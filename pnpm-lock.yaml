@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@testing-library/jest-dom':
-      specifier: ^6.6.4
-      version: 6.9.1
+      specifier: ^7.0.1
+      version: 7.0.1
     '@testing-library/user-event':
       specifier: ^14.6.1
       version: 14.6.1
@@ -256,7 +256,7 @@ importers:
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 6.9.1
+        version: 7.0.1(@testing-library/dom@9.3.4)
       '@testing-library/vue':
         specifier: 'catalog:'
         version: 5.9.0(vue-template-compiler@2.7.16)(vue@2.7.16)
@@ -326,7 +326,7 @@ importers:
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 6.9.1
+        version: 7.0.1(@testing-library/dom@9.3.4)
       '@testing-library/user-event':
         specifier: 'catalog:'
         version: 14.6.1(@testing-library/dom@9.3.4)
@@ -393,7 +393,7 @@ importers:
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 6.9.1
+        version: 7.0.1(@testing-library/dom@9.3.4)
       '@testing-library/vue':
         specifier: 'catalog:'
         version: 5.9.0(vue-template-compiler@2.7.16)(vue@2.7.16)
@@ -445,7 +445,7 @@ importers:
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 6.9.1
+        version: 7.0.1(@testing-library/dom@9.3.4)
       '@testing-library/user-event':
         specifier: 'catalog:'
         version: 14.6.1(@testing-library/dom@9.3.4)
@@ -958,7 +958,7 @@ importers:
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 6.9.1
+        version: 7.0.1(@testing-library/dom@9.3.4)
       '@testing-library/user-event':
         specifier: 'catalog:'
         version: 14.6.1(@testing-library/dom@9.3.4)
@@ -1034,7 +1034,7 @@ importers:
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 6.9.1
+        version: 7.0.1(@testing-library/dom@9.3.4)
       '@testing-library/user-event':
         specifier: 'catalog:'
         version: 14.6.1(@testing-library/dom@9.3.4)
@@ -1080,7 +1080,7 @@ importers:
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 6.9.1
+        version: 7.0.1(@testing-library/dom@9.3.4)
       '@testing-library/vue':
         specifier: 'catalog:'
         version: 5.9.0(vue-template-compiler@2.7.16)(vue@2.7.16)
@@ -1183,7 +1183,7 @@ importers:
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 6.9.1
+        version: 7.0.1(@testing-library/dom@9.3.4)
       '@testing-library/user-event':
         specifier: 'catalog:'
         version: 14.6.1(@testing-library/dom@9.3.4)
@@ -1379,7 +1379,7 @@ importers:
     devDependencies:
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 6.9.1
+        version: 7.0.1(@testing-library/dom@9.3.4)
       '@testing-library/user-event':
         specifier: 'catalog:'
         version: 14.6.1(@testing-library/dom@9.3.4)
@@ -3701,6 +3701,16 @@ packages:
   '@testing-library/jest-dom@6.9.1':
     resolution: {integrity: sha512-zIcONa+hVtVSSep9UT3jZ5rizo2BsxgyDYU7WFD5eICBE7no3881HGeb/QkGfsJs6JTkY1aQhT7rIPC7e+0nnA==}
     engines: {node: '>=14', npm: '>=6', yarn: '>=1'}
+
+  '@testing-library/jest-dom@7.0.1':
+    resolution: {integrity: sha512-oMDTC3oA+6CXSO2JZnvOI7CA6oVub6kij5ggk9ohwye5slmkwxYDXcPOVxgMw/RQlticjtO0C1RZkR97HgrWMw==}
+    engines: {node: '>=22', npm: '>=6', yarn: '>=1'}
+    peerDependencies:
+      '@testing-library/dom': '>=10 <11'
+      vitest: '>= 0.32'
+    peerDependenciesMeta:
+      vitest:
+        optional: true
 
   '@testing-library/user-event@14.6.1':
     resolution: {integrity: sha512-vq7fv0rnt+QTXgPxr5Hjc210p6YKq2kmdziLgnsZGgLJ9e6VAShx1pACLuRjd/AS/sr7phAR58OIIpf0LlmQNw==}
@@ -12792,6 +12802,16 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
 
+  '@testing-library/jest-dom@7.0.1(@testing-library/dom@9.3.4)':
+    dependencies:
+      '@adobe/css-tools': 4.4.4
+      '@testing-library/dom': 9.3.4
+      aria-query: 5.3.2
+      css.escape: 1.5.1
+      dom-accessibility-api: 0.6.3
+      picocolors: 1.1.1
+      redent: 3.0.0
+
   '@testing-library/user-event@14.6.1(@testing-library/dom@9.3.4)':
     dependencies:
       '@testing-library/dom': 9.3.4
@@ -14394,7 +14414,7 @@ snapshots:
       postcss-value-parser: 4.2.0
       semver: 7.7.3
     optionalDependencies:
-      webpack: 5.104.1(webpack-cli@7.0.2)
+      webpack: 5.104.1(@swc/core@1.15.24(@swc/helpers@0.5.23))(webpack-cli@7.0.2)
 
   css-minimizer-webpack-plugin@7.0.2(webpack@5.104.1):
     dependencies:
@@ -17457,7 +17477,7 @@ snapshots:
     dependencies:
       schema-utils: 4.3.3
       tapable: 2.3.0
-      webpack: 5.104.1(webpack-cli@7.0.2)
+      webpack: 5.104.1(@swc/core@1.15.24(@swc/helpers@0.5.23))(webpack-cli@7.0.2)
 
   minimalistic-assert@1.0.1: {}
 
@@ -19982,7 +20002,7 @@ snapshots:
       import-local: 3.2.0
       interpret: 3.1.1
       rechoir: 0.8.0
-      webpack: 5.104.1(webpack-cli@7.0.2)
+      webpack: 5.104.1(@swc/core@1.15.24(@swc/helpers@0.5.23))(webpack-cli@7.0.2)
       webpack-merge: 6.0.1
     optionalDependencies:
       webpack-dev-server: 5.2.5(tslib@2.8.1)(webpack-cli@7.0.2)(webpack@5.104.1)
@@ -19996,7 +20016,7 @@ snapshots:
       range-parser: 1.2.1
       schema-utils: 4.3.3
     optionalDependencies:
-      webpack: 5.104.1(webpack-cli@7.0.2)
+      webpack: 5.104.1(@swc/core@1.15.24(@swc/helpers@0.5.23))(webpack-cli@7.0.2)
     transitivePeerDependencies:
       - tslib
 
@@ -20031,7 +20051,7 @@ snapshots:
       webpack-dev-middleware: 7.4.5(tslib@2.8.1)(webpack@5.104.1)
       ws: 8.21.0
     optionalDependencies:
-      webpack: 5.104.1(webpack-cli@7.0.2)
+      webpack: 5.104.1(@swc/core@1.15.24(@swc/helpers@0.5.23))(webpack-cli@7.0.2)
       webpack-cli: 7.0.2(webpack-dev-server@5.2.5)(webpack@5.104.1)
     transitivePeerDependencies:
       - bufferutil
