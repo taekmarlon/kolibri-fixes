@@ -11,7 +11,7 @@
     "lint-frontend:format": "pnpm run lint-frontend --write"
   },
   "dependencies": {
-    "@sentry/vue": "^10.19.0",
+    "@sentry/vue": "^10.70.0",
     "browserslist-config-kolibri": "workspace:*",
     "kolibri": "workspace:*",
     "kolibri-plugin-data": "workspace:*",
