@@ -5,7 +5,7 @@
     "version": "0.0.1",
     "dependencies": {
         "@vueuse/core": "catalog:",
-        "date-fns": "^1.28.2",
+        "date-fns": "^4.4.0",
         "fuse.js": "^7.1.0",
         "kolibri": "workspace:*",
         "kolibri-app": "workspace:*",
