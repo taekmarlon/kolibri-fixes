@@ -12,6 +12,7 @@ COPY . /app
 
 # Install Python dependencies for Kolibri
 ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.16.0
+RUN mkdir -p kolibri/dist && touch kolibri/dist/__init__.py
 RUN pip install -e .
 
 # Install frontend dependencies and build Kolibri frontend
