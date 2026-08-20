@@ -25,8 +25,8 @@ catalogs:
       specifier: ^3.47.0
       version: 3.47.0
     kolibri-constants:
-      specifier: 0.2.16
-      version: 0.2.16
+      specifier: 0.2.18
+      version: 0.2.18
     kolibri-design-system:
       specifier: 5.7.0
       version: 5.7.0
@@ -222,7 +222,7 @@ importers:
         version: link:../../../packages/kolibri-common
       kolibri-constants:
         specifier: 'catalog:'
-        version: 0.2.16
+        version: 0.2.18
       kolibri-design-system:
         specifier: 'catalog:'
         version: 5.7.0
@@ -499,7 +499,7 @@ importers:
         version: link:../../../packages/kolibri-common
       kolibri-constants:
         specifier: 'catalog:'
-        version: 0.2.16
+        version: 0.2.18
       kolibri-design-system:
         specifier: 'catalog:'
         version: 5.7.0
@@ -1137,7 +1137,7 @@ importers:
         version: 1.2.5
       kolibri-constants:
         specifier: 'catalog:'
-        version: 0.2.16
+        version: 0.2.18
       kolibri-design-system:
         specifier: 'catalog:'
         version: 5.7.0
@@ -1342,7 +1342,7 @@ importers:
         version: link:../kolibri
       kolibri-constants:
         specifier: 'catalog:'
-        version: 0.2.16
+        version: 0.2.18
       kolibri-design-system:
         specifier: 'catalog:'
         version: 5.7.0
@@ -7385,8 +7385,8 @@ packages:
   knuth-shuffle-seeded@1.0.6:
     resolution: {integrity: sha512-9pFH0SplrfyKyojCLxZfMcvkhf5hH0d+UwR9nTVJ/DDQJGuzcXjTwB7TP7sDfehSudlGGaOLblmEWqv04ERVWg==}
 
-  kolibri-constants@0.2.16:
-    resolution: {integrity: sha512-z2tH+Sl8vBX1Y7O3BYTfwQs33Ozp6QRKZIHhl66A8sZkxUVBFFKOR+SgGOt0U0Q7pT/PH4yfCZ5mu6u8J641zQ==}
+  kolibri-constants@0.2.18:
+    resolution: {integrity: sha512-Uhwl7zO4s7NGUQ26gs+tiYjAQY0emqhxviNnvyqk7iealDhWANLpNH++yGRDNoXgC+6dU4mzz9HdVMTUwSMcxA==}
 
   kolibri-design-system@5.7.0:
     resolution: {integrity: sha512-+ol8VBIfTbSbLGmSvtGehZUhEFejWJDAzGNujRL62DHs9NhDjpmjBGehvk/y7BV13FwxFR4tOFhW9RxnYx7eBg==}
@@ -14394,7 +14394,7 @@ snapshots:
       postcss-value-parser: 4.2.0
       semver: 7.7.3
     optionalDependencies:
-      webpack: 5.104.1(webpack-cli@7.0.2)
+      webpack: 5.104.1(@swc/core@1.15.24(@swc/helpers@0.5.23))(webpack-cli@7.0.2)
 
   css-minimizer-webpack-plugin@7.0.2(webpack@5.104.1):
     dependencies:
@@ -17121,7 +17121,7 @@ snapshots:
     dependencies:
       seed-random: 2.2.0
 
-  kolibri-constants@0.2.16: {}
+  kolibri-constants@0.2.18: {}
 
   kolibri-design-system@5.7.0:
     dependencies:
@@ -17457,7 +17457,7 @@ snapshots:
     dependencies:
       schema-utils: 4.3.3
       tapable: 2.3.0
-      webpack: 5.104.1(webpack-cli@7.0.2)
+      webpack: 5.104.1(@swc/core@1.15.24(@swc/helpers@0.5.23))(webpack-cli@7.0.2)
 
   minimalistic-assert@1.0.1: {}
 
@@ -19982,7 +19982,7 @@ snapshots:
       import-local: 3.2.0
       interpret: 3.1.1
       rechoir: 0.8.0
-      webpack: 5.104.1(webpack-cli@7.0.2)
+      webpack: 5.104.1(@swc/core@1.15.24(@swc/helpers@0.5.23))(webpack-cli@7.0.2)
       webpack-merge: 6.0.1
     optionalDependencies:
       webpack-dev-server: 5.2.5(tslib@2.8.1)(webpack-cli@7.0.2)(webpack@5.104.1)
@@ -19996,7 +19996,7 @@ snapshots:
       range-parser: 1.2.1
       schema-utils: 4.3.3
     optionalDependencies:
-      webpack: 5.104.1(webpack-cli@7.0.2)
+      webpack: 5.104.1(@swc/core@1.15.24(@swc/helpers@0.5.23))(webpack-cli@7.0.2)
     transitivePeerDependencies:
       - tslib
 
@@ -20031,7 +20031,7 @@ snapshots:
       webpack-dev-middleware: 7.4.5(tslib@2.8.1)(webpack@5.104.1)
       ws: 8.21.0
     optionalDependencies:
-      webpack: 5.104.1(webpack-cli@7.0.2)
+      webpack: 5.104.1(@swc/core@1.15.24(@swc/helpers@0.5.23))(webpack-cli@7.0.2)
       webpack-cli: 7.0.2(webpack-dev-server@5.2.5)(webpack@5.104.1)
     transitivePeerDependencies:
       - bufferutil
