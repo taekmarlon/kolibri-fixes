@@ -9,7 +9,7 @@
   "dependencies": {
     "core-js": "catalog:",
     "lodash": "catalog:",
-    "@zip.js/zip.js": "^2.8.11",
+    "@zip.js/zip.js": "^2.8.45",
     "fastestsmallesttextencoderdecoder": "^1.0.22",
     "web-streams-polyfill": "^4.2.0"
   },
