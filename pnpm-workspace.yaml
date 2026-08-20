@@ -22,7 +22,7 @@ catalog:
   vue: 2.7.16
   vue-meta: ^2.4.0
   vue-router: ^3.6.5
-  vuex: ^3.6.2
+  vuex: ^4.1.0
   xstate: ^4.38.3
 onlyBuiltDependencies:
   - "@swc/core"
