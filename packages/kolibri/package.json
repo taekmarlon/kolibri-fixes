@@ -92,7 +92,7 @@
     "kolibri-plugin-data": "workspace:*",
     "lockr": "0.8.5",
     "lodash": "catalog:",
-    "path-to-regexp": "1.9.0",
+    "path-to-regexp": "8.4.2",
     "qs": "^6.15.2",
     "tippy.js": "^6.3.7",
     "ua-parser-js": "^1.0.41",
