@@ -95,7 +95,7 @@
     "path-to-regexp": "1.9.0",
     "qs": "^6.15.2",
     "tippy.js": "^6.3.7",
-    "ua-parser-js": "^1.0.41",
+    "ua-parser-js": "^2.0.10",
     "vue": "catalog:",
     "vue-intl": "3.1.0",
     "vue-meta": "catalog:",
