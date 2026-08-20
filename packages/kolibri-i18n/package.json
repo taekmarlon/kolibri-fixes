@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "kolibri": "workspace:*",
-    "rewire": "^6.0.0"
+    "rewire": "^9.0.1"
   },
   "engines": {
     "node": ">= 20.19.0",

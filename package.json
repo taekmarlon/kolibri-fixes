@@ -59,7 +59,7 @@
     "kolibri-i18n": "workspace:*",
     "kolibri-logging": "workspace:*",
     "kolibri-plugin-data": "workspace:*",
-    "rewire": "^6.0.0",
+    "rewire": "^9.0.1",
     "vue-jest": "^3.0.0",
     "vue-template-compiler": "2.7.16",
     "webpack": "^5.104.0"
