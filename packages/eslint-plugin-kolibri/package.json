@@ -16,7 +16,7 @@
     "requireindex": "^1.1.0"
   },
   "devDependencies": {
-    "eslint": "^9.39.0",
+    "eslint": "^10.8.1",
     "kolibri": "workspace:*",
     "vue-eslint-parser": "^9.4.3"
   },
