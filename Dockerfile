@@ -11,12 +11,21 @@ WORKDIR /app
 COPY . /app
 
 # Install Python dependencies for Kolibri
+# SETUPTOOLS_SCM_PRETEND_VERSION is needed because we wiped the git history
 ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.16.0
 RUN mkdir -p kolibri/dist && touch kolibri/dist/__init__.py
 RUN pip install -e .
 
-# Install frontend dependencies and build Kolibri frontend
-RUN pnpm install
+# Install frontend dependencies
+# --shamefully-hoist ensures workspace packages (like kolibri-jest-config)
+# are hoisted into root node_modules so babel.config.js can resolve them
+RUN pnpm install --shamefully-hoist
+
+# Patch babel.config.js to use absolute path since workspace symlinks
+# don't always resolve correctly in Docker without hoisting
+RUN echo "module.exports = require('/app/packages/kolibri-jest-config/jest.conf/babel.config');" > babel.config.js
+
+# Build the Kolibri frontend
 RUN pnpm run build
 
 # Configure Kolibri for production server mode
