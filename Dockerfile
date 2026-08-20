@@ -1,4 +1,4 @@
-﻿FROM python:3.11-slim
+FROM python:3.11-slim
 
 # Install Node.js, pnpm, and gettext (required for Kolibri i18n builds)
 RUN apt-get update && apt-get install -y curl gettext
@@ -11,6 +11,7 @@ WORKDIR /app
 COPY . /app
 
 # Install Python dependencies for Kolibri
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.16.0
 RUN pip install -e .
 
 # Install frontend dependencies and build Kolibri frontend
