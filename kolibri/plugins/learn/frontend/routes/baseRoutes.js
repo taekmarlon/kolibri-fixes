@@ -16,4 +16,8 @@ export default {
     name: PageNames.BOOKMARKS,
     path: '/bookmarks',
   },
+  liveMeeting: {
+    name: PageNames.LIVE_MEETING,
+    path: '/live-meeting',
+  },
 };

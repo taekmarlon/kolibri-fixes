@@ -1,0 +1,389 @@
+<template>
+
+  <LearnAppBarPage
+    :appBarTitle="learnString('learnLabel')"
+    :loading="pageLoading"
+  >
+    <div role="main" class="live-meeting-page">
+      <!-- Active Live Meeting -->
+      <div v-if="meetingActive" class="active-meeting-wrapper">
+        <LiveMeeting
+          :roomName="currentRoomName"
+          :meetingTitle="currentMeetingTitle"
+          @leave="leaveMeeting"
+        />
+      </div>
+
+      <!-- Meeting Lobby / Join Screen -->
+      <div v-else class="meeting-lobby-container">
+        <div class="lobby-intro">
+          <h1 class="page-title" :style="{ color: $themeTokens.text }">
+            {{ $tr('virtualMeetingTitle') }}
+          </h1>
+          <p class="page-desc" :style="{ color: $themeTokens.annotation }">
+            {{ $tr('virtualMeetingDesc') }}
+          </p>
+        </div>
+
+        <KGrid gutter="24" class="lobby-grid">
+          <!-- Join / Create Room Card -->
+          <KGridItem :layout12="{ span: 7 }">
+            <div
+              class="card join-card"
+              :style="{
+                backgroundColor: $themeTokens.surface,
+                border: `1px solid ${$themeTokens.fineLine}`,
+              }"
+            >
+              <div class="card-header">
+                <KIcon icon="group" class="header-icon" :style="{ color: $themeTokens.primary }" />
+                <div>
+                  <h2 class="card-title" :style="{ color: $themeTokens.text }">
+                    {{ $tr('joinOrCreateHeader') }}
+                  </h2>
+                  <p class="card-desc" :style="{ color: $themeTokens.annotation }">
+                    {{ $tr('joinOrCreateSubtext') }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="input-section">
+                <KTextbox
+                  v-model="roomInput"
+                  :label="$tr('roomNameLabel')"
+                  :placeholder="$tr('roomNamePlaceholder')"
+                  :invalid="Boolean(roomError)"
+                  :invalidText="roomError"
+                  @keydown.enter="joinRoom"
+                />
+
+                <div class="user-info-badge" :style="{ backgroundColor: $themePalette.grey.v_200 }">
+                  <span :style="{ color: $themeTokens.annotation }">{{ $tr('joiningAsLabel') }}:</span>
+                  <span :style="{ color: $themeTokens.text, fontWeight: 'bold' }">{{ userDisplayName }}</span>
+                </div>
+              </div>
+
+              <div class="card-actions">
+                <KButton
+                  :text="$tr('joinMeetingButton')"
+                  :primary="true"
+                  appearance="raised-button"
+                  icon="group"
+                  @click="joinRoom"
+                />
+                <KButton
+                  :text="$tr('generateRandomButton')"
+                  :primary="false"
+                  appearance="flat-button"
+                  @click="generateRandomRoom"
+                />
+              </div>
+            </div>
+          </KGridItem>
+
+          <!-- Recent Rooms Card -->
+          <KGridItem :layout12="{ span: 5 }">
+            <div
+              class="card recent-card"
+              :style="{
+                backgroundColor: $themeTokens.surface,
+                border: `1px solid ${$themeTokens.fineLine}`,
+              }"
+            >
+              <h2 class="card-title" :style="{ color: $themeTokens.text }">
+                {{ $tr('recentRoomsTitle') }}
+              </h2>
+              <p class="card-desc" :style="{ color: $themeTokens.annotation }">
+                {{ $tr('recentRoomsDesc') }}
+              </p>
+
+              <div v-if="recentRooms.length" class="recent-list">
+                <div
+                  v-for="room in recentRooms"
+                  :key="room.roomId"
+                  class="recent-item"
+                  :style="{ borderBottom: `1px solid ${$themeTokens.fineLine}` }"
+                >
+                  <div class="recent-info">
+                    <span class="recent-room-title" :style="{ color: $themeTokens.text }">
+                      {{ room.title || room.roomId }}
+                    </span>
+                    <span class="recent-room-id" :style="{ color: $themeTokens.annotation }">
+                      {{ room.roomId }}
+                    </span>
+                  </div>
+                  <KButton
+                    :text="$tr('rejoinButton')"
+                    appearance="basic-flat-button"
+                    :primary="false"
+                    @click="joinSpecificRoom(room.roomId, room.title)"
+                  />
+                </div>
+              </div>
+
+              <div v-else class="empty-recent" :style="{ color: $themeTokens.annotation }">
+                {{ $tr('noRecentRooms') }}
+              </div>
+            </div>
+          </KGridItem>
+        </KGrid>
+      </div>
+    </div>
+  </LearnAppBarPage>
+
+</template>
+
+
+<script>
+
+  import { ref, computed } from 'vue';
+  import { createTranslator } from 'kolibri/utils/i18n';
+  import { pageLoading } from 'kolibri-common/composables/usePageLoading';
+  import LiveMeeting from 'kolibri-common/components/LiveMeeting';
+  import useLiveMeeting from 'kolibri-common/composables/useLiveMeeting';
+  import useUser from 'kolibri/composables/useUser';
+  import commonLearnStrings from './commonLearnStrings';
+  import LearnAppBarPage from './LearnAppBarPage';
+
+  const livePageStrings = createTranslator('LiveMeetingPageStrings', {
+    virtualMeetingTitle: {
+      message: 'Live Virtual Meeting',
+      context: 'Page title for general live meeting page',
+    },
+    virtualMeetingDesc: {
+      message: 'Start or join real-time interactive video meetings with audio, video, screen sharing, and live chat.',
+      context: 'Subtitle for live meeting page',
+    },
+    joinOrCreateHeader: {
+      message: 'Join or Create a Room',
+      context: 'Header for join/create card',
+    },
+    joinOrCreateSubtext: {
+      message: 'Enter any room name or topic to meet with peers or instructors.',
+      context: 'Help text for join card',
+    },
+    roomNameLabel: {
+      message: 'Room Name or Topic',
+      context: 'Label for room name text field',
+    },
+    roomNamePlaceholder: {
+      message: 'e.g. Science-Study-Group',
+      context: 'Placeholder for room name input',
+    },
+    joiningAsLabel: {
+      message: 'Joining as',
+      context: 'Label indicating the user display name',
+    },
+    joinMeetingButton: {
+      message: 'Join Meeting',
+      context: 'Button to join meeting',
+    },
+    generateRandomButton: {
+      message: 'New Random Room',
+      context: 'Button to generate random room ID',
+    },
+    recentRoomsTitle: {
+      message: 'Recent Rooms',
+      context: 'Header for recent rooms list',
+    },
+    recentRoomsDesc: {
+      message: 'Quickly re-connect to rooms you previously joined.',
+      context: 'Description for recent rooms card',
+    },
+    rejoinButton: {
+      message: 'Join',
+      context: 'Button to re-join a recent room',
+    },
+    noRecentRooms: {
+      message: 'No recent rooms yet.',
+      context: 'Message when user has no recent rooms',
+    },
+    enterRoomError: {
+      message: 'Please enter a room name',
+      context: 'Error message when input is empty',
+    },
+  });
+
+  export default {
+    name: 'LiveMeetingPage',
+    components: {
+      LearnAppBarPage,
+      LiveMeeting,
+    },
+    mixins: [commonLearnStrings],
+    setup() {
+      const { full_name, username } = useUser();
+      const { recentRooms, generateRoomId, saveRecentRoom } = useLiveMeeting();
+
+      const meetingActive = ref(false);
+      const currentRoomName = ref('');
+      const currentMeetingTitle = ref('');
+      const roomInput = ref('');
+      const roomError = ref('');
+
+      const userDisplayName = computed(() => {
+        return full_name.value || username.value || 'Guest User';
+      });
+
+      function joinRoom() {
+        if (!roomInput.value.trim()) {
+          roomError.value = livePageStrings.$tr('enterRoomError');
+          return;
+        }
+        roomError.value = '';
+        const cleanName = `kolibri_${roomInput.value.trim().replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+        joinSpecificRoom(cleanName, roomInput.value.trim());
+      }
+
+      function generateRandomRoom() {
+        const randomId = generateRoomId('kolibri_room');
+        roomInput.value = randomId.replace('kolibri_', '');
+        roomError.value = '';
+      }
+
+      function joinSpecificRoom(roomId, title) {
+        currentRoomName.value = roomId;
+        currentMeetingTitle.value = title || roomId;
+        meetingActive.value = true;
+        saveRecentRoom({
+          roomId,
+          title: title || roomId,
+        });
+      }
+
+      function leaveMeeting() {
+        meetingActive.value = false;
+        currentRoomName.value = '';
+        currentMeetingTitle.value = '';
+      }
+
+      return {
+        pageLoading,
+        meetingActive,
+        currentRoomName,
+        currentMeetingTitle,
+        roomInput,
+        roomError,
+        userDisplayName,
+        recentRooms,
+        joinRoom,
+        generateRandomRoom,
+        joinSpecificRoom,
+        leaveMeeting,
+      };
+    },
+    $trs: livePageStrings,
+  };
+
+</script>
+
+
+<style lang="scss" scoped>
+
+  .live-meeting-page {
+    padding: 16px 0;
+  }
+
+  .active-meeting-wrapper {
+    width: 100%;
+    min-height: 700px;
+  }
+
+  .lobby-intro {
+    margin-bottom: 24px;
+  }
+
+  .page-title {
+    margin: 0 0 8px 0;
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+
+  .page-desc {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .card {
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .header-icon {
+    font-size: 36px;
+  }
+
+  .card-title {
+    margin: 0 0 4px 0;
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+
+  .card-desc {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  .input-section {
+    margin-bottom: 24px;
+  }
+
+  .user-info-badge {
+    margin-top: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    display: flex;
+    gap: 8px;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .recent-list {
+    display: flex;
+    flex-direction: column;
+    margin-top: 16px;
+  }
+
+  .recent-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+  }
+
+  .recent-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .recent-room-title {
+    font-weight: bold;
+    font-size: 0.95rem;
+  }
+
+  .recent-room-id {
+    font-size: 0.8rem;
+    font-family: monospace;
+  }
+
+  .empty-recent {
+    margin-top: 24px;
+    text-align: center;
+    font-style: italic;
+  }
+
+</style>

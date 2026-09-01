@@ -16,6 +16,7 @@ import ExamReportViewer from '../views/LearnExamReportViewer';
 import AllClassesPage from '../views/classes/AllClassesPage';
 import ClassAssignmentsPage from '../views/classes/ClassAssignmentsPage';
 import LessonPlaylistPage from '../views/classes/LessonPlaylistPage';
+import LearnerLiveClassPage from '../views/classes/LearnerLiveClassPage';
 
 function noClassesGuard() {
   const { canAccessUnassignedContent } = store.getters;
@@ -50,6 +51,20 @@ export default [
       return noClassesGuard() || showClassAssignmentsPage(store, classId);
     },
     component: ClassAssignmentsPage,
+  },
+  {
+    name: ClassesPageNames.CLASS_LIVE_CLASS,
+    path: '/classes/:classId/live-class',
+    props: route => {
+      const classId = route.params.classId;
+      return {
+        classId,
+      };
+    },
+    handler: () => {
+      return noClassesGuard();
+    },
+    component: LearnerLiveClassPage,
   },
   {
     name: ClassesPageNames.LESSON_PLAYLIST,

@@ -14,6 +14,7 @@ import HomePage from '../views/home/HomePage';
 import CoachPrompts from '../views/CoachPrompts';
 import HomeActivityPage from '../views/home/HomeActivityPage';
 import StatusTestPage from '../views/common/status/StatusTestPage';
+import CoachLiveClassPage from '../views/CoachLiveClassPage';
 import { ClassesPageNames } from '../../../learn/frontend/constants';
 import { PageNames } from '../constants';
 import { classIdParamRequiredGuard } from './utils';
@@ -44,6 +45,16 @@ export default [
   ...groupsRoutes,
   ...attendanceRoutes,
   ...(plugin_data.courses_exist ? coursesRoutes : []),
+  {
+    name: PageNames.LIVE_CLASS_ROOT,
+    path: '/:classId?/live-class',
+    component: CoachLiveClassPage,
+    handler(toRoute) {
+      showHomePage(toRoute).then(() => {
+        pageLoading.value = false;
+      });
+    },
+  },
   {
     name: 'AllFacilitiesPage',
     path: '/facilities/:subtopicName?',

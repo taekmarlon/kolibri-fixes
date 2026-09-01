@@ -484,20 +484,26 @@ TESTING = False
 
 # Content Security Policy header settings
 # https://django-csp.readthedocs.io/en/latest/configuration.html
+JITSI_HOST_SOURCES = ("meet.jit.si", "*.jit.si", "8x8.vc", "*.8x8.vc")
+
 CSP_DEFAULT_SRC = ("'self'", "data:", "blob:") + tuple(
     conf.OPTIONS["Deployment"]["CSP_HOST_SOURCES"]
-)
+) + JITSI_HOST_SOURCES
 
 # Use a stricter script source policy to prevent data: from being used
 # we still allow blob: as a source for scripts, as this is used for
 # processing graphie scripts in Perseus.
-CSP_SCRIPT_SRC = ("'self'", "blob:") + tuple(
+CSP_SCRIPT_SRC = ("'self'", "blob:", "'unsafe-eval'") + tuple(
     conf.OPTIONS["Deployment"]["CSP_HOST_SOURCES"]
-)
+) + JITSI_HOST_SOURCES
 
 # Allow inline styles, as we rely on them heavily in our templates
 # and the Aphrodite CSS in JS library generates inline styles
 CSP_STYLE_SRC = CSP_DEFAULT_SRC + ("'unsafe-inline'",)
+
+CSP_CONNECT_SRC = ("'self'", "blob:", "data:", "wss:") + tuple(
+    conf.OPTIONS["Deployment"]["CSP_HOST_SOURCES"]
+) + JITSI_HOST_SOURCES
 
 # Explicitly allow iframe embedding from the our zipcontent origin
 # This is necessary for the zipcontent app to work
@@ -511,7 +517,7 @@ else:
 
 # Always allow 'self' and 'data' sources to allow for the kind of
 # iframe manipulation needed for epub.js.
-CSP_FRAME_SRC = CSP_DEFAULT_SRC + frame_src
+CSP_FRAME_SRC = CSP_DEFAULT_SRC + frame_src + JITSI_HOST_SOURCES
 
 # Allow media from our zipcontent origin as well
-CSP_MEDIA_SRC = CSP_DEFAULT_SRC + frame_src
+CSP_MEDIA_SRC = CSP_DEFAULT_SRC + frame_src + JITSI_HOST_SOURCES

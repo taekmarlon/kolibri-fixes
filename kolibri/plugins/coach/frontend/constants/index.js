@@ -2,6 +2,7 @@ export const PageNames = {
   /* Class Summary */
   HOME_PAGE: 'HomePage', // make sure this matches the Coach 'Home' page name
   EXAM_CREATION_ROOT: 'EXAM_CREATION_ROOT',
+  LIVE_CLASS_ROOT: 'LIVE_CLASS_ROOT',
 
   /* Exams and quizzes */
   EXAMS_ROOT: 'EXAMS_ROOT',

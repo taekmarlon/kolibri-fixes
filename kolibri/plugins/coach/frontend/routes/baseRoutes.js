@@ -25,4 +25,8 @@ export default {
     name: PageNames.GROUPS_ROOT,
     path: '/:classId?/groups',
   },
+  liveClass: {
+    name: PageNames.LIVE_CLASS_ROOT,
+    path: '/:classId?/live-class',
+  },
 };

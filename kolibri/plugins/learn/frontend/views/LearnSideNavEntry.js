@@ -20,6 +20,10 @@ const navStrings = createTranslator('LearnSideNavEntryStrings', {
     context:
       'Bookmarks are used to give all users a way of saving a reference for a specific resource or topic to come back to later.',
   },
+  liveMeetingLabel: {
+    message: 'Live Meeting',
+    context: 'Label for live meeting / video conferencing in learner side navigation',
+  },
   learnLabel: {
     message: 'Learn',
     context:
@@ -54,6 +58,12 @@ registerNavItem({
         icon: 'bookmark',
         route: baseRoutes.bookmarks.path,
         name: baseRoutes.bookmarks.name,
+      },
+      {
+        label: navStrings.$tr('liveMeetingLabel'),
+        icon: 'group',
+        route: baseRoutes.liveMeeting.path,
+        name: baseRoutes.liveMeeting.name,
       },
     ];
   },
