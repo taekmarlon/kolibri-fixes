@@ -22,6 +22,15 @@
       </div>
 
       <div class="header-actions">
+        <!-- Open in New Window (Unlimited Time / No Embed Limit) -->
+        <KButton
+          :text="openNewTab$()"
+          icon="openNewTab"
+          appearance="raised-button"
+          :primary="true"
+          @click="openInNewWindow"
+        />
+
         <KButton
           :text="copied ? linkCopied$() : copyLink$()"
           icon="copy"
@@ -56,6 +65,28 @@
       </div>
     </div>
 
+    <!-- Tip banner about unlimited time in new tab -->
+    <div
+      class="unlimited-tip"
+      :style="{
+        backgroundColor: $themePalette.grey.v_100,
+        color: $themeTokens.annotation,
+        borderBottom: `1px solid ${$themeTokens.fineLine}`,
+      }"
+    >
+      <KIcon icon="info" class="tip-icon" />
+      <span>
+        {{ unlimitedTip$() }}
+      </span>
+      <KButton
+        :text="openFullWindow$()"
+        appearance="basic-flat-button"
+        :primary="false"
+        class="tip-btn"
+        @click="openInNewWindow"
+      />
+    </div>
+
     <!-- Video Frame Area -->
     <div ref="meetingWrapper" class="meeting-frame-wrapper">
       <!-- Loading Spinner -->
@@ -70,7 +101,7 @@
         </p>
       </div>
 
-      <!-- Direct Jitsi Meet Iframe (100% reliable with WebRTC permissions) -->
+      <!-- Direct Jitsi Meet Iframe -->
       <iframe
         class="jitsi-iframe"
         :src="jitsiIframeUrl"
@@ -98,6 +129,18 @@
     roomLabel: {
       message: 'Room: {roomName}',
       context: 'Display name of the meeting room',
+    },
+    openNewTab: {
+      message: 'Open Full Window (Unlimited Time)',
+      context: 'Button to open meeting in external window with no limits',
+    },
+    openFullWindow: {
+      message: 'Open Window',
+      context: 'Short button to open window',
+    },
+    unlimitedTip: {
+      message: 'Tip: For long classes (>5 min) with no timeout, click "Open Full Window" to run with unlimited duration.',
+      context: 'Informational tip about unlimited duration in popup window',
     },
     copyLink: {
       message: 'Copy Link',
@@ -147,6 +190,9 @@
       const {
         defaultTitle$,
         roomLabel$,
+        openNewTab$,
+        openFullWindow$,
+        unlimitedTip$,
         copyLink$,
         linkCopied$,
         fullscreen$,
@@ -173,6 +219,11 @@
         return `https://${props.jitsiDomain}/${formattedRoomName.value}#userInfo.displayName="${name}"&config.prejoinPageEnabled=false&config.startWithAudioMuted=true&config.disableDeepLinking=true`;
       });
 
+      const directMeetingUrl = computed(() => {
+        const name = encodeURIComponent(userDisplayName.value);
+        return `https://${props.jitsiDomain}/${formattedRoomName.value}#userInfo.displayName="${name}"&config.prejoinPageEnabled=false&config.startWithAudioMuted=false`;
+      });
+
       function onIframeLoad() {
         loading.value = false;
       }
@@ -181,8 +232,12 @@
         emit('leave');
       }
 
+      function openInNewWindow() {
+        window.open(directMeetingUrl.value, '_blank', 'width=1200,height=800,menubar=no,toolbar=no');
+      }
+
       function copyMeetingLink() {
-        const url = window.location.href;
+        const url = directMeetingUrl.value;
         if (navigator.clipboard) {
           navigator.clipboard.writeText(url).then(() => {
             copied.value = true;
@@ -207,7 +262,6 @@
       }
 
       onMounted(() => {
-        // Fallback timer to hide loader if iframe takes a moment
         setTimeout(() => {
           loading.value = false;
         }, 3000);
@@ -225,8 +279,12 @@
         userDisplayName,
         formattedRoomName,
         jitsiIframeUrl,
+        directMeetingUrl,
         defaultTitle$,
         roomLabel$,
+        openNewTab$,
+        openFullWindow$,
+        unlimitedTip$,
         copyLink$,
         linkCopied$,
         fullscreen$,
@@ -235,6 +293,7 @@
         connecting$,
         onIframeLoad,
         handleLeave,
+        openInNewWindow,
         copyMeetingLink,
         toggleFullscreen,
       };
@@ -295,6 +354,24 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .unlimited-tip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    font-size: 0.85rem;
+  }
+
+  .tip-icon {
+    font-size: 18px;
+  }
+
+  .tip-btn {
+    margin-left: auto;
+    font-size: 0.85rem;
   }
 
   .meeting-frame-wrapper {
