@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
-# Install Node.js, pnpm, gettext, nginx, and supervisor
-RUN apt-get update && apt-get install -y curl gettext git nginx supervisor
+# Install Node.js, pnpm, gettext, and nginx
+RUN apt-get update && apt-get install -y curl gettext git nginx
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 RUN apt-get install -y nodejs
 RUN npm install -g pnpm
@@ -28,23 +28,23 @@ RUN echo "module.exports = require('/app/packages/kolibri-jest-config/jest.conf/
 RUN pnpm run build
 
 # --- Nginx config ---
-# Routes:
-#   /zipcontent/ → Kolibri zip content server on port 8081
-#   /           → Kolibri main server on port 8000
-RUN cat > /etc/nginx/sites-available/default <<'EOF'
+# Routes /zipcontent/ to internal zip content server (port 8081)
+# Routes everything else to Kolibri main server (port 8000)
+RUN cat > /etc/nginx/sites-available/default <<'NGINXEOF'
 server {
     listen 8080;
 
-    # Proxy zip content server (Flexbooks, HTML5 apps)
+    # Proxy Flexbook/HTML5 zip content server
     location /zipcontent/ {
-        proxy_pass http://127.0.0.1:8081;
+        proxy_pass http://127.0.0.1:8081/zipcontent/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120;
     }
 
-    # Proxy main Kolibri server
+    # Proxy main Kolibri Django server
     location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
@@ -55,47 +55,36 @@ server {
         proxy_connect_timeout 300;
     }
 }
-EOF
+NGINXEOF
 
-# --- Supervisor config to run nginx + kolibri together ---
-RUN cat > /etc/supervisor/conf.d/kolibri.conf <<'EOF'
-[supervisord]
-nodaemon=true
-logfile=/dev/null
-logfile_maxbytes=0
+# --- Startup script ---
+# Writes options.ini to guarantee ZIP_CONTENT_ORIGIN is applied,
+# then starts nginx and kolibri together
+RUN cat > /start.sh <<'STARTEOF'
+#!/bin/bash
+set -e
 
-[program:nginx]
-command=nginx -g "daemon off;"
-autostart=true
-autorestart=true
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
+# Create Kolibri home and write options.ini to force same-origin zip content
+mkdir -p /root/.kolibri
+cat > /root/.kolibri/options.ini <<OPTEOF
+[Deployment]
+ZIP_CONTENT_ORIGIN = https://lms-online-qvbg.onrender.com
+OPTEOF
 
-[program:kolibri]
-command=kolibri start --port=8000 --zip-port=8081 --foreground
-autostart=true
-autorestart=true
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-EOF
+echo "==> Starting nginx..."
+nginx
+
+echo "==> Starting Kolibri on port 8000 (zip content on port 8081)..."
+exec kolibri start --port=8000 --zip-port=8081 --foreground
+STARTEOF
+
+RUN chmod +x /start.sh
 
 # Configure Kolibri for production server mode
 ENV KOLIBRI_RUN_MODE=prod
 ENV KOLIBRI_LISTEN_ADDRESS=0.0.0.0
 
-# Tell Kolibri to serve zip content (Flexbooks, HTML5 apps) through the SAME
-# origin as the main server (nginx on port 8080/443).
-# Without this, Kolibri tries to use port 8081 which Render blocks.
-# Set this to your actual Render URL (no trailing slash).
-ENV KOLIBRI_ZIP_CONTENT_ORIGIN=https://lms-online-qvbg.onrender.com
-
-# Render exposes only one port — nginx listens here and proxies internally
-ENV PORT=8080
+# Render exposes only one port (8080) — nginx listens here and proxies internally
 EXPOSE 8080
 
-# Start supervisor which manages both nginx and kolibri
-CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+CMD ["/start.sh"]
