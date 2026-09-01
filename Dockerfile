@@ -29,9 +29,10 @@ RUN pnpm run build
 
 # --- Nginx config ---
 # Routes:
-#   /zipcontent/     -> Kolibri zip content server (port 8081)
-#   /content/static/ -> Kolibri zip content server (port 8081, for sandbox runner)
-#   /                -> Kolibri main server (port 8000)
+#   /content/zipcontent/ -> Kolibri zip content server (port 8081)
+#   /zipcontent/         -> Kolibri zip content server (port 8081)
+#   /content/static/     -> Kolibri zip content server (port 8081, sandbox runner)
+#   /                    -> Kolibri main server (port 8000)
 RUN cat > /etc/nginx/sites-available/default <<'NGINXEOF'
 server {
     listen 8080;
@@ -40,7 +41,18 @@ server {
     proxy_buffer_size 64k;
     proxy_busy_buffers_size 128k;
 
-    # Proxy Flexbook/HTML5 zip content files to zip server
+    # Proxy Flexbook/HTML5 zip content files to zip server (port 8081)
+    location /content/zipcontent/ {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 300;
+        proxy_connect_timeout 300;
+    }
+
+    # Proxy /zipcontent/ fallback
     location /zipcontent/ {
         proxy_pass http://127.0.0.1:8081;
         proxy_set_header Host $host;
@@ -51,7 +63,7 @@ server {
         proxy_connect_timeout 300;
     }
 
-    # Proxy sandbox HTML/JS (Hashi runner used by Flexbooks & HTML5 apps) to zip server
+    # Proxy sandbox HTML/JS (Hashi runner used by Flexbooks & HTML5 apps) to zip server (port 8081)
     location /content/static/ {
         proxy_pass http://127.0.0.1:8081;
         proxy_set_header Host $host;
@@ -62,7 +74,7 @@ server {
         proxy_connect_timeout 300;
     }
 
-    # Proxy main Kolibri Django server
+    # Proxy main Kolibri Django server (port 8000)
     location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
