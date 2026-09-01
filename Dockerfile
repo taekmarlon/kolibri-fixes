@@ -28,20 +28,38 @@ RUN echo "module.exports = require('/app/packages/kolibri-jest-config/jest.conf/
 RUN pnpm run build
 
 # --- Nginx config ---
-# Routes /zipcontent/ to internal zip content server (port 8081)
-# Routes everything else to Kolibri main server (port 8000)
+# Routes:
+#   /zipcontent/     -> Kolibri zip content server (port 8081)
+#   /content/static/ -> Kolibri zip content server (port 8081, for sandbox runner)
+#   /                -> Kolibri main server (port 8000)
 RUN cat > /etc/nginx/sites-available/default <<'NGINXEOF'
 server {
     listen 8080;
 
-    # Proxy Flexbook/HTML5 zip content server
+    proxy_buffers 16 32k;
+    proxy_buffer_size 64k;
+    proxy_busy_buffers_size 128k;
+
+    # Proxy Flexbook/HTML5 zip content files to zip server
     location /zipcontent/ {
-        proxy_pass http://127.0.0.1:8081/zipcontent/;
+        proxy_pass http://127.0.0.1:8081;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 120;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 300;
+        proxy_connect_timeout 300;
+    }
+
+    # Proxy sandbox HTML/JS (Hashi runner used by Flexbooks & HTML5 apps) to zip server
+    location /content/static/ {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 300;
+        proxy_connect_timeout 300;
     }
 
     # Proxy main Kolibri Django server
@@ -50,7 +68,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto https;
         proxy_read_timeout 300;
         proxy_connect_timeout 300;
     }
@@ -71,7 +89,7 @@ cat > /root/.kolibri/options.ini <<OPTEOF
 ZIP_CONTENT_ORIGIN = https://lms-online-qvbg.onrender.com
 OPTEOF
 
-echo "==> options.ini written:"
+echo "==> options.ini configured:"
 cat /root/.kolibri/options.ini
 
 echo "==> Starting nginx..."
@@ -86,6 +104,7 @@ RUN chmod +x /start.sh
 # Configure Kolibri for production server mode
 ENV KOLIBRI_RUN_MODE=prod
 ENV KOLIBRI_LISTEN_ADDRESS=0.0.0.0
+ENV KOLIBRI_ZIP_CONTENT_ORIGIN=https://lms-online-qvbg.onrender.com
 
 # Render exposes only one port (8080) — nginx listens here and proxies internally
 EXPOSE 8080
