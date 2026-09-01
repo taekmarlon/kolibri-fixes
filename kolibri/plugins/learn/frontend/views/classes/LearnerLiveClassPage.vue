@@ -29,7 +29,7 @@
               {{ pageTitle }}
             </h1>
             <p class="class-subtitle" :style="{ color: $themeTokens.annotation }">
-              {{ $tr('lobbySubtitle', { className: className || $tr('defaultClass') }) }}
+              {{ lobbySubtitle$({ className: className || defaultClass$() }) }}
             </p>
           </div>
         </div>
@@ -37,7 +37,7 @@
         <div class="lobby-details">
           <div class="detail-item">
             <span class="detail-label" :style="{ color: $themeTokens.annotation }">
-              {{ $tr('roomCodeLabel') }}:
+              {{ roomCodeLabel$() }}:
             </span>
             <code class="code-badge" :style="{ backgroundColor: $themePalette.grey.v_200, color: $themeTokens.text }">
               {{ classRoomName }}
@@ -45,7 +45,7 @@
           </div>
           <div class="detail-item">
             <span class="detail-label" :style="{ color: $themeTokens.annotation }">
-              {{ $tr('studentNameLabel') }}:
+              {{ studentNameLabel$() }}:
             </span>
             <span :style="{ color: $themeTokens.text, fontWeight: 'bold' }">
               {{ userDisplayName }}
@@ -55,14 +55,14 @@
 
         <div class="lobby-actions">
           <KButton
-            :text="$tr('joinClassButton')"
+            :text="joinClassButton$()"
             :primary="true"
             appearance="raised-button"
             icon="group"
             @click="joinMeeting"
           />
           <KButton
-            :text="$tr('backToClassButton')"
+            :text="backToClassButton$()"
             :primary="false"
             appearance="flat-button"
             :to="{ name: ClassesPageNames.CLASS_ASSIGNMENTS, params: { classId } }"
@@ -136,7 +136,17 @@
     setup(props) {
       const { full_name, username } = useUser();
       const { getClass, fetchClass } = useLearnerResources();
-      const meetingActive = ref(true); // default to joining directly for smooth student experience
+      const meetingActive = ref(true);
+
+      const {
+        liveClassHeader$,
+        defaultClass$,
+        lobbySubtitle$,
+        roomCodeLabel$,
+        studentNameLabel$,
+        joinClassButton$,
+        backToClassButton$,
+      } = learnerLiveStrings;
 
       const currentClass = computed(() => {
         return getClass(props.classId) || {};
@@ -156,8 +166,8 @@
 
       const pageTitle = computed(() => {
         return className.value
-          ? learnerLiveStrings.$tr('liveClassHeader', { className: className.value })
-          : learnerLiveStrings.$tr('liveClassHeader', { className: learnerLiveStrings.$tr('defaultClass') });
+          ? liveClassHeader$({ className: className.value })
+          : liveClassHeader$({ className: defaultClass$() });
       });
 
       const breadcrumbs = computed(() => [
@@ -166,11 +176,11 @@
           link: { name: ClassesPageNames.ALL_CLASSES },
         },
         {
-          text: className.value || learnerLiveStrings.$tr('defaultClass'),
+          text: className.value || defaultClass$(),
           link: { name: ClassesPageNames.CLASS_ASSIGNMENTS, params: { classId: props.classId } },
         },
         {
-          text: learnerLiveStrings.$tr('defaultClass'),
+          text: defaultClass$(),
         },
       ]);
 
@@ -197,11 +207,17 @@
         pageTitle,
         breadcrumbs,
         ClassesPageNames,
+        liveClassHeader$,
+        defaultClass$,
+        lobbySubtitle$,
+        roomCodeLabel$,
+        studentNameLabel$,
+        joinClassButton$,
+        backToClassButton$,
         joinMeeting,
         leaveMeeting,
       };
     },
-    $trs: learnerLiveStrings,
   };
 
 </script>

@@ -15,10 +15,10 @@
       <div v-else class="lobby-container">
         <div class="lobby-header">
           <h1 class="title" :style="{ color: $themeTokens.text }">
-            {{ $tr('liveClassTitle') }}
+            {{ liveClassTitle$() }}
           </h1>
           <p class="description" :style="{ color: $themeTokens.annotation }">
-            {{ $tr('liveClassDescription', { className: className || $tr('defaultClass') }) }}
+            {{ liveClassDescription$({ className: className || defaultClass$() }) }}
           </p>
         </div>
 
@@ -36,10 +36,10 @@
                 <KIcon icon="group" class="card-icon" :style="{ color: $themeTokens.primary }" />
                 <div>
                   <h2 class="card-title" :style="{ color: $themeTokens.text }">
-                    {{ className ? $tr('classMeetingTitle', { className }) : $tr('instantMeetingTitle') }}
+                    {{ className ? classMeetingTitle$({ className }) : instantMeetingTitle$() }}
                   </h2>
                   <span class="card-subtitle" :style="{ color: $themeTokens.annotation }">
-                    {{ $tr('classRoomSubtext') }}
+                    {{ classRoomSubtext$() }}
                   </span>
                 </div>
               </div>
@@ -47,7 +47,7 @@
               <div class="room-details">
                 <div class="info-row">
                   <span class="label" :style="{ color: $themeTokens.annotation }">
-                    {{ $tr('roomCodeLabel') }}:
+                    {{ roomCodeLabel$() }}:
                   </span>
                   <code class="code-badge" :style="{ backgroundColor: $themePalette.grey.v_200, color: $themeTokens.text }">
                     {{ defaultClassRoomName }}
@@ -55,21 +55,21 @@
                 </div>
                 <div class="info-row">
                   <span class="label" :style="{ color: $themeTokens.annotation }">
-                    {{ $tr('featuresLabel') }}:
+                    {{ featuresLabel$() }}:
                   </span>
                   <span :style="{ color: $themeTokens.text }">
-                    {{ $tr('featuresList') }}
+                    {{ featuresList$() }}
                   </span>
                 </div>
               </div>
 
               <div class="room-actions">
                 <KButton
-                  :text="$tr('startClassMeetingButton')"
+                  :text="startClassMeetingButton$()"
                   :primary="true"
                   appearance="raised-button"
                   icon="group"
-                  @click="startMeeting(defaultClassRoomName, className ? $tr('classMeetingTitle', { className }) : $tr('liveClassTitle'))"
+                  @click="startMeeting(defaultClassRoomName, className ? classMeetingTitle$({ className }) : liveClassTitle$())"
                 />
               </div>
             </div>
@@ -85,23 +85,23 @@
               }"
             >
               <h3 class="custom-title" :style="{ color: $themeTokens.text }">
-                {{ $tr('customRoomTitle') }}
+                {{ customRoomTitle$() }}
               </h3>
               <p class="custom-desc" :style="{ color: $themeTokens.annotation }">
-                {{ $tr('customRoomDesc') }}
+                {{ customRoomDesc$() }}
               </p>
 
               <KTextbox
                 v-model="customRoomInput"
-                :label="$tr('customRoomInputLabel')"
-                :placeholder="$tr('customRoomPlaceholder')"
+                :label="customRoomInputLabel$()"
+                :placeholder="customRoomPlaceholder$()"
                 :invalid="Boolean(customRoomError)"
                 :invalidText="customRoomError"
               />
 
               <div class="custom-actions">
                 <KButton
-                  :text="$tr('startCustomMeetingButton')"
+                  :text="startCustomMeetingButton$()"
                   :primary="false"
                   appearance="flat-button"
                   @click="startCustomMeeting"
@@ -182,7 +182,7 @@
       context: 'Input label for custom room name',
     },
     customRoomPlaceholder: {
-      message: 'e.g., Math-Review-Q3',
+      message: 'e.g. Math-Review-Q3',
       context: 'Placeholder for room name',
     },
     startCustomMeetingButton: {
@@ -210,6 +210,25 @@
       const customRoomInput = ref('');
       const customRoomError = ref('');
 
+      const {
+        liveClassTitle$,
+        liveClassDescription$,
+        classMeetingTitle$,
+        instantMeetingTitle$,
+        classRoomSubtext$,
+        roomCodeLabel$,
+        featuresLabel$,
+        featuresList$,
+        startClassMeetingButton$,
+        customRoomTitle$,
+        customRoomDesc$,
+        customRoomInputLabel$,
+        customRoomPlaceholder$,
+        startCustomMeetingButton$,
+        enterRoomNameError$,
+        defaultClass$,
+      } = coachLiveStrings;
+
       return {
         pageLoading,
         meetingActive,
@@ -218,6 +237,22 @@
         customRoomInput,
         customRoomError,
         saveRecentRoom,
+        liveClassTitle$,
+        liveClassDescription$,
+        classMeetingTitle$,
+        instantMeetingTitle$,
+        classRoomSubtext$,
+        roomCodeLabel$,
+        featuresLabel$,
+        featuresList$,
+        startClassMeetingButton$,
+        customRoomTitle$,
+        customRoomDesc$,
+        customRoomInputLabel$,
+        customRoomPlaceholder$,
+        startCustomMeetingButton$,
+        enterRoomNameError$,
+        defaultClass$,
       };
     },
     computed: {
@@ -240,7 +275,7 @@
       },
       startCustomMeeting() {
         if (!this.customRoomInput.trim()) {
-          this.customRoomError = this.$tr('enterRoomNameError');
+          this.customRoomError = this.enterRoomNameError$();
           return;
         }
         this.customRoomError = '';
@@ -253,7 +288,6 @@
         this.activeMeetingTitle = '';
       },
     },
-    $trs: coachLiveStrings,
   };
 
 </script>

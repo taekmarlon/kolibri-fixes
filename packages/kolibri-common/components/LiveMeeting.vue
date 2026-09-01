@@ -10,20 +10,20 @@
       }"
     >
       <div class="header-left">
-        <KIcon icon="group" class="meeting-icon" />
+        <KIcon icon="group" class="meeting-icon" :style="{ color: $themeTokens.primary }" />
         <div class="meeting-info">
           <h2 class="meeting-title" :style="{ color: $themeTokens.text }">
             {{ meetingTitle || defaultTitle$() }}
           </h2>
           <span class="meeting-room-name" :style="{ color: $themeTokens.annotation }">
-            {{ $tr('roomLabel', { roomName: formattedRoomName }) }}
+            {{ roomLabel$({ roomName: formattedRoomName }) }}
           </span>
         </div>
       </div>
 
       <div class="header-actions">
         <KButton
-          :text="copied ? $tr('linkCopied') : $tr('copyLink')"
+          :text="copied ? linkCopied$() : copyLink$()"
           icon="copy"
           appearance="basic-flat-button"
           :primary="false"
@@ -32,7 +32,7 @@
 
         <KButton
           v-if="!isFullscreen"
-          :text="$tr('fullscreen')"
+          :text="fullscreen$()"
           icon="fullscreen"
           appearance="basic-flat-button"
           :primary="false"
@@ -40,7 +40,7 @@
         />
         <KButton
           v-else
-          :text="$tr('exitFullscreen')"
+          :text="exitFullscreen$()"
           icon="fullscreen_exit"
           appearance="basic-flat-button"
           :primary="false"
@@ -48,7 +48,7 @@
         />
 
         <KButton
-          :text="$tr('leaveMeeting')"
+          :text="leaveMeeting$()"
           appearance="raised-button"
           :style="{ backgroundColor: $themeTokens.error, color: 'white' }"
           @click="handleLeave"
@@ -58,27 +58,25 @@
 
     <!-- Video Frame Area -->
     <div ref="meetingWrapper" class="meeting-frame-wrapper">
+      <!-- Loading Spinner -->
       <div
         v-if="loading"
         class="loading-overlay"
         :style="{ backgroundColor: $themePalette.grey.v_200 }"
       >
         <KCircularLoader :delay="false" />
-        <p :style="{ color: $themeTokens.text, marginTop: '16px' }">
-          {{ $tr('connecting') }}
+        <p :style="{ color: $themeTokens.text, marginTop: '16px', fontWeight: 'bold' }">
+          {{ connecting$() }}
         </p>
       </div>
 
-      <!-- Jitsi target container -->
-      <div id="jitsi-meet-target" ref="jitsiContainer" class="jitsi-target"></div>
-
-      <!-- Fallback direct iframe if external_api.js is unavailable -->
+      <!-- Direct Jitsi Meet Iframe (100% reliable with WebRTC permissions) -->
       <iframe
-        v-if="useIframeFallback"
-        class="fallback-iframe"
-        :src="fallbackIframeUrl"
-        allow="camera; microphone; display-capture; autoplay; clipboard-write"
+        class="jitsi-iframe"
+        :src="jitsiIframeUrl"
+        allow="camera *; microphone *; display-capture *; autoplay *; clipboard-write *; fullscreen *"
         frameBorder="0"
+        @load="onIframeLoad"
       ></iframe>
     </div>
   </div>
@@ -88,7 +86,7 @@
 
 <script>
 
-  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
   import useUser from 'kolibri/composables/useUser';
 
@@ -146,111 +144,40 @@
     emits: ['leave'],
     setup(props, { emit }) {
       const { full_name, username } = useUser();
-      const { defaultTitle$ } = liveMeetingStrings;
+      const {
+        defaultTitle$,
+        roomLabel$,
+        copyLink$,
+        linkCopied$,
+        fullscreen$,
+        exitFullscreen$,
+        leaveMeeting$,
+        connecting$,
+      } = liveMeetingStrings;
 
-      const jitsiContainer = ref(null);
       const meetingWrapper = ref(null);
       const loading = ref(true);
       const copied = ref(false);
       const isFullscreen = ref(false);
-      const useIframeFallback = ref(false);
-      let jitsiApi = null;
 
       const userDisplayName = computed(() => {
         return full_name.value || username.value || 'Kolibri User';
       });
 
       const formattedRoomName = computed(() => {
-        // Clean room name: only alphanumeric and underscores/dashes
         return props.roomName.replace(/[^a-zA-Z0-9-_]/g, '_');
       });
 
-      const fallbackIframeUrl = computed(() => {
+      const jitsiIframeUrl = computed(() => {
         const name = encodeURIComponent(userDisplayName.value);
-        return `https://${props.jitsiDomain}/${formattedRoomName.value}#userInfo.displayName="${name}"&config.startWithAudioMuted=true&config.prejoinPageEnabled=false`;
+        return `https://${props.jitsiDomain}/${formattedRoomName.value}#userInfo.displayName="${name}"&config.prejoinPageEnabled=false&config.startWithAudioMuted=true&config.disableDeepLinking=true`;
       });
 
-      function loadJitsiScript() {
-        return new Promise((resolve, reject) => {
-          if (window.JitsiMeetExternalAPI) {
-            resolve();
-            return;
-          }
-          const script = document.createElement('script');
-          script.src = `https://${props.jitsiDomain}/external_api.js`;
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('Failed to load Jitsi API'));
-          document.head.appendChild(script);
-        });
-      }
-
-      function initJitsi() {
-        loadJitsiScript()
-          .then(() => {
-            if (!jitsiContainer.value) return;
-
-            const options = {
-              roomName: formattedRoomName.value,
-              parentNode: jitsiContainer.value,
-              width: '100%',
-              height: '100%',
-              userInfo: {
-                displayName: userDisplayName.value,
-              },
-              configOverwrite: {
-                startWithAudioMuted: false,
-                startWithVideoMuted: false,
-                disableDeepLinking: true,
-                prejoinPageEnabled: false,
-                enableWelcomePage: false,
-                enableClosePage: false,
-              },
-              interfaceConfigOverwrite: {
-                TOOLBAR_BUTTONS: [
-                  'microphone',
-                  'camera',
-                  'closedcaptions',
-                  'desktop',
-                  'fullscreen',
-                  'fodeviceselection',
-                  'hangup',
-                  'chat',
-                  'raisehand',
-                  'videoquality',
-                  'filmstrip',
-                  'tileview',
-                  'videobackgroundblur',
-                  'mute-everyone',
-                ],
-                SHOW_JITSI_WATERMARK: false,
-                SHOW_WATERMARK_FOR_GUESTS: false,
-              },
-            };
-
-            jitsiApi = new window.JitsiMeetExternalAPI(props.jitsiDomain, options);
-            loading.value = false;
-
-            jitsiApi.addEventListener('readyToClose', () => {
-              handleLeave();
-            });
-          })
-          .catch(() => {
-            // If script tag is blocked, use direct iframe
-            useIframeFallback.value = true;
-            loading.value = false;
-          });
+      function onIframeLoad() {
+        loading.value = false;
       }
 
       function handleLeave() {
-        if (jitsiApi) {
-          try {
-            jitsiApi.dispose();
-          } catch (e) {
-            // ignore
-          }
-          jitsiApi = null;
-        }
         emit('leave');
       }
 
@@ -280,33 +207,33 @@
       }
 
       onMounted(() => {
-        initJitsi();
+        // Fallback timer to hide loader if iframe takes a moment
+        setTimeout(() => {
+          loading.value = false;
+        }, 3000);
+
         document.addEventListener('fullscreenchange', () => {
           isFullscreen.value = Boolean(document.fullscreenElement);
         });
       });
 
-      onBeforeUnmount(() => {
-        if (jitsiApi) {
-          try {
-            jitsiApi.dispose();
-          } catch (e) {
-            // ignore
-          }
-        }
-      });
-
       return {
-        jitsiContainer,
         meetingWrapper,
         loading,
         copied,
         isFullscreen,
-        useIframeFallback,
         userDisplayName,
         formattedRoomName,
-        fallbackIframeUrl,
+        jitsiIframeUrl,
         defaultTitle$,
+        roomLabel$,
+        copyLink$,
+        linkCopied$,
+        fullscreen$,
+        exitFullscreen$,
+        leaveMeeting$,
+        connecting$,
+        onIframeLoad,
         handleLeave,
         copyMeetingLink,
         toggleFullscreen,
@@ -327,6 +254,7 @@
     min-height: 650px;
     border-radius: 8px;
     overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .meeting-header {
@@ -373,8 +301,8 @@
     position: relative;
     flex: 1;
     width: 100%;
-    min-height: 580px;
-    background-color: #000;
+    min-height: 600px;
+    background-color: #111;
   }
 
   .loading-overlay {
@@ -390,17 +318,12 @@
     z-index: 10;
   }
 
-  .jitsi-target {
+  .jitsi-iframe {
     width: 100%;
     height: 100%;
-    min-height: 580px;
-  }
-
-  .fallback-iframe {
-    width: 100%;
-    height: 100%;
-    min-height: 580px;
+    min-height: 600px;
     border: none;
+    display: block;
   }
 
 </style>

@@ -18,10 +18,10 @@
       <div v-else class="meeting-lobby-container">
         <div class="lobby-intro">
           <h1 class="page-title" :style="{ color: $themeTokens.text }">
-            {{ $tr('virtualMeetingTitle') }}
+            {{ virtualMeetingTitle$() }}
           </h1>
           <p class="page-desc" :style="{ color: $themeTokens.annotation }">
-            {{ $tr('virtualMeetingDesc') }}
+            {{ virtualMeetingDesc$() }}
           </p>
         </div>
 
@@ -39,10 +39,10 @@
                 <KIcon icon="group" class="header-icon" :style="{ color: $themeTokens.primary }" />
                 <div>
                   <h2 class="card-title" :style="{ color: $themeTokens.text }">
-                    {{ $tr('joinOrCreateHeader') }}
+                    {{ joinOrCreateHeader$() }}
                   </h2>
                   <p class="card-desc" :style="{ color: $themeTokens.annotation }">
-                    {{ $tr('joinOrCreateSubtext') }}
+                    {{ joinOrCreateSubtext$() }}
                   </p>
                 </div>
               </div>
@@ -50,29 +50,29 @@
               <div class="input-section">
                 <KTextbox
                   v-model="roomInput"
-                  :label="$tr('roomNameLabel')"
-                  :placeholder="$tr('roomNamePlaceholder')"
+                  :label="roomNameLabel$()"
+                  :placeholder="roomNamePlaceholder$()"
                   :invalid="Boolean(roomError)"
                   :invalidText="roomError"
                   @keydown.enter="joinRoom"
                 />
 
                 <div class="user-info-badge" :style="{ backgroundColor: $themePalette.grey.v_200 }">
-                  <span :style="{ color: $themeTokens.annotation }">{{ $tr('joiningAsLabel') }}:</span>
+                  <span :style="{ color: $themeTokens.annotation }">{{ joiningAsLabel$() }}:</span>
                   <span :style="{ color: $themeTokens.text, fontWeight: 'bold' }">{{ userDisplayName }}</span>
                 </div>
               </div>
 
               <div class="card-actions">
                 <KButton
-                  :text="$tr('joinMeetingButton')"
+                  :text="joinMeetingButton$()"
                   :primary="true"
                   appearance="raised-button"
                   icon="group"
                   @click="joinRoom"
                 />
                 <KButton
-                  :text="$tr('generateRandomButton')"
+                  :text="generateRandomButton$()"
                   :primary="false"
                   appearance="flat-button"
                   @click="generateRandomRoom"
@@ -91,10 +91,10 @@
               }"
             >
               <h2 class="card-title" :style="{ color: $themeTokens.text }">
-                {{ $tr('recentRoomsTitle') }}
+                {{ recentRoomsTitle$() }}
               </h2>
               <p class="card-desc" :style="{ color: $themeTokens.annotation }">
-                {{ $tr('recentRoomsDesc') }}
+                {{ recentRoomsDesc$() }}
               </p>
 
               <div v-if="recentRooms.length" class="recent-list">
@@ -113,7 +113,7 @@
                     </span>
                   </div>
                   <KButton
-                    :text="$tr('rejoinButton')"
+                    :text="rejoinButton$()"
                     appearance="basic-flat-button"
                     :primary="false"
                     @click="joinSpecificRoom(room.roomId, room.title)"
@@ -122,7 +122,7 @@
               </div>
 
               <div v-else class="empty-recent" :style="{ color: $themeTokens.annotation }">
-                {{ $tr('noRecentRooms') }}
+                {{ noRecentRooms$() }}
               </div>
             </div>
           </KGridItem>
@@ -215,6 +215,23 @@
       const { full_name, username } = useUser();
       const { recentRooms, generateRoomId, saveRecentRoom } = useLiveMeeting();
 
+      const {
+        virtualMeetingTitle$,
+        virtualMeetingDesc$,
+        joinOrCreateHeader$,
+        joinOrCreateSubtext$,
+        roomNameLabel$,
+        roomNamePlaceholder$,
+        joiningAsLabel$,
+        joinMeetingButton$,
+        generateRandomButton$,
+        recentRoomsTitle$,
+        recentRoomsDesc$,
+        rejoinButton$,
+        noRecentRooms$,
+        enterRoomError$,
+      } = livePageStrings;
+
       const meetingActive = ref(false);
       const currentRoomName = ref('');
       const currentMeetingTitle = ref('');
@@ -227,7 +244,7 @@
 
       function joinRoom() {
         if (!roomInput.value.trim()) {
-          roomError.value = livePageStrings.$tr('enterRoomError');
+          roomError.value = enterRoomError$();
           return;
         }
         roomError.value = '';
@@ -266,13 +283,25 @@
         roomError,
         userDisplayName,
         recentRooms,
+        virtualMeetingTitle$,
+        virtualMeetingDesc$,
+        joinOrCreateHeader$,
+        joinOrCreateSubtext$,
+        roomNameLabel$,
+        roomNamePlaceholder$,
+        joiningAsLabel$,
+        joinMeetingButton$,
+        generateRandomButton$,
+        recentRoomsTitle$,
+        recentRoomsDesc$,
+        rejoinButton$,
+        noRecentRooms$,
         joinRoom,
         generateRandomRoom,
         joinSpecificRoom,
         leaveMeeting,
       };
     },
-    $trs: livePageStrings,
   };
 
 </script>
