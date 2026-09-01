@@ -125,7 +125,7 @@
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import LiveMeeting from 'kolibri-common/components/LiveMeeting';
   import useLiveMeeting from 'kolibri-common/composables/useLiveMeeting';
-  import CoachAppBarPage from '../CoachAppBarPage';
+  import CoachAppBarPage from './CoachAppBarPage';
   import commonCoach from './common';
 
   const coachLiveStrings = createTranslator('CoachLiveClassStrings', {
