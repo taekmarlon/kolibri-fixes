@@ -71,6 +71,9 @@ cat > /root/.kolibri/options.ini <<OPTEOF
 ZIP_CONTENT_ORIGIN = https://lms-online-qvbg.onrender.com
 OPTEOF
 
+echo "==> options.ini written:"
+cat /root/.kolibri/options.ini
+
 echo "==> Starting nginx..."
 nginx
 
