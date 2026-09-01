@@ -55,9 +55,16 @@
 
         <div class="lobby-actions">
           <KButton
-            :text="joinClassButton$()"
+            :text="launchWindowButton$()"
             :primary="true"
             appearance="raised-button"
+            icon="openNewTab"
+            @click="launchWindow"
+          />
+          <KButton
+            :text="joinClassButton$()"
+            :primary="false"
+            appearance="flat-button"
             icon="group"
             @click="joinMeeting"
           />
@@ -109,9 +116,13 @@
       message: 'Joining as',
       context: 'Label indicating the learner display name',
     },
+    launchWindowButton: {
+      message: 'Join Live Class (Unlimited Window)',
+      context: 'Button to join live video meeting in external window with no limits',
+    },
     joinClassButton: {
-      message: 'Join Live Class',
-      context: 'Button to enter the video conference',
+      message: 'Join In-Page',
+      context: 'Button to enter the video conference in page',
     },
     backToClassButton: {
       message: 'Back to Class',
@@ -136,7 +147,7 @@
     setup(props) {
       const { full_name, username } = useUser();
       const { getClass, fetchClass } = useLearnerResources();
-      const meetingActive = ref(true);
+      const meetingActive = ref(false);
 
       const {
         liveClassHeader$,
@@ -144,6 +155,7 @@
         lobbySubtitle$,
         roomCodeLabel$,
         studentNameLabel$,
+        launchWindowButton$,
         joinClassButton$,
         backToClassButton$,
       } = learnerLiveStrings;
@@ -190,6 +202,12 @@
         });
       });
 
+      function launchWindow() {
+        const name = encodeURIComponent(userDisplayName.value);
+        const directUrl = `https://meet.jit.si/${classRoomName.value}#userInfo.displayName="${name}"&config.startWithAudioMuted=true&config.prejoinPageEnabled=false`;
+        window.open(directUrl, '_blank');
+      }
+
       function joinMeeting() {
         meetingActive.value = true;
       }
@@ -212,8 +230,10 @@
         lobbySubtitle$,
         roomCodeLabel$,
         studentNameLabel$,
+        launchWindowButton$,
         joinClassButton$,
         backToClassButton$,
+        launchWindow,
         joinMeeting,
         leaveMeeting,
       };

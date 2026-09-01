@@ -65,9 +65,16 @@
 
               <div class="room-actions">
                 <KButton
-                  :text="startClassMeetingButton$()"
+                  :text="launchWindowButton$()"
                   :primary="true"
                   appearance="raised-button"
+                  icon="openNewTab"
+                  @click="launchWindow(defaultClassRoomName, className ? classMeetingTitle$({ className }) : liveClassTitle$())"
+                />
+                <KButton
+                  :text="startEmbeddedButton$()"
+                  :primary="false"
+                  appearance="flat-button"
                   icon="group"
                   @click="startMeeting(defaultClassRoomName, className ? classMeetingTitle$({ className }) : liveClassTitle$())"
                 />
@@ -165,6 +172,14 @@
       message: 'HD Video, Audio, Screen Sharing, Live Chat, Hand Raising',
       context: 'List of features in Jitsi meeting',
     },
+    launchWindowButton: {
+      message: 'Launch Live Class (Unlimited Window)',
+      context: 'Button to open video meeting in external window with no limits',
+    },
+    startEmbeddedButton: {
+      message: 'Open In-Page',
+      context: 'Button to open meeting embedded in page',
+    },
     startClassMeetingButton: {
       message: 'Start Live Class Now',
       context: 'Button to begin live video class',
@@ -219,6 +234,8 @@
         roomCodeLabel$,
         featuresLabel$,
         featuresList$,
+        launchWindowButton$,
+        startEmbeddedButton$,
         startClassMeetingButton$,
         customRoomTitle$,
         customRoomDesc$,
@@ -245,6 +262,8 @@
         roomCodeLabel$,
         featuresLabel$,
         featuresList$,
+        launchWindowButton$,
+        startEmbeddedButton$,
         startClassMeetingButton$,
         customRoomTitle$,
         customRoomDesc$,
@@ -263,6 +282,15 @@
       },
     },
     methods: {
+      launchWindow(roomName, title) {
+        this.saveRecentRoom({
+          roomId: roomName,
+          title,
+          classId: this.classId,
+        });
+        const directUrl = `https://meet.jit.si/${roomName}#config.startWithAudioMuted=false&config.prejoinPageEnabled=false`;
+        window.open(directUrl, '_blank');
+      },
       startMeeting(roomName, title) {
         this.activeRoomName = roomName;
         this.activeMeetingTitle = title;
