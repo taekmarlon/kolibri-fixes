@@ -91,7 +91,7 @@ ENV KOLIBRI_LISTEN_ADDRESS=0.0.0.0
 # origin as the main server (nginx on port 8080/443).
 # Without this, Kolibri tries to use port 8081 which Render blocks.
 # Set this to your actual Render URL (no trailing slash).
-ENV KOLIBRI_DEPLOYMENT_ZIP_CONTENT_ORIGIN=https://lms-online-qvbg.onrender.com
+ENV KOLIBRI_ZIP_CONTENT_ORIGIN=https://lms-online-qvbg.onrender.com
 
 # Render exposes only one port — nginx listens here and proxies internally
 ENV PORT=8080
