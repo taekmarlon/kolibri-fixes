@@ -181,7 +181,7 @@
       },
       jitsiDomain: {
         type: String,
-        default: 'meet.jit.si',
+        default: 'meet.ffrn.de',
       },
     },
     emits: ['leave'],

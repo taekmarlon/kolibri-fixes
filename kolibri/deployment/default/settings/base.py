@@ -484,7 +484,16 @@ TESTING = False
 
 # Content Security Policy header settings
 # https://django-csp.readthedocs.io/en/latest/configuration.html
-JITSI_HOST_SOURCES = ("meet.jit.si", "*.jit.si", "8x8.vc", "*.8x8.vc")
+JITSI_HOST_SOURCES = (
+    "meet.jit.si",
+    "*.jit.si",
+    "8x8.vc",
+    "*.8x8.vc",
+    "meet.ffrn.de",
+    "*.ffrn.de",
+    "jitsi.riot.im",
+    "*.riot.im",
+)
 
 CSP_DEFAULT_SRC = ("'self'", "data:", "blob:") + tuple(
     conf.OPTIONS["Deployment"]["CSP_HOST_SOURCES"]
