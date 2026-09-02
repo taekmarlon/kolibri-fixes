@@ -22,8 +22,8 @@ const navStrings = createTranslator('LearnSideNavEntryStrings', {
       'Bookmarks are used to give all users a way of saving a reference for a specific resource or topic to come back to later.',
   },
   liveMeetingLabel: {
-    message: 'Live Meeting',
-    context: 'Label for live meeting / video conferencing in learner side navigation',
+    message: 'Live Class',
+    context: 'Label for live class / video conferencing in learner navigation and top bar',
   },
   aiTutorLabel: {
     message: 'AI Tutor',
@@ -54,18 +54,6 @@ registerNavItem({
         name: baseRoutes.home.name,
       },
       {
-        label: navStrings.$tr('libraryLabel'),
-        icon: 'library',
-        route: baseRoutes.library.path,
-        name: baseRoutes.library.name,
-      },
-      {
-        label: navStrings.$tr('bookmarksLabel'),
-        icon: 'bookmark',
-        route: baseRoutes.bookmarks.path,
-        name: baseRoutes.bookmarks.name,
-      },
-      {
         label: navStrings.$tr('liveMeetingLabel'),
         icon: 'group',
         route: baseRoutes.liveMeeting.path,
@@ -81,6 +69,21 @@ registerNavItem({
         name: baseRoutes.aiTutor.name,
       });
     }
+
+    navItems.push(
+      {
+        label: navStrings.$tr('libraryLabel'),
+        icon: 'library',
+        route: baseRoutes.library.path,
+        name: baseRoutes.library.name,
+      },
+      {
+        label: navStrings.$tr('bookmarksLabel'),
+        icon: 'bookmark',
+        route: baseRoutes.bookmarks.path,
+        name: baseRoutes.bookmarks.name,
+      },
+    );
 
     return navItems;
   },
