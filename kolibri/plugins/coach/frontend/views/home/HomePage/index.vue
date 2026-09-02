@@ -5,6 +5,9 @@
       <KGridItem>
         <OverviewBlock />
       </KGridItem>
+      <KGridItem>
+        <AiAssistantBlock />
+      </KGridItem>
       <KGridItem :layout12="{ span: 6 }">
         <KGrid gutter="16">
           <KGridItem v-if="currentLanguage === 'en' && facilityConfig.enable_mark_attendance">
@@ -39,6 +42,7 @@
   import ActivityBlock from './ActivityBlock';
   import LessonsBlock from './LessonsBlock';
   import QuizzesBlock from './QuizzesBlock';
+  import AiAssistantBlock from './AiAssistantBlock';
 
   export default {
     name: 'HomePage',
@@ -49,6 +53,7 @@
       ActivityBlock,
       LessonsBlock,
       QuizzesBlock,
+      AiAssistantBlock,
     },
     mixins: [commonCoach],
     setup() {

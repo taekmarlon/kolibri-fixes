@@ -20,4 +20,8 @@ export default {
     name: PageNames.LIVE_MEETING,
     path: '/live-meeting',
   },
+  aiTutor: {
+    name: PageNames.AI_TUTOR,
+    path: '/ai-tutor',
+  },
 };

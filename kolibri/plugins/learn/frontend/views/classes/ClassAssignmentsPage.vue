@@ -48,6 +48,35 @@
         />
       </div>
 
+      <!-- AI Tutor Study Assistant Banner (When enabled) -->
+      <div
+        v-if="isAiEnabled"
+        class="live-class-card ai-tutor-banner"
+        :style="{
+          backgroundColor: $themeTokens.surface,
+          border: `1px solid ${$themeTokens.fineLine}`,
+        }"
+      >
+        <div class="live-card-left">
+          <KIcon icon="practice" class="live-card-icon" :style="{ color: $themeTokens.primary }" />
+          <div>
+            <h2 class="live-card-title" :style="{ color: $themeTokens.text }">
+              {{ $tr('aiTutorCardTitle') }}
+            </h2>
+            <p class="live-card-desc" :style="{ color: $themeTokens.annotation }">
+              {{ $tr('aiTutorCardDesc') }}
+            </p>
+          </div>
+        </div>
+        <KButton
+          :text="$tr('askAiTutorButton')"
+          :primary="false"
+          appearance="raised-button"
+          icon="practice"
+          :to="{ name: PageNames.AI_TUTOR }"
+        />
+      </div>
+
       <AssignedCoursesCards :courses="activeCourses" />
       <AssignedLessonsCards
         :lessons="activeLessons"
@@ -74,6 +103,7 @@
   import { PageNames, ClassesPageNames } from '../../constants';
 
   import useLearnerResources from '../../composables/useLearnerResources';
+  import useAiTutor from 'kolibri-common/composables/useAiTutor';
   import commonLearnStrings from '../commonLearnStrings';
   import LearnAppBarPage from '../LearnAppBarPage';
   import AssignedCoursesCards from './AssignedCoursesCards';
@@ -103,6 +133,8 @@
         getClassActiveLessons,
         getClassActiveQuizzes,
       } = useLearnerResources();
+
+      const { isAiEnabled } = useAiTutor();
 
       const className = computed(() => {
         return (getClass(props.classId) || {}).name;
@@ -134,6 +166,8 @@
         activeQuizzes,
         pageLoading,
         ClassesPageNames,
+        PageNames,
+        isAiEnabled,
       };
     },
     props: {
@@ -177,6 +211,18 @@
       joinLiveClassButton: {
         message: 'Join Live Class',
         context: 'Button to join the live virtual meeting',
+      },
+      aiTutorCardTitle: {
+        message: 'AI Personal Study Assistant',
+        context: 'Title for AI tutor card on learner class assignments page',
+      },
+      aiTutorCardDesc: {
+        message: 'Ask questions, get step-by-step math solutions, and understand tricky concepts anytime.',
+        context: 'Description for AI tutor card',
+      },
+      askAiTutorButton: {
+        message: 'Ask AI Tutor',
+        context: 'Button to open AI tutor chat',
       },
     },
   };

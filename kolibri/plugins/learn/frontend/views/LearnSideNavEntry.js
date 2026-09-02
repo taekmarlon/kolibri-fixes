@@ -1,6 +1,7 @@
 import { registerNavItem } from 'kolibri/composables/useNav';
 import urls from 'kolibri/urls';
 import useUser from 'kolibri/composables/useUser';
+import useAiTutor from 'kolibri-common/composables/useAiTutor';
 import { createTranslator } from 'kolibri/utils/i18n';
 import baseRoutes from '../routes/baseRoutes';
 
@@ -24,6 +25,10 @@ const navStrings = createTranslator('LearnSideNavEntryStrings', {
     message: 'Live Meeting',
     context: 'Label for live meeting / video conferencing in learner side navigation',
   },
+  aiTutorLabel: {
+    message: 'AI Tutor',
+    context: 'Label for personal AI Tutor in learner side navigation and top bar',
+  },
   learnLabel: {
     message: 'Learn',
     context:
@@ -37,10 +42,11 @@ registerNavItem({
   },
   get routes() {
     const { isUserLoggedIn } = useUser();
+    const { isAiEnabled } = useAiTutor();
     if (!isUserLoggedIn.value) {
       return [];
     }
-    return [
+    const navItems = [
       {
         label: navStrings.$tr('homeLabel'),
         icon: 'dashboard',
@@ -66,6 +72,17 @@ registerNavItem({
         name: baseRoutes.liveMeeting.name,
       },
     ];
+
+    if (isAiEnabled.value) {
+      navItems.push({
+        label: navStrings.$tr('aiTutorLabel'),
+        icon: 'practice',
+        route: baseRoutes.aiTutor.path,
+        name: baseRoutes.aiTutor.name,
+      });
+    }
+
+    return navItems;
   },
   get label() {
     return navStrings.$tr('learnLabel');

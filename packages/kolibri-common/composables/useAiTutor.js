@@ -9,37 +9,47 @@ const aiModelName = ref('');
 const isCheckingStatus = ref(false);
 const statusLoaded = ref(false);
 
+async function checkAiStatus(force = false) {
+  if (statusLoaded.value && !force) {
+    return {
+      enabled: isAiEnabled.value,
+      provider: aiProvider.value,
+      model_name: aiModelName.value,
+    };
+  }
+  if (isCheckingStatus.value) {
+    return { enabled: isAiEnabled.value };
+  }
+  isCheckingStatus.value = true;
+  try {
+    const response = await client({
+      url: '/api/ai/status/',
+      method: 'GET',
+    });
+    isAiEnabled.value = Boolean(response.data?.enabled);
+    aiProvider.value = response.data?.provider || 'gemini';
+    aiModelName.value = response.data?.model_name || '';
+    statusLoaded.value = true;
+    return response.data;
+  } catch (err) {
+    isAiEnabled.value = false;
+    statusLoaded.value = true;
+    return { enabled: false };
+  } finally {
+    isCheckingStatus.value = false;
+  }
+}
+
+// Auto-run status check on script initialization
+checkAiStatus();
+
 export default function useAiTutor() {
   const messages = ref([]);
   const isLoading = ref(false);
   const errorMessage = ref('');
 
-  async function checkAiStatus() {
-    if (statusLoaded.value) {
-      return {
-        enabled: isAiEnabled.value,
-        provider: aiProvider.value,
-        model_name: aiModelName.value,
-      };
-    }
-    isCheckingStatus.value = true;
-    try {
-      const response = await client({
-        url: '/api/ai/status/',
-        method: 'GET',
-      });
-      isAiEnabled.value = Boolean(response.data?.enabled);
-      aiProvider.value = response.data?.provider || 'gemini';
-      aiModelName.value = response.data?.model_name || '';
-      statusLoaded.value = true;
-      return response.data;
-    } catch (err) {
-      isAiEnabled.value = false;
-      statusLoaded.value = true;
-      return { enabled: false };
-    } finally {
-      isCheckingStatus.value = false;
-    }
+  if (!statusLoaded.value && !isCheckingStatus.value) {
+    checkAiStatus();
   }
 
   async function sendChatMessage(userText, resourceContext = {}) {

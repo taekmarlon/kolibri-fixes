@@ -21,6 +21,7 @@ export const PageNames = {
   COURSE_CONTENT_TEST: 'COURSE_CONTENT_TEST',
   COURSE_WELCOME: 'COURSE_WELCOME',
   LIVE_MEETING: 'LIVE_MEETING',
+  AI_TUTOR: 'AI_TUTOR',
 };
 
 export const ExternalPageNames = {
