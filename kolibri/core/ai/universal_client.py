@@ -1,0 +1,246 @@
+import json
+import logging
+import os
+import urllib.error
+import urllib.request
+
+logger = logging.getLogger(__name__)
+
+# Default provider presets
+PROVIDER_PRESETS = {
+    "gemini": {
+        "name": "Google Gemini",
+        "default_url": "https://generativelanguage.googleapis.com/v1beta/models",
+        "default_model": "gemini-1.5-flash",
+        "env_var": "GEMINI_API_KEY",
+        "is_gemini_native": True,
+    },
+    "openai": {
+        "name": "OpenAI",
+        "default_url": "https://api.openai.com/v1/chat/completions",
+        "default_model": "gpt-4o-mini",
+        "env_var": "OPENAI_API_KEY",
+        "is_gemini_native": False,
+    },
+    "deepseek": {
+        "name": "DeepSeek",
+        "default_url": "https://api.deepseek.com/v1/chat/completions",
+        "default_model": "deepseek-chat",
+        "env_var": "DEEPSEEK_API_KEY",
+        "is_gemini_native": False,
+    },
+    "groq": {
+        "name": "Groq (Llama 3.3 / 3.1)",
+        "default_url": "https://api.groq.com/openai/v1/chat/completions",
+        "default_model": "llama-3.3-70b-versatile",
+        "env_var": "GROQ_API_KEY",
+        "is_gemini_native": False,
+    },
+    "huggingface": {
+        "name": "Hugging Face",
+        "default_url": "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-7B-Instruct/v1/chat/completions",
+        "default_model": "Qwen/Qwen2.5-7B-Instruct",
+        "env_var": "HUGGINGFACE_API_KEY",
+        "is_gemini_native": False,
+    },
+    "ollama": {
+        "name": "Local Ollama (Offline)",
+        "default_url": "http://localhost:11434/v1/chat/completions",
+        "default_model": "llama3.2",
+        "env_var": "OLLAMA_API_KEY",
+        "is_gemini_native": False,
+    },
+    "custom": {
+        "name": "Custom OpenAI-Compatible Endpoint",
+        "default_url": "",
+        "default_model": "",
+        "env_var": "AI_API_KEY",
+        "is_gemini_native": False,
+    },
+}
+
+DEFAULT_SYSTEM_PROMPT = (
+    "You are a helpful, encouraging, and knowledgeable AI Tutor and Educational Assistant inside the Kolibri Learning Platform.\n"
+    "Your goal is to explain concepts clearly, provide direct and accurate answers with step-by-step explanations,\n"
+    "guide students through math and science problems, and help teachers create effective lesson materials.\n"
+    "Format math formulas and scientific notation using standard LaTeX with $ for inline math (e.g. $x^2 + y^2 = r^2$) "
+    "and $$ for block math equations.\n"
+    "Keep explanations structured, friendly, clear, and easy to understand."
+)
+
+
+def get_ai_config():
+    """
+    Retrieves current AI Tutor configuration from DeviceSettings or environment variables.
+    """
+    from kolibri.core.device.utils import get_device_setting
+
+    extra_settings = get_device_setting("extra_settings") or {}
+
+    provider = extra_settings.get("ai_provider", "gemini") or "gemini"
+    preset = PROVIDER_PRESETS.get(provider, PROVIDER_PRESETS["gemini"])
+
+    enabled = bool(extra_settings.get("ai_tutor_enabled", False))
+
+    # Check key: database override first, then environment variable
+    api_key = extra_settings.get("ai_api_key", "")
+    if not api_key and preset.get("env_var"):
+        api_key = os.environ.get(preset["env_var"], "") or os.environ.get(
+            "GEMINI_API_KEY", ""
+        )
+
+    api_url = extra_settings.get("ai_api_url", "") or preset["default_url"]
+    model_name = extra_settings.get("ai_model_name", "") or preset["default_model"]
+    system_prompt = extra_settings.get("ai_system_prompt", "") or DEFAULT_SYSTEM_PROMPT
+
+    return {
+        "enabled": enabled,
+        "provider": provider,
+        "api_key": api_key,
+        "api_url": api_url,
+        "model_name": model_name,
+        "system_prompt": system_prompt,
+        "is_gemini_native": preset.get("is_gemini_native", False),
+    }
+
+
+def call_ai_chat(messages, system_instruction=None, context_info=None, timeout=30):
+    """
+    Unified router that sends chat messages to the configured provider.
+    messages: list of {"role": "user"|"assistant"|"system", "content": "..."}
+    """
+    config = get_ai_config()
+
+    if not config["enabled"]:
+        raise PermissionError("AI Tutor is currently disabled by administrator.")
+
+    api_key = config["api_key"]
+    if not api_key and config["provider"] != "ollama":
+        raise ValueError(
+            f"API Key for {config['provider'].upper()} is not configured. Please set it in Device Settings or environment variable."
+        )
+
+    sys_prompt = system_instruction or config["system_prompt"]
+    if context_info:
+        sys_prompt += f"\n\nCURRENT RESOURCE / LESSON CONTEXT:\n{context_info}"
+
+    if config["is_gemini_native"]:
+        return _call_gemini_native(messages, sys_prompt, config, timeout=timeout)
+    else:
+        return _call_openai_compatible(messages, sys_prompt, config, timeout=timeout)
+
+
+def _call_gemini_native(messages, system_prompt, config, timeout=30):
+    """
+    Calls Google Gemini REST API v1beta.
+    """
+    model = config["model_name"] or "gemini-1.5-flash"
+    api_key = config["api_key"]
+    base_url = config["api_url"].rstrip("/")
+
+    url = f"{base_url}/{model}:generateContent?key={api_key}"
+
+    # Format history into Gemini contents format
+    gemini_contents = []
+    for msg in messages:
+        role = "user" if msg["role"] == "user" else "model"
+        gemini_contents.append(
+            {"role": role, "parts": [{"text": msg.get("content", "")}]}
+        )
+
+    payload = {
+        "contents": gemini_contents,
+        "systemInstruction": {"parts": [{"text": system_prompt}]},
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 2048,
+        },
+    }
+
+    req_data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=req_data, headers={"Content-Type": "application/json"}
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            res_body = response.read().decode("utf-8")
+            data = json.loads(res_body)
+            candidates = data.get("candidates", [])
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if parts:
+                    return parts[0].get("text", "")
+            return "No response received from AI model."
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode("utf-8", errors="ignore")
+        logger.error(f"Gemini API Error ({e.code}): {err_msg}")
+        try:
+            err_json = json.loads(err_msg)
+            message = err_json.get("error", {}).get("message", err_msg)
+        except Exception:
+            message = err_msg
+        raise RuntimeError(f"Google Gemini Error: {message}")
+    except Exception as e:
+        logger.error(f"Gemini Request failed: {e}")
+        raise RuntimeError(f"Failed to connect to AI provider: {str(e)}")
+
+
+def _call_openai_compatible(messages, system_prompt, config, timeout=30):
+    """
+    Calls any OpenAI-compatible Chat Completions API (DeepSeek, Groq, OpenAI, Ollama, Hugging Face).
+    """
+    url = config["api_url"]
+    if not url:
+        raise ValueError("API Endpoint URL is missing.")
+
+    api_key = config["api_key"]
+    model = config["model_name"]
+
+    # Build formatted messages with system prompt at top
+    openai_messages = [{"role": "system", "content": system_prompt}]
+    for msg in messages:
+        if msg["role"] != "system":
+            openai_messages.append(
+                {
+                    "role": "assistant" if msg["role"] == "model" else msg["role"],
+                    "content": msg.get("content", ""),
+                }
+            )
+
+    payload = {
+        "model": model,
+        "messages": openai_messages,
+        "temperature": 0.7,
+        "max_tokens": 2048,
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+    }
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    req_data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=req_data, headers=headers)
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            res_body = response.read().decode("utf-8")
+            data = json.loads(res_body)
+            choices = data.get("choices", [])
+            if choices:
+                return choices[0].get("message", {}).get("content", "")
+            return "No response received from AI model."
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode("utf-8", errors="ignore")
+        logger.error(f"OpenAI-Compatible API Error ({e.code}): {err_msg}")
+        try:
+            err_json = json.loads(err_msg)
+            message = err_json.get("error", {}).get("message", err_msg)
+        except Exception:
+            message = err_msg
+        raise RuntimeError(f"{config['provider'].upper()} Error: {message}")
+    except Exception as e:
+        logger.error(f"AI Provider Request failed: {e}")
+        raise RuntimeError(f"Failed to connect to {config['provider']}: {str(e)}")

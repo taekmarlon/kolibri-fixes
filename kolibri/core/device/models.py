@@ -105,6 +105,12 @@ extra_settings_schema = {
         "allow_learner_download_resources": {"type": "boolean", "optional": True},
         "set_limit_for_autodownload": {"type": "boolean", "optional": True},
         "limit_for_autodownload": {"type": "integer", "optional": True},
+        "ai_tutor_enabled": {"type": "boolean", "optional": True},
+        "ai_provider": {"type": "string", "optional": True},
+        "ai_api_key": {"type": "string", "optional": True},
+        "ai_api_url": {"type": "string", "optional": True},
+        "ai_model_name": {"type": "string", "optional": True},
+        "ai_system_prompt": {"type": "string", "optional": True},
         DEFAULT_DEMOGRAPHIC_FIELDS_KEY: custom_demographics_schema,
     },
     "required": [
@@ -120,6 +126,12 @@ extra_settings_default_values = {
     "allow_learner_download_resources": False,
     "set_limit_for_autodownload": False,
     "limit_for_autodownload": 0,
+    "ai_tutor_enabled": False,
+    "ai_provider": "gemini",
+    "ai_api_key": "",
+    "ai_api_url": "",
+    "ai_model_name": "",
+    "ai_system_prompt": "",
 }
 
 

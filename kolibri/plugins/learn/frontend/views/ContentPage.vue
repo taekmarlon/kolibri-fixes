@@ -71,6 +71,13 @@
         @error="onError"
         @finished="onFinished"
       />
+
+      <!-- Inline AI Study Assistant (Khanmigo-style) -->
+      <InlineAiTutor
+        :resourceTitle="content.title || ''"
+        :resourceDescription="content.description || ''"
+        :resourceKind="content.kind || ''"
+      />
     </template>
 
     <CompletionModal
@@ -104,6 +111,7 @@
   import { handleApiError } from 'kolibri/utils/appError';
   import ContentNodeResource from 'kolibri-common/apiResources/ContentNodeResource';
   import useKResponsiveWindow from 'kolibri-design-system/lib/composables/useKResponsiveWindow';
+  import InlineAiTutor from 'kolibri-common/components/InlineAiTutor';
   import router from 'kolibri/router';
   import Modalities from 'kolibri-constants/Modalities';
   import useUser from 'kolibri/composables/useUser';
@@ -133,6 +141,7 @@
       CompletionModal,
       QuizRenderer,
       MarkAsCompleteModal,
+      InlineAiTutor,
     },
     mixins: [commonLearnStrings],
     setup() {

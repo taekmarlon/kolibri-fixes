@@ -7,6 +7,14 @@
       <CoachHeader :title="quizzesLabel$()">
         <template #actions>
           <KButton
+            v-if="isAiEnabled"
+            appearance="raised-button"
+            icon="generate"
+            :text="generateWithAi$()"
+            style="margin-right: 8px"
+            @click="showAiQuizModal = true"
+          />
+          <KButton
             v-if="practiceQuizzesExist && hasChannels"
             class="new-quiz-button"
             primary
@@ -171,6 +179,11 @@
           <div>{{ closeQuizModalDetail$() }}</div>
         </KModal>
       </div>
+
+      <AiQuizGeneratorModal
+        v-if="showAiQuizModal"
+        @close="showAiQuizModal = false"
+      />
     </KPageContainer>
   </CoachAppBarPage>
 
@@ -191,6 +204,8 @@
   import { mapState, mapGetters } from 'vuex';
   import useSnackbar from 'kolibri/composables/useSnackbar';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
+  import { createTranslator } from 'kolibri/utils/i18n';
+  import useAiTutor from 'kolibri-common/composables/useAiTutor';
   import { fetchClassSyncStatus } from '../../composables/fetchClassSyncStatus';
   import { PageNames } from '../../constants';
   import { coachStrings } from '../common/commonCoachStrings';
@@ -205,6 +220,14 @@
   import Score from '../common/Score.vue';
   import StatusSummary from '../common/status/StatusSummary';
   import CoachHeader from '../common/CoachHeader.vue';
+  import AiQuizGeneratorModal from '../common/AiQuizGeneratorModal.vue';
+
+  const aiCoachStrings = createTranslator('AiCoachStrings', {
+    generateWithAi: {
+      message: 'Generate with AI',
+      context: 'Button label for AI quiz generator',
+    },
+  });
 
   export default {
     name: 'ExamsRootPage',
@@ -219,12 +242,16 @@
       StatusSummary,
       CoachHeader,
       NoResourceAlert,
+      AiQuizGeneratorModal,
     },
     mixins: [commonCoreStrings],
     setup() {
       const { createSnackbar } = useSnackbar();
       const { classId, initClassInfo, refreshClassSummary } = useCoreCoach();
       const { quizzes, fetchQuizSizes } = useQuizzes();
+      const { isAiEnabled } = useAiTutor();
+      const { generateWithAi$ } = aiCoachStrings;
+      const showAiQuizModal = ref(false);
       const showOpenConfirmationModal = ref(false);
       const showCloseConfirmationModal = ref(false);
       const activeQuiz = ref(null);
@@ -317,6 +344,9 @@
         entireClassLabel$,
         quizzesLabel$,
         recipientSelected,
+        isAiEnabled,
+        showAiQuizModal,
+        generateWithAi$,
       };
     },
     data() {

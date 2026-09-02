@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     "kolibri.core.lessons",
     "kolibri.core.analytics",
     "kolibri.core.attendance",
+    "kolibri.core.ai.apps.KolibriAiConfig",
     "rest_framework",
     "django_js_reverse",
     "jsonfield",
@@ -495,24 +496,30 @@ JITSI_HOST_SOURCES = (
     "*.riot.im",
 )
 
-CSP_DEFAULT_SRC = ("'self'", "data:", "blob:") + tuple(
-    conf.OPTIONS["Deployment"]["CSP_HOST_SOURCES"]
-) + JITSI_HOST_SOURCES
+CSP_DEFAULT_SRC = (
+    ("'self'", "data:", "blob:")
+    + tuple(conf.OPTIONS["Deployment"]["CSP_HOST_SOURCES"])
+    + JITSI_HOST_SOURCES
+)
 
 # Use a stricter script source policy to prevent data: from being used
 # we still allow blob: as a source for scripts, as this is used for
 # processing graphie scripts in Perseus.
-CSP_SCRIPT_SRC = ("'self'", "blob:", "'unsafe-eval'") + tuple(
-    conf.OPTIONS["Deployment"]["CSP_HOST_SOURCES"]
-) + JITSI_HOST_SOURCES
+CSP_SCRIPT_SRC = (
+    ("'self'", "blob:", "'unsafe-eval'")
+    + tuple(conf.OPTIONS["Deployment"]["CSP_HOST_SOURCES"])
+    + JITSI_HOST_SOURCES
+)
 
 # Allow inline styles, as we rely on them heavily in our templates
 # and the Aphrodite CSS in JS library generates inline styles
 CSP_STYLE_SRC = CSP_DEFAULT_SRC + ("'unsafe-inline'",)
 
-CSP_CONNECT_SRC = ("'self'", "blob:", "data:", "wss:") + tuple(
-    conf.OPTIONS["Deployment"]["CSP_HOST_SOURCES"]
-) + JITSI_HOST_SOURCES
+CSP_CONNECT_SRC = (
+    ("'self'", "blob:", "data:", "wss:")
+    + tuple(conf.OPTIONS["Deployment"]["CSP_HOST_SOURCES"])
+    + JITSI_HOST_SOURCES
+)
 
 # Explicitly allow iframe embedding from the our zipcontent origin
 # This is necessary for the zipcontent app to work

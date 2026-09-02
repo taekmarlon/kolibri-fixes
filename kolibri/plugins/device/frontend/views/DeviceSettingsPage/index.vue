@@ -308,6 +308,80 @@
         </ul>
       </section>
 
+      <!-- AI Assistant & Tutor (Universal Multi-Provider Engine) -->
+      <section>
+        <h2>{{ $tr('aiTutorSectionHeader') }}</h2>
+        <p :class="InfoDescriptionColor">
+          {{ $tr('aiTutorSectionDescription') }}
+        </p>
+
+        <div class="fieldset">
+          <KCheckbox
+            :label="$tr('enableAiTutorLabel')"
+            :checked="aiTutorEnabled"
+            @change="aiTutorEnabled = $event"
+          />
+
+          <div
+            v-if="aiTutorEnabled"
+            class="ai-config-panel"
+            style="margin-top: 16px; margin-left: 28px;"
+          >
+            <KSelect
+              v-model="aiProviderSelect"
+              :label="$tr('aiProviderLabel')"
+              :options="aiProviderOptions"
+              :floatingLabel="false"
+              style="max-width: 450px; margin-bottom: 16px;"
+              @change="handleAiProviderChange"
+            />
+
+            <KTextbox
+              v-if="aiProviderSelect.value !== 'ollama'"
+              v-model="aiApiKey"
+              type="password"
+              :label="$tr('aiApiKeyLabel')"
+              :placeholder="$tr('aiApiKeyPlaceholder')"
+              style="max-width: 450px; margin-bottom: 16px;"
+            />
+
+            <KTextbox
+              v-model="aiModelName"
+              :label="$tr('aiModelNameLabel')"
+              :placeholder="$tr('aiModelNamePlaceholder')"
+              style="max-width: 450px; margin-bottom: 16px;"
+            />
+
+            <KTextbox
+              v-if="aiProviderSelect.value === 'custom' || aiProviderSelect.value === 'huggingface' || aiProviderSelect.value === 'ollama'"
+              v-model="aiApiUrl"
+              :label="$tr('aiApiUrlLabel')"
+              :placeholder="$tr('aiApiUrlPlaceholder')"
+              style="max-width: 450px; margin-bottom: 16px;"
+            />
+
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px;">
+              <KButton
+                :text="aiTesting ? $tr('testingConnection') : $tr('testConnectionButton')"
+                appearance="flat-button"
+                :primary="false"
+                :disabled="aiTesting"
+                @click="testAiConnection"
+              />
+              <span
+                v-if="aiTestStatus"
+                :style="{
+                  color: aiTestSuccess ? $themeTokens.success : $themeTokens.error,
+                  fontWeight: 'bold',
+                }"
+              >
+                {{ aiTestStatus }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section
         v-if="isAppContext"
         class="android-bar"
@@ -400,6 +474,7 @@
   import AddStorageLocationModal from './AddStorageLocationModal';
   import RemoveStorageLocationModal from './RemoveStorageLocationModal';
   import ServerRestartModal from './ServerRestartModal';
+  import useAiTutor from 'kolibri-common/composables/useAiTutor';
 
   const logging = logger.getLogger(__filename);
 
@@ -509,10 +584,32 @@
         writablePaths: 0,
         readOnlyPaths: 0,
         alertDismissed: true,
+        aiTutorEnabled: false,
+        aiProviderSelect: {
+          value: 'gemini',
+          label: 'Google Gemini (Flash 1.5 / 2.0 - Free Tier)',
+        },
+        aiApiKey: '',
+        aiApiUrl: '',
+        aiModelName: 'gemini-1.5-flash',
+        aiTesting: false,
+        aiTestStatus: '',
+        aiTestSuccess: false,
       };
     },
     computed: {
       ...mapGetters('deviceInfo', ['isRemoteContent']),
+      aiProviderOptions() {
+        return [
+          { value: 'gemini', label: 'Google Gemini (Flash 1.5 / 2.0 - Free Tier)' },
+          { value: 'deepseek', label: 'DeepSeek (V3 / R1 - Ultra-Low Cost & Math)' },
+          { value: 'groq', label: 'Groq (Llama 3.3 / Llama 3.1 - Ultra Fast)' },
+          { value: 'openai', label: 'OpenAI (GPT-4o-mini / GPT-4o)' },
+          { value: 'huggingface', label: 'Hugging Face (Serverless / Endpoints)' },
+          { value: 'ollama', label: 'Local Ollama (Offline / 100% Free)' },
+          { value: 'custom', label: 'Custom OpenAI-Compatible Endpoint' },
+        ];
+      },
       InfoDescriptionColor() {
         return {
           color: this.$themePalette.grey.v_700,
@@ -696,6 +793,11 @@
           enable_automatic_download = true,
           limit_for_autodownload = 0,
           set_limit_for_autodownload = false,
+          ai_tutor_enabled = false,
+          ai_provider = 'gemini',
+          ai_api_key = '',
+          ai_api_url = '',
+          ai_model_name = '',
         } = extraSettings;
 
         if (allow_download_on_metered_connection === false) {
@@ -719,6 +821,13 @@
           this.limitForAutodownload = limit_for_autodownload.toString();
         }
         this.setLimitForAutodownload = set_limit_for_autodownload;
+
+        this.aiTutorEnabled = Boolean(ai_tutor_enabled);
+        const matchProvider = this.aiProviderOptions.find(o => o.value === ai_provider);
+        this.aiProviderSelect = matchProvider || this.aiProviderOptions[0];
+        this.aiApiKey = ai_api_key || '';
+        this.aiApiUrl = ai_api_url || '';
+        this.aiModelName = ai_model_name || (this.aiProviderSelect.value === 'gemini' ? 'gemini-1.5-flash' : '');
       },
       getContentSettings() {
         // This is the inverse of 'setSignInPageOption'
@@ -761,8 +870,59 @@
             this.enableAutomaticDownload === false || this.notEnoughFreeSpace
               ? false
               : this.setLimitForAutodownload,
+          ai_tutor_enabled: this.aiTutorEnabled,
+          ai_provider: this.aiProviderSelect.value,
+          ai_api_key: this.aiApiKey,
+          ai_api_url: this.aiApiUrl,
+          ai_model_name: this.aiModelName,
         };
         Object.assign(this.extraSettings, newExtraSettings);
+      },
+      handleAiProviderChange(selected) {
+        if (!selected) return;
+        const p = selected.value;
+        if (p === 'gemini') {
+          this.aiModelName = 'gemini-1.5-flash';
+          this.aiApiUrl = '';
+        } else if (p === 'deepseek') {
+          this.aiModelName = 'deepseek-chat';
+          this.aiApiUrl = 'https://api.deepseek.com/v1/chat/completions';
+        } else if (p === 'groq') {
+          this.aiModelName = 'llama-3.3-70b-versatile';
+          this.aiApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+        } else if (p === 'openai') {
+          this.aiModelName = 'gpt-4o-mini';
+          this.aiApiUrl = 'https://api.openai.com/v1/chat/completions';
+        } else if (p === 'huggingface') {
+          this.aiModelName = 'Qwen/Qwen2.5-7B-Instruct';
+          this.aiApiUrl = 'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-7B-Instruct/v1/chat/completions';
+        } else if (p === 'ollama') {
+          this.aiModelName = 'llama3.2';
+          this.aiApiUrl = 'http://localhost:11434/v1/chat/completions';
+        }
+      },
+      testAiConnection() {
+        this.aiTesting = true;
+        this.aiTestStatus = '';
+        this.aiTestSuccess = false;
+        useAiTutor()
+          .testAiConnection({
+            provider: this.aiProviderSelect.value,
+            api_key: this.aiApiKey,
+            api_url: this.aiApiUrl,
+            model_name: this.aiModelName,
+          })
+          .then(res => {
+            this.aiTestSuccess = true;
+            this.aiTestStatus = res.message || 'Connected successfully!';
+          })
+          .catch(err => {
+            this.aiTestSuccess = false;
+            this.aiTestStatus = `Connection failed: ${err.message}`;
+          })
+          .finally(() => {
+            this.aiTesting = false;
+          });
       },
       setDeviceURLs() {
         return getDeviceURLs().then(({ deviceUrls }) => {
@@ -982,6 +1142,57 @@
       },
     },
     $trs: {
+      aiTutorSectionHeader: {
+        message: 'AI Study Assistant & Tutor Settings',
+        context: 'Section header for AI tutor configuration',
+      },
+      aiTutorSectionDescription: {
+        message:
+          'Configure AI tutoring for learners and coaching tools across Kolibri. Supports Google Gemini, DeepSeek, Groq / Llama, OpenAI, Hugging Face, and Local Ollama.',
+        context: 'Description of AI tutor configuration section',
+      },
+      enableAiTutorLabel: {
+        message: 'Enable AI Study Assistant & Coach Generator across Kolibri',
+        context: 'Master toggle label for AI tutor',
+      },
+      aiProviderLabel: {
+        message: 'AI Model Provider',
+        context: 'Label for AI provider dropdown',
+      },
+      aiApiKeyLabel: {
+        message: 'API Key / Access Token',
+        context: 'Label for API key input',
+      },
+      aiApiKeyPlaceholder: {
+        message: 'Enter API Key (or leave blank if set in environment)',
+        context: 'Placeholder for API key',
+      },
+      aiModelNameLabel: {
+        message: 'Model Name',
+        context: 'Label for model name input',
+      },
+      aiModelNamePlaceholder: {
+        message:
+          'e.g. gemini-1.5-flash, deepseek-chat, llama-3.3-70b-versatile, gpt-4o-mini',
+        context: 'Placeholder for model name',
+      },
+      aiApiUrlLabel: {
+        message: 'Custom Endpoint URL (Optional)',
+        context: 'Label for API URL input',
+      },
+      aiApiUrlPlaceholder: {
+        message:
+          'e.g. https://api.deepseek.com/v1/chat/completions or http://localhost:11434/v1/chat/completions',
+        context: 'Placeholder for API URL',
+      },
+      testConnectionButton: {
+        message: 'Test Connection',
+        context: 'Button to test AI connection',
+      },
+      testingConnection: {
+        message: 'Testing...',
+        context: 'Loading text for testing connection',
+      },
       browserDefaultLanguage: {
         message: 'Browser default',
         context:

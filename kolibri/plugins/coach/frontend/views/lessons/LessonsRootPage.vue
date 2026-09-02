@@ -7,13 +7,22 @@
     <KPageContainer>
       <CoachHeader :title="coreString('lessonsLabel')">
         <template #actions>
-          <div class="lesson-button">
-            <KRouterLink
-              primary
+          <div style="display: flex; gap: 8px;">
+            <KButton
+              v-if="isAiEnabled"
               appearance="raised-button"
-              :text="coachString('newLessonAction')"
-              :to="newLessonRoute"
+              icon="generate"
+              :text="generateLessonWithAi$()"
+              @click="showAiLessonModal = true"
             />
+            <div class="lesson-button">
+              <KRouterLink
+                primary
+                appearance="raised-button"
+                :text="coachString('newLessonAction')"
+                :to="newLessonRoute"
+              />
+            </div>
           </div>
         </template>
       </CoachHeader>
@@ -174,6 +183,11 @@
           />
         </KModal>
       </div>
+
+      <AiLessonGeneratorModal
+        v-if="showAiLessonModal"
+        @close="showAiLessonModal = false"
+      />
     </KPageContainer>
   </CoachAppBarPage>
 
@@ -182,7 +196,7 @@
 
 <script>
 
-  import Vue, { set } from 'vue';
+  import Vue, { ref, set } from 'vue';
   import { mapState, mapActions } from 'vuex';
   import LessonResource from 'kolibri-common/apiResources/LessonResource';
   import { LESSON_VISIBILITY_MODAL_DISMISSED, ERROR_CONSTANTS } from 'kolibri/constants';
@@ -195,6 +209,8 @@
   import bytesForHumans from 'kolibri/uiText/bytesForHumans';
   import useSnackbar from 'kolibri/composables/useSnackbar';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
+  import { createTranslator } from 'kolibri/utils/i18n';
+  import useAiTutor from 'kolibri-common/composables/useAiTutor';
   import { fetchClassSyncStatus } from '../../composables/fetchClassSyncStatus';
   import CoachAppBarPage from '../CoachAppBarPage';
   import commonCoach from '../common';
@@ -205,7 +221,15 @@
   import * as csvFields from '../../csv/fields';
   import CSVExporter from '../../csv/exporter';
   import CoachHeader from '../common/CoachHeader.vue';
+  import AiLessonGeneratorModal from '../common/AiLessonGeneratorModal.vue';
   import { PageNames } from '../../constants';
+
+  const aiLessonStrings = createTranslator('AiLessonStrings', {
+    generateLessonWithAi: {
+      message: 'Plan Lesson with AI',
+      context: 'Button label for AI lesson plan generator',
+    },
+  });
 
   export default {
     name: 'LessonsRootPage',
@@ -215,6 +239,7 @@
       CoachAppBarPage,
       AssignmentDetailsModal,
       ReportsControls,
+      AiLessonGeneratorModal,
     },
     mixins: [commonCoach, commonCoreStrings],
     setup() {
@@ -223,6 +248,10 @@
       const { lessonsAreLoading } = useLessons();
       const { createSnackbar } = useSnackbar();
       const { windowIsSmall } = useKResponsiveWindow();
+      const { isAiEnabled } = useAiTutor();
+      const { generateLessonWithAi$ } = aiLessonStrings;
+      const showAiLessonModal = ref(false);
+
       return {
         show,
         lessonsAreLoading,
@@ -230,6 +259,9 @@
         windowIsSmall,
         entireClassLabel$,
         pageLoading,
+        isAiEnabled,
+        generateLessonWithAi$,
+        showAiLessonModal,
       };
     },
     data() {
