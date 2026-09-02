@@ -22,7 +22,66 @@
           </h1>
           <p class="page-desc" :style="{ color: $themeTokens.annotation }">
             {{ virtualMeetingDesc$() }}
-          </p>
+        </div>
+
+        <!-- Enrolled Class Live Rooms Card -->
+        <div
+          v-if="enrolledClassrooms.length"
+          class="card class-rooms-card"
+          :style="{
+            backgroundColor: '#eff6ff',
+            border: '1px solid #93c5fd',
+            borderRadius: '12px',
+            padding: '20px',
+            marginBottom: '24px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+          }"
+        >
+          <div class="card-header" style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+            <KIcon icon="classes" class="header-icon" :style="{ color: '#1d4ed8', fontSize: '28px' }" />
+            <div>
+              <h2 class="card-title" :style="{ color: '#1e3a8a', margin: '0', fontSize: '18px', fontWeight: '800' }">
+                🎓 Your Enrolled Class Live Rooms
+              </h2>
+              <p class="card-desc" :style="{ color: '#3b82f6', margin: '4px 0 0', fontSize: '13px' }">
+                Join the live virtual classroom with your teacher and classmates with one click:
+              </p>
+            </div>
+          </div>
+          <div class="class-rooms-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <div
+              v-for="classroom in enrolledClassrooms"
+              :key="classroom.id"
+              class="class-room-item"
+              :style="{
+                backgroundColor: '#ffffff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '10px',
+                padding: '14px 18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }"
+            >
+              <div>
+                <div style="font-weight: 700; font-size: 15.5px; color: #1e293b;">
+                  {{ classroom.name }} — Live Class
+                </div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+                  Room ID: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">kolibri_class_{{ classroom.id }}</code>
+                </div>
+              </div>
+              <KButton
+                :text="`Join ${classroom.name}`"
+                :primary="true"
+                appearance="raised-button"
+                icon="group"
+                @click="joinSpecificRoom(`kolibri_class_${classroom.id}`, `${classroom.name} — Live Class`)"
+              />
+            </div>
+          </div>
         </div>
 
         <KGrid gutter="24" class="lobby-grid">
@@ -136,12 +195,13 @@
 
 <script>
 
-  import { ref, computed } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import LiveMeeting from 'kolibri-common/components/LiveMeeting';
   import useLiveMeeting from 'kolibri-common/composables/useLiveMeeting';
   import useUser from 'kolibri/composables/useUser';
+  import { LearnerClassroomResource } from '../apiResources';
   import commonLearnStrings from './commonLearnStrings';
   import LearnAppBarPage from './LearnAppBarPage';
 
@@ -237,6 +297,17 @@
       const currentMeetingTitle = ref('');
       const roomInput = ref('');
       const roomError = ref('');
+      const enrolledClassrooms = ref([]);
+
+      onMounted(() => {
+        LearnerClassroomResource.fetchCollection()
+          .then(classes => {
+            enrolledClassrooms.value = classes || [];
+          })
+          .catch(() => {
+            enrolledClassrooms.value = [];
+          });
+      });
 
       const userDisplayName = computed(() => {
         return full_name.value || username.value || 'Guest User';
@@ -281,6 +352,11 @@
         currentMeetingTitle,
         roomInput,
         roomError,
+        enrolledClassrooms,
+        joinSpecificRoom,
+        joinRoom,
+        generateRandomRoom,
+        leaveMeeting,
         userDisplayName,
         recentRooms,
         virtualMeetingTitle$,
