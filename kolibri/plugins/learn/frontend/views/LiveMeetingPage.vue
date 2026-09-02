@@ -22,6 +22,7 @@
           </h1>
           <p class="page-desc" :style="{ color: $themeTokens.annotation }">
             {{ virtualMeetingDesc$() }}
+          </p>
         </div>
 
         <!-- Enrolled Class Live Rooms Card -->
