@@ -303,6 +303,9 @@
         LearnerClassroomResource.fetchCollection()
           .then(classes => {
             enrolledClassrooms.value = classes || [];
+            if (classes && classes.length > 0 && !roomInput.value) {
+              roomInput.value = `class_${classes[0].id}`;
+            }
           })
           .catch(() => {
             enrolledClassrooms.value = [];
@@ -315,8 +318,12 @@
 
       function joinRoom() {
         if (!roomInput.value.trim()) {
-          roomError.value = enterRoomError$();
-          return;
+          if (enrolledClassrooms.value && enrolledClassrooms.value.length > 0) {
+            const firstClass = enrolledClassrooms.value[0];
+            joinSpecificRoom(`kolibri_class_${firstClass.id}`, `${firstClass.name} — Live Class`);
+            return;
+          }
+          generateRandomRoom();
         }
         roomError.value = '';
         const cleanName = `kolibri_${roomInput.value.trim().replace(/[^a-zA-Z0-9-_]/g, '_')}`;
