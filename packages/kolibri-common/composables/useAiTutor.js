@@ -8,6 +8,8 @@ const aiProvider = ref('gemini');
 const aiModelName = ref('');
 const isCheckingStatus = ref(false);
 const statusLoaded = ref(false);
+const selectedGradeLevel = ref('elementary');
+const selectedPersona = ref('owl');
 
 async function checkAiStatus(force = false) {
   if (statusLoaded.value && !force) {
@@ -67,6 +69,7 @@ export default function useAiTutor() {
         data: {
           messages: messages.value,
           context: resourceContext,
+          grade_level: selectedGradeLevel.value,
         },
       });
 
@@ -152,6 +155,8 @@ export default function useAiTutor() {
     aiModelName: computed(() => aiModelName.value),
     isCheckingStatus: computed(() => isCheckingStatus.value),
     statusLoaded: computed(() => statusLoaded.value),
+    selectedGradeLevel,
+    selectedPersona,
     messages,
     isLoading,
     errorMessage,

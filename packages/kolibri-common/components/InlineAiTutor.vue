@@ -93,7 +93,12 @@
               {{ msg.role === 'user' ? youLabel$() : tutorLabel$() }}
             </div>
             <div class="message-content">
-              {{ msg.content }}
+              <AiMessageRenderer
+                v-if="msg.role !== 'user'"
+                :content="msg.content"
+                :gradeLevel="selectedGradeLevel"
+              />
+              <span v-else>{{ msg.content }}</span>
             </div>
           </div>
         </div>
@@ -145,6 +150,7 @@
   import { ref, computed, onMounted, nextTick } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
   import useAiTutor from 'kolibri-common/composables/useAiTutor';
+  import AiMessageRenderer from 'kolibri-common/components/AiMessageRenderer';
 
   const aiStrings = createTranslator('InlineAiTutorStrings', {
     tutorTitle: {
@@ -211,6 +217,9 @@
 
   export default {
     name: 'InlineAiTutor',
+    components: {
+      AiMessageRenderer,
+    },
     props: {
       resourceTitle: {
         type: String,
@@ -235,6 +244,7 @@
         aiProvider,
         messages,
         isLoading,
+        selectedGradeLevel,
         checkAiStatus,
         sendChatMessage,
         clearChat,

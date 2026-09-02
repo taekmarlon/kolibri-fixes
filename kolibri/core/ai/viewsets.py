@@ -74,8 +74,12 @@ class AiChatView(APIView):
             if question:
                 context_info += f"\nCurrent Problem / Question: {question}"
 
+        grade_level = data.get("grade_level", "elementary")
+
         try:
-            ai_reply = call_ai_chat(messages, context_info=context_info)
+            ai_reply = call_ai_chat(
+                messages, context_info=context_info, grade_level=grade_level
+            )
             return Response({"response": ai_reply, "reply": ai_reply})
         except PermissionError as e:
             return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)

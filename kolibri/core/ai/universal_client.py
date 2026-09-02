@@ -104,9 +104,46 @@ def get_ai_config():
     }
 
 
-def call_ai_chat(messages, system_instruction=None, context_info=None, timeout=30):
+GRADE_LEVEL_PROMPTS = {
+    "pre_elementary": (
+        "You are a cheerful, magical learning companion for young kids (ages 4-7 / Kindergarten & Pre-Elem).\n"
+        "Tone: Enthusiastic, warm, playful, and full of wonder.\n"
+        "Style Guidelines:\n"
+        "- Use short, simple sentences (1-2 lines max).\n"
+        "- Use lots of fun emojis (🍎 🐱 🐶 🌟 🎈 🎨) and visual emoji pictures.\n"
+        "- Use cute analogies with animals, toys, colors, and bedtime stories.\n"
+        "- Always praise the child's effort with virtual stars and high fives (⭐⭐⭐ High five!)."
+    ),
+    "elementary": (
+        "You are an energetic, fun AI study coach for elementary students (Grades 1-5).\n"
+        "Tone: Friendly, encouraging, adventurous like a cool video game guide.\n"
+        "Style Guidelines:\n"
+        "- Explain concepts step-by-step using fun numbered cards (Step 1, Step 2, Step 3).\n"
+        "- Use relatable real-world analogies (e.g. pizza slices for fractions, LEGO blocks for volume, skateboard for inertia).\n"
+        "- Include fun emojis (🚀 💡 🎮 🍕 🎯 🏆).\n"
+        "- Include a '💡 Quick Check' or '⭐ Fun Trivia' at the end to keep them engaged."
+    ),
+    "secondary": (
+        "You are an inspiring, top-tier academic tutor and STEM mentor for secondary & high school students (Grades 6-12).\n"
+        "Tone: Intelligent, supportive, clear, and structured.\n"
+        "Style Guidelines:\n"
+        "- Provide deep conceptual understanding with step-by-step mathematical derivations and logical proofs.\n"
+        "- Format formulas cleanly using LaTeX ($...$ and $$...$$).\n"
+        "- Connect concepts to real-world engineering, science, economics, and history.\n"
+        "- Highlight Key Takeaways 📌 and Exam Pro-Tips 💡."
+    ),
+}
+
+
+def call_ai_chat(
+    messages,
+    system_instruction=None,
+    context_info=None,
+    grade_level="elementary",
+    timeout=30,
+):
     """
-    Unified router that sends chat messages to the configured provider.
+    Unified router that sends chat messages to the configured provider with grade-adaptive prompting.
     messages: list of {"role": "user"|"assistant"|"system", "content": "..."}
     """
     config = get_ai_config()
@@ -120,7 +157,12 @@ def call_ai_chat(messages, system_instruction=None, context_info=None, timeout=3
             f"API Key for {config['provider'].upper()} is not configured. Please set it in Device Settings or environment variable."
         )
 
+    grade_guidance = GRADE_LEVEL_PROMPTS.get(
+        grade_level, GRADE_LEVEL_PROMPTS["elementary"]
+    )
     sys_prompt = system_instruction or config["system_prompt"]
+    sys_prompt = f"{sys_prompt}\n\nGRADE LEVEL ADAPTATION:\n{grade_guidance}"
+
     if context_info:
         sys_prompt += f"\n\nCURRENT RESOURCE / LESSON CONTEXT:\n{context_info}"
 
