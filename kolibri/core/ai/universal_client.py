@@ -60,9 +60,9 @@ PROVIDER_PRESETS = {
 }
 
 DEFAULT_SYSTEM_PROMPT = (
-    "You are a helpful, encouraging, and knowledgeable AI Tutor and Educational Assistant inside the Kolibri Learning Platform.\n"
-    "Your goal is to explain concepts clearly, provide direct and accurate answers with step-by-step explanations,\n"
-    "guide students through math and science problems, and help teachers create effective lesson materials.\n"
+    "You are a friendly, encouraging, and knowledgeable AI Tutor in the Kolibri Learning Platform.\n"
+    "Your goal is to explain concepts clearly in your own original words using simple everyday analogies,\n"
+    "step-by-step reasoning, and clear formatting.\n"
     "Format math formulas and scientific notation using standard LaTeX with $ for inline math (e.g. $x^2 + y^2 = r^2$) "
     "and $$ for block math equations.\n"
     "Keep explanations structured, friendly, clear, and easy to understand."
@@ -132,8 +132,10 @@ def call_ai_chat(messages, system_instruction=None, context_info=None, timeout=3
 
 def _call_gemini_native(messages, system_prompt, config, timeout=30):
     """
-    Calls Google Gemini REST API v1beta.
+    Calls Google Gemini REST API v1beta with automatic retries and fallback.
     """
+    import time
+
     model = config["model_name"] or "gemini-1.5-flash"
     api_key = config["api_key"]
     base_url = config["api_url"].rstrip("/")
@@ -152,7 +154,7 @@ def _call_gemini_native(messages, system_prompt, config, timeout=30):
         "contents": gemini_contents,
         "systemInstruction": {"parts": [{"text": system_prompt}]},
         "generationConfig": {
-            "temperature": 0.7,
+            "temperature": 0.8,
             "maxOutputTokens": 2048,
         },
     }
@@ -162,34 +164,68 @@ def _call_gemini_native(messages, system_prompt, config, timeout=30):
         url, data=req_data, headers={"Content-Type": "application/json"}
     )
 
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as response:
-            res_body = response.read().decode("utf-8")
-            data = json.loads(res_body)
-            candidates = data.get("candidates", [])
-            if candidates:
-                parts = candidates[0].get("content", {}).get("parts", [])
-                if parts:
-                    return parts[0].get("text", "")
-            return "No response received from AI model."
-    except urllib.error.HTTPError as e:
-        err_msg = e.read().decode("utf-8", errors="ignore")
-        logger.error(f"Gemini API Error ({e.code}): {err_msg}")
+    last_error = None
+    for attempt in range(3):
         try:
-            err_json = json.loads(err_msg)
-            message = err_json.get("error", {}).get("message", err_msg)
-        except Exception:
-            message = err_msg
-        raise RuntimeError(f"Google Gemini Error: {message}")
-    except Exception as e:
-        logger.error(f"Gemini Request failed: {e}")
-        raise RuntimeError(f"Failed to connect to AI provider: {str(e)}")
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                res_body = response.read().decode("utf-8")
+                data = json.loads(res_body)
+                candidates = data.get("candidates", [])
+                if candidates:
+                    candidate = candidates[0]
+                    parts = candidate.get("content", {}).get("parts", [])
+                    text_parts = [p.get("text", "") for p in parts if p.get("text")]
+                    if text_parts:
+                        return "".join(text_parts)
+                    if candidate.get("finishReason") == "RECITATION":
+                        logger.warning("Gemini recitation filter triggered, re-prompting...")
+                        # Modify payload to emphasize original paraphrase
+                        payload["systemInstruction"] = {
+                            "parts": [
+                                {
+                                    "text": (
+                                        f"{system_prompt}\n\nPlease summarize and explain everything in your own original words with intuitive examples."
+                                    )
+                                }
+                            ]
+                        }
+                        req = urllib.request.Request(
+                            url,
+                            data=json.dumps(payload).encode("utf-8"),
+                            headers={"Content-Type": "application/json"},
+                        )
+                        continue
+                return "No response received from AI model."
+        except urllib.error.HTTPError as e:
+            err_msg = e.read().decode("utf-8", errors="ignore")
+            logger.error(f"Gemini API Error ({e.code}): {err_msg}")
+            try:
+                err_json = json.loads(err_msg)
+                message = err_json.get("error", {}).get("message", err_msg)
+            except Exception:
+                message = err_msg
+            raise RuntimeError(f"Google Gemini Error: {message}")
+        except urllib.error.URLError as e:
+            last_error = e
+            logger.warning(f"Gemini connection attempt {attempt + 1} failed: {e}")
+            time.sleep(1 * (attempt + 1))
+        except Exception as e:
+            last_error = e
+            break
+
+    if isinstance(last_error, urllib.error.URLError):
+        raise RuntimeError(
+            f"Unable to reach Google Gemini ({last_error.reason}). Please check your internet connection and try again."
+        )
+    raise RuntimeError(f"Failed to connect to AI provider: {str(last_error)}")
 
 
 def _call_openai_compatible(messages, system_prompt, config, timeout=30):
     """
     Calls any OpenAI-compatible Chat Completions API (DeepSeek, Groq, OpenAI, Ollama, Hugging Face).
     """
+    import time
+
     url = config["api_url"]
     if not url:
         raise ValueError("API Endpoint URL is missing.")
@@ -224,23 +260,35 @@ def _call_openai_compatible(messages, system_prompt, config, timeout=30):
     req_data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=req_data, headers=headers)
 
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as response:
-            res_body = response.read().decode("utf-8")
-            data = json.loads(res_body)
-            choices = data.get("choices", [])
-            if choices:
-                return choices[0].get("message", {}).get("content", "")
-            return "No response received from AI model."
-    except urllib.error.HTTPError as e:
-        err_msg = e.read().decode("utf-8", errors="ignore")
-        logger.error(f"OpenAI-Compatible API Error ({e.code}): {err_msg}")
+    last_error = None
+    for attempt in range(3):
         try:
-            err_json = json.loads(err_msg)
-            message = err_json.get("error", {}).get("message", err_msg)
-        except Exception:
-            message = err_msg
-        raise RuntimeError(f"{config['provider'].upper()} Error: {message}")
-    except Exception as e:
-        logger.error(f"AI Provider Request failed: {e}")
-        raise RuntimeError(f"Failed to connect to {config['provider']}: {str(e)}")
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                res_body = response.read().decode("utf-8")
+                data = json.loads(res_body)
+                choices = data.get("choices", [])
+                if choices:
+                    return choices[0].get("message", {}).get("content", "")
+                return "No response received from AI model."
+        except urllib.error.HTTPError as e:
+            err_msg = e.read().decode("utf-8", errors="ignore")
+            logger.error(f"OpenAI-Compatible API Error ({e.code}): {err_msg}")
+            try:
+                err_json = json.loads(err_msg)
+                message = err_json.get("error", {}).get("message", err_msg)
+            except Exception:
+                message = err_msg
+            raise RuntimeError(f"AI Provider Error: {message}")
+        except urllib.error.URLError as e:
+            last_error = e
+            logger.warning(f"AI connection attempt {attempt + 1} failed: {e}")
+            time.sleep(1 * (attempt + 1))
+        except Exception as e:
+            last_error = e
+            break
+
+    if isinstance(last_error, urllib.error.URLError):
+        raise RuntimeError(
+            f"Unable to reach AI provider at {url} ({last_error.reason}). Please verify connection and try again."
+        )
+    raise RuntimeError(f"Failed to connect to AI provider: {str(last_error)}")
