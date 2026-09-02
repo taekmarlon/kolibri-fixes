@@ -192,10 +192,27 @@ class WebpackBundleHook(hooks.KolibriHook):
         css_tag = '<link type="text/css" href="{url}" rel="stylesheet"/>'
         # Sorted to load css before js
         for chunk in self.sorted_chunks():
-            if chunk["name"].endswith(".js"):
-                yield js_tag.format(url=chunk["url"])
-            elif chunk["name"].endswith(".css"):
-                yield css_tag.format(url=chunk["url"])
+            url = chunk["url"]
+            if getattr(settings, "DEVELOPER_MODE", False) and (
+                url.startswith("http://127.0.0.1:") or url.startswith("http://localhost:")
+            ):
+                if chunk["name"].endswith(".js"):
+                    yield (
+                        '<script type="text/javascript">'
+                        f'document.write(\'<script type="text/javascript" src="\' + "{url}".replace(/http:\\/\\/(127\\.0\\.0\\.1|localhost):/, window.location.protocol + "//" + window.location.hostname + ":") + \'"><\\/script>\');'
+                        '</script>'
+                    )
+                elif chunk["name"].endswith(".css"):
+                    yield (
+                        '<script type="text/javascript">'
+                        f'document.write(\'<link type="text/css" href="\' + "{url}".replace(/http:\\/\\/(127\\.0\\.0\\.1|localhost):/, window.location.protocol + "//" + window.location.hostname + ":") + \'" rel="stylesheet\\"/>\');'
+                        '</script>'
+                    )
+            else:
+                if chunk["name"].endswith(".js"):
+                    yield js_tag.format(url=url)
+                elif chunk["name"].endswith(".css"):
+                    yield css_tag.format(url=url)
 
     def frontend_message_tag(self):
         if self.frontend_messages():

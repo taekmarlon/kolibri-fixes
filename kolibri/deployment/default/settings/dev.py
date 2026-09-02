@@ -53,6 +53,38 @@ SWAGGER_SETTINGS = {"DEFAULT_INFO": "kolibri.deployment.default.dev_urls.api_inf
 
 # Ensure that the CSP is set up to allow webpack-dev-server to be accessed during development
 WEBPACK_DEV_SERVER_PORT = os.environ.get("WEBPACK_DEV_SERVER_PORT", "3001")
-CSP_DEFAULT_SRC += (f"localhost:{WEBPACK_DEV_SERVER_PORT}", f"127.0.0.1:{WEBPACK_DEV_SERVER_PORT}", "ws:")  # noqa F405
-CSP_SCRIPT_SRC += (f"localhost:{WEBPACK_DEV_SERVER_PORT}", f"127.0.0.1:{WEBPACK_DEV_SERVER_PORT}")  # noqa F405
-CSP_STYLE_SRC += (f"localhost:{WEBPACK_DEV_SERVER_PORT}", f"127.0.0.1:{WEBPACK_DEV_SERVER_PORT}")  # noqa F405
+CSP_DEFAULT_SRC += (
+    f"localhost:{WEBPACK_DEV_SERVER_PORT}",
+    f"127.0.0.1:{WEBPACK_DEV_SERVER_PORT}",
+    f"*:{WEBPACK_DEV_SERVER_PORT}",
+    "http:",
+    "https:",
+    "ws:",
+    "wss:",
+)  # noqa F405
+CSP_SCRIPT_SRC += (
+    f"localhost:{WEBPACK_DEV_SERVER_PORT}",
+    f"127.0.0.1:{WEBPACK_DEV_SERVER_PORT}",
+    f"*:{WEBPACK_DEV_SERVER_PORT}",
+    "http:",
+    "https:",
+    "'unsafe-inline'",
+    "'unsafe-eval'",
+)  # noqa F405
+CSP_STYLE_SRC += (
+    f"localhost:{WEBPACK_DEV_SERVER_PORT}",
+    f"127.0.0.1:{WEBPACK_DEV_SERVER_PORT}",
+    f"*:{WEBPACK_DEV_SERVER_PORT}",
+    "http:",
+    "https:",
+    "'unsafe-inline'",
+)  # noqa F405
+CSP_CONNECT_SRC += (
+    f"localhost:{WEBPACK_DEV_SERVER_PORT}",
+    f"127.0.0.1:{WEBPACK_DEV_SERVER_PORT}",
+    f"*:{WEBPACK_DEV_SERVER_PORT}",
+    "http:",
+    "https:",
+    "ws:",
+    "wss:",
+)  # noqa F405
