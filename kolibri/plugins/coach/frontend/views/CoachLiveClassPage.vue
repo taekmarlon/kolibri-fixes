@@ -63,13 +63,48 @@
                 </div>
               </div>
 
-              <div class="room-actions">
+              <!-- Live in Session Status Indicator for Coach -->
+              <div
+                v-if="isLiveNow"
+                class="live-status-badge"
+                style="background: #f0fdf4; border: 1.5px solid #22c55e; border-radius: 8px; padding: 12px 16px; margin-top: 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;"
+              >
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 18px;">🟢</span>
+                  <div>
+                    <div style="font-weight: 800; color: #15803d; font-size: 14px;">
+                      Class Meeting is Live in Session Now
+                    </div>
+                    <div style="font-size: 12px; color: #166534;">
+                      Students see the green indicator on their dashboards.
+                    </div>
+                  </div>
+                </div>
                 <KButton
-                  :text="launchWindowButton$()"
+                  text="End Live Class"
+                  :primary="false"
+                  appearance="flat-button"
+                  style="color: #dc2626; border: 1px solid #f87171; font-weight: bold;"
+                  @click="endLiveSession"
+                />
+              </div>
+
+              <div class="room-actions" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px;">
+                <KButton
+                  :text="isLiveNow ? 'Re-Join Live Class (Unlimited)' : launchWindowButton$()"
                   :primary="true"
                   appearance="raised-button"
                   icon="openNewTab"
+                  :style="isLiveNow ? { backgroundColor: '#16a34a' } : {}"
                   @click="launchWindow(defaultClassRoomName, className ? classMeetingTitle$({ className }) : liveClassTitle$())"
+                />
+                <KButton
+                  v-if="isLiveNow"
+                  text="End Live Class"
+                  :primary="false"
+                  appearance="flat-button"
+                  style="color: #dc2626; border: 1px solid #f87171; font-weight: bold;"
+                  @click="endLiveSession"
                 />
               </div>
             </div>
@@ -119,7 +154,8 @@
 
 <script>
 
-  import { ref, computed } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+  import { useTimeoutPoll } from '@vueuse/core';
   import { mapState } from 'vuex';
   import { createTranslator } from 'kolibri/utils/i18n';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
@@ -209,12 +245,19 @@
     mixins: [commonCoach],
     setup() {
       const { saveRecentRoom } = useLiveMeeting();
-      const { setLiveSessionActive } = useLiveSessions();
+      const { setLiveSessionActive, fetchLiveSessions, isClassLive } = useLiveSessions();
       const meetingActive = ref(false);
       const activeRoomName = ref('');
       const activeMeetingTitle = ref('');
       const customRoomInput = ref('');
       const customRoomError = ref('');
+
+      onMounted(() => {
+        fetchLiveSessions();
+      });
+
+      const livePolling = useTimeoutPoll(fetchLiveSessions, 5000);
+      onBeforeUnmount(livePolling.pause);
 
       const {
         liveClassTitle$,
@@ -245,6 +288,8 @@
         customRoomError,
         saveRecentRoom,
         setLiveSessionActive,
+        fetchLiveSessions,
+        isClassLive,
         liveClassTitle$,
         liveClassDescription$,
         classMeetingTitle$,
@@ -269,6 +314,9 @@
       currentClassId() {
         return this.classId || this.$route.params.classId || null;
       },
+      isLiveNow() {
+        return this.isClassLive(this.currentClassId);
+      },
       defaultClassRoomName() {
         const id = this.currentClassId || 'general';
         return `kolibri_class_${id}`;
@@ -291,6 +339,15 @@
         }
         const directUrl = `https://meet.jit.si/${roomName}#config.startWithAudioMuted=false&config.prejoinPageEnabled=false`;
         window.open(directUrl, '_blank');
+      },
+      endLiveSession() {
+        const classId = this.currentClassId;
+        if (classId) {
+          this.setLiveSessionActive({
+            classId,
+            active: false,
+          });
+        }
       },
       startCustomMeeting() {
         if (!this.customRoomInput.trim()) {

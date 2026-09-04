@@ -34,20 +34,7 @@ export default function useLiveSessions() {
       },
     })
       .then(() => {
-        if (active) {
-          activeLiveSessions.value = {
-            ...activeLiveSessions.value,
-            [classId]: {
-              active: true,
-              room_name: roomName || `kolibri_class_${classId}`,
-              class_id: classId,
-            },
-          };
-        } else {
-          const updated = { ...activeLiveSessions.value };
-          delete updated[classId];
-          activeLiveSessions.value = updated;
-        }
+        return fetchLiveSessions();
       })
       .catch(() => {});
   }
