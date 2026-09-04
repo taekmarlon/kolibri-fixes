@@ -114,6 +114,9 @@ class CoachToolsModule extends KolibriApp {
         PageNames.ATTENDANCE_NEW,
         PageNames.ATTENDANCE_HISTORY,
         PageNames.ATTENDANCE_EDIT,
+        PageNames.COURSEWORK_ASSIGNMENTS,
+        PageNames.COURSEWORK_GRADEBOOK,
+        PageNames.COURSEWORK_DISCUSSIONS,
         HomeActivityPage.name,
       ];
 

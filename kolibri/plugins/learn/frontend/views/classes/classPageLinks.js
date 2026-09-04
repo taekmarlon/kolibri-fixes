@@ -17,3 +17,22 @@ export function lessonPlaylistLink(lessonId) {
     },
   };
 }
+
+export function assignmentDetailLink(classId, assignmentId) {
+  return {
+    name: ClassesPageNames.COURSEWORK_ASSIGNMENT_DETAIL,
+    params: {
+      classId,
+      assignmentId,
+    },
+  };
+}
+
+export function classDiscussionsLink(classId) {
+  return {
+    name: ClassesPageNames.COURSEWORK_DISCUSSIONS,
+    params: {
+      classId,
+    },
+  };
+}

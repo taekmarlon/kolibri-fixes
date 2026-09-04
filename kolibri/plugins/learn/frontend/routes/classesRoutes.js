@@ -1,6 +1,7 @@
 import { get } from '@vueuse/core';
 import store from 'kolibri/store';
 import router from 'kolibri/router';
+import { pageLoading } from 'kolibri-common/composables/usePageLoading';
 import { ClassesPageNames, PageNames } from '../constants';
 import { showLessonPlaylist } from '../modules/lessonPlaylist/handlers';
 import { showClassAssignmentsPage } from '../modules/classAssignments/handlers';
@@ -17,6 +18,8 @@ import AllClassesPage from '../views/classes/AllClassesPage';
 import ClassAssignmentsPage from '../views/classes/ClassAssignmentsPage';
 import LessonPlaylistPage from '../views/classes/LessonPlaylistPage';
 import LearnerLiveClassPage from '../views/classes/LearnerLiveClassPage';
+import LearnerAssignmentDetailPage from '../views/classes/LearnerAssignmentDetailPage';
+import ClassroomDiscussionsPage from '../views/classes/ClassroomDiscussionsPage';
 
 function noClassesGuard() {
   const { canAccessUnassignedContent } = store.getters;
@@ -65,6 +68,33 @@ export default [
       pageLoading.value = false;
     },
     component: LearnerLiveClassPage,
+  },
+  {
+    name: ClassesPageNames.COURSEWORK_ASSIGNMENT_DETAIL,
+    path: '/classes/:classId/assignments/:assignmentId',
+    props: route => {
+      return {
+        classId: route.params.classId,
+        assignmentId: route.params.assignmentId,
+      };
+    },
+    handler: () => {
+      pageLoading.value = false;
+    },
+    component: LearnerAssignmentDetailPage,
+  },
+  {
+    name: ClassesPageNames.COURSEWORK_DISCUSSIONS,
+    path: '/classes/:classId/discussions',
+    props: route => {
+      return {
+        classId: route.params.classId,
+      };
+    },
+    handler: () => {
+      pageLoading.value = false;
+    },
+    component: ClassroomDiscussionsPage,
   },
   {
     name: ClassesPageNames.LESSON_PLAYLIST,

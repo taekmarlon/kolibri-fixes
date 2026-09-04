@@ -91,6 +91,7 @@
       </div>
 
       <AssignedCoursesCards :courses="activeCourses" />
+      <AssignedCourseworkCards :classId="classId" />
       <AssignedLessonsCards
         :lessons="activeLessons"
         :style="{ marginTop: '44px' }"
@@ -122,6 +123,7 @@
   import commonLearnStrings from '../commonLearnStrings';
   import LearnAppBarPage from '../LearnAppBarPage';
   import AssignedCoursesCards from './AssignedCoursesCards';
+  import AssignedCourseworkCards from './AssignedCourseworkCards';
   import AssignedQuizzesCards from './AssignedQuizzesCards';
   import AssignedLessonsCards from './AssignedLessonsCards';
 
@@ -134,6 +136,7 @@
     },
     components: {
       AssignedCoursesCards,
+      AssignedCourseworkCards,
       AssignedQuizzesCards,
       AssignedLessonsCards,
       KBreadcrumbs,

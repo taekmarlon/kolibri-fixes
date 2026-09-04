@@ -24,6 +24,7 @@ import learnersRoutes from './learnersRoutes';
 import groupsRoutes from './groupsRoutes';
 import attendanceRoutes from './attendanceRoutes';
 import coursesRoutes from './coursesRoutes';
+import courseworkRoutes from './courseworkRoutes';
 
 function showHomePage(toRoute) {
   const initClassInfoPromise = store.dispatch('initClassInfo', toRoute.params.classId);
@@ -44,6 +45,7 @@ export default [
   ...learnersRoutes,
   ...groupsRoutes,
   ...attendanceRoutes,
+  ...courseworkRoutes,
   ...(plugin_data.courses_exist ? coursesRoutes : []),
   {
     name: PageNames.LIVE_CLASS_ROOT,

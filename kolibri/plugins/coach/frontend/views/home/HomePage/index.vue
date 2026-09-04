@@ -14,6 +14,9 @@
             <AttendanceBlock />
           </KGridItem>
           <KGridItem>
+            <CourseworkBlock />
+          </KGridItem>
+          <KGridItem>
             <QuizzesBlock />
           </KGridItem>
           <KGridItem>
@@ -38,6 +41,7 @@
   import CoachAppBarPage from '../../CoachAppBarPage';
   import commonCoach from '../../common';
   import AttendanceBlock from './AttendanceBlock';
+  import CourseworkBlock from './CourseworkBlock';
   import OverviewBlock from './OverviewBlock';
   import ActivityBlock from './ActivityBlock';
   import LessonsBlock from './LessonsBlock';
@@ -49,6 +53,7 @@
     components: {
       CoachAppBarPage,
       AttendanceBlock,
+      CourseworkBlock,
       OverviewBlock,
       ActivityBlock,
       LessonsBlock,
