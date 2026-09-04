@@ -55,8 +55,8 @@
               :key="classroom.id"
               class="class-room-item"
               :style="{
-                backgroundColor: '#ffffff',
-                border: '1px solid #bfdbfe',
+                backgroundColor: isClassLive(classroom.id) ? '#f0fdf4' : '#ffffff',
+                border: isClassLive(classroom.id) ? '2px solid #22c55e' : '1px solid #bfdbfe',
                 borderRadius: '10px',
                 padding: '14px 18px',
                 display: 'flex',
@@ -64,21 +64,41 @@
                 justifyContent: 'space-between',
                 flexWrap: 'wrap',
                 gap: '12px',
+                boxShadow: isClassLive(classroom.id) ? '0 4px 18px rgba(34, 197, 94, 0.28)' : 'none',
               }"
             >
-              <div>
-                <div style="font-weight: 700; font-size: 15.5px; color: #1e293b;">
-                  {{ classroom.name }} — Live Class
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div v-if="isClassLive(classroom.id)" class="live-dot-wrapper">
+                  <span class="pulse-ring"></span>
+                  <span class="pulse-dot"></span>
                 </div>
-                <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
-                  Room ID: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">kolibri_class_{{ classroom.id }}</code>
+                <div>
+                  <div
+                    v-if="isClassLive(classroom.id)"
+                    style="display: inline-block; font-size: 11px; font-weight: 800; color: #166534; background: #bbf7d0; padding: 2px 8px; border-radius: 9999px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;"
+                  >
+                    🟢 TEACHER IS LIVE NOW
+                  </div>
+                  <div
+                    style="font-weight: 700; font-size: 15.5px;"
+                    :style="{ color: isClassLive(classroom.id) ? '#15803d' : '#1e293b' }"
+                  >
+                    {{ classroom.name }} — Live Class
+                  </div>
+                  <div
+                    :style="{ color: isClassLive(classroom.id) ? '#166534' : '#64748b' }"
+                    style="font-size: 12px; margin-top: 2px;"
+                  >
+                    {{ isClassLive(classroom.id) ? 'Your teacher is in this room right now. Click to join!' : `Room ID: kolibri_class_${classroom.id}` }}
+                  </div>
                 </div>
               </div>
               <KButton
-                :text="`Join ${classroom.name} (Unlimited)`"
+                :text="isClassLive(classroom.id) ? 'Join Live Class Now ➔' : `Join ${classroom.name} (Unlimited)`"
                 :primary="true"
                 appearance="raised-button"
                 icon="openNewTab"
+                :style="isClassLive(classroom.id) ? { backgroundColor: '#16a34a', color: '#ffffff', fontWeight: 'bold' } : {}"
                 @click="joinSpecificRoom(`kolibri_class_${classroom.id}`, `${classroom.name} — Live Class`)"
               />
             </div>
@@ -196,11 +216,13 @@
 
 <script>
 
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+  import { useTimeoutPoll } from '@vueuse/core';
   import { createTranslator } from 'kolibri/utils/i18n';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import LiveMeeting from 'kolibri-common/components/LiveMeeting';
   import useLiveMeeting from 'kolibri-common/composables/useLiveMeeting';
+  import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
   import useUser from 'kolibri/composables/useUser';
   import { LearnerClassroomResource } from '../apiResources';
   import commonLearnStrings from './commonLearnStrings';
@@ -275,6 +297,7 @@
     setup() {
       const { full_name, username } = useUser();
       const { recentRooms, generateRoomId, saveRecentRoom } = useLiveMeeting();
+      const { fetchLiveSessions, isClassLive } = useLiveSessions();
 
       const {
         virtualMeetingTitle$,
@@ -301,6 +324,7 @@
       const enrolledClassrooms = ref([]);
 
       onMounted(() => {
+        fetchLiveSessions();
         LearnerClassroomResource.fetchCollection()
           .then(classes => {
             enrolledClassrooms.value = classes || [];
@@ -312,6 +336,9 @@
             enrolledClassrooms.value = [];
           });
       });
+
+      const livePolling = useTimeoutPoll(fetchLiveSessions, 2000);
+      onBeforeUnmount(livePolling.pause);
 
       const userDisplayName = computed(() => {
         return full_name.value || username.value || 'Guest User';
@@ -381,6 +408,7 @@
         recentRoomsDesc$,
         rejoinButton$,
         noRecentRooms$,
+        isClassLive,
         joinRoom,
         generateRandomRoom,
         joinSpecificRoom,
@@ -498,6 +526,48 @@
     margin-top: 24px;
     text-align: center;
     font-style: italic;
+  }
+
+  .live-dot-wrapper {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .pulse-dot {
+    width: 14px;
+    height: 14px;
+    background-color: #22c55e;
+    border-radius: 50%;
+    z-index: 2;
+  }
+
+  .pulse-ring {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    background-color: rgba(34, 197, 94, 0.45);
+    border-radius: 50%;
+    animation: pulse-ring-anim 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  }
+
+  @keyframes pulse-ring-anim {
+    0% {
+      transform: scale(0.6);
+      opacity: 0.9;
+    }
+    70% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
   }
 
 </style>

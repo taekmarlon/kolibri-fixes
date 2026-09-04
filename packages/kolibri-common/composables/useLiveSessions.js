@@ -63,7 +63,7 @@ export default function useLiveSessions() {
   }
 
   const liveClassesCount = computed(() => {
-    return Object.keys(activeLiveSessions.value).length;
+    return Object.values(activeLiveSessions.value).filter(s => s && s.active).length;
   });
 
   return {

@@ -63,6 +63,8 @@
 
 <script>
 
+  import { onMounted, onBeforeUnmount } from 'vue';
+  import { useTimeoutPoll } from '@vueuse/core';
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
   import { ClassesPageNames } from '../../constants';
@@ -81,7 +83,12 @@
     },
     mixins: [commonCoreStrings],
     setup() {
-      const { isClassLive } = useLiveSessions();
+      const { fetchLiveSessions, isClassLive } = useLiveSessions();
+      onMounted(() => {
+        fetchLiveSessions();
+      });
+      const livePolling = useTimeoutPoll(fetchLiveSessions, 2000);
+      onBeforeUnmount(livePolling.pause);
       return {
         isClassLive,
       };

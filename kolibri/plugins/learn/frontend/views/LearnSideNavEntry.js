@@ -2,8 +2,19 @@ import { registerNavItem } from 'kolibri/composables/useNav';
 import urls from 'kolibri/urls';
 import useUser from 'kolibri/composables/useUser';
 import useAiTutor from 'kolibri-common/composables/useAiTutor';
+import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
 import { createTranslator } from 'kolibri/utils/i18n';
 import baseRoutes from '../routes/baseRoutes';
+
+let pollStarted = false;
+function initPolling() {
+  if (!pollStarted && typeof window !== 'undefined') {
+    pollStarted = true;
+    const { fetchLiveSessions } = useLiveSessions();
+    fetchLiveSessions();
+    setInterval(fetchLiveSessions, 3000);
+  }
+}
 
 const navStrings = createTranslator('LearnSideNavEntryStrings', {
   homeLabel: {
@@ -41,11 +52,14 @@ registerNavItem({
     return urls['kolibri:kolibri.plugins.learn:learn']();
   },
   get routes() {
+    initPolling();
     const { isUserLoggedIn } = useUser();
     const { isAiEnabled } = useAiTutor();
+    const { liveClassesCount } = useLiveSessions();
     if (!isUserLoggedIn.value) {
       return [];
     }
+    const isLive = liveClassesCount.value > 0;
     const navItems = [
       {
         label: navStrings.$tr('homeLabel'),
@@ -54,7 +68,9 @@ registerNavItem({
         name: baseRoutes.home.name,
       },
       {
-        label: navStrings.$tr('liveMeetingLabel'),
+        label: isLive
+          ? `🟢 ${navStrings.$tr('liveMeetingLabel')}`
+          : navStrings.$tr('liveMeetingLabel'),
         icon: 'group',
         route: baseRoutes.liveMeeting.path,
         name: baseRoutes.liveMeeting.name,

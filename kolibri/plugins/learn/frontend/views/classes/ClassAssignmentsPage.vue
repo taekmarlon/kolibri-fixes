@@ -156,7 +156,7 @@
         fetchLiveSessions();
       });
 
-      const liveSessionPolling = useTimeoutPoll(fetchLiveSessions, 5000);
+      const liveSessionPolling = useTimeoutPoll(fetchLiveSessions, 2000);
       onBeforeUnmount(liveSessionPolling.pause);
 
       const isLiveNow = computed(() => {
