@@ -102,3 +102,21 @@ class AiApiTestCase(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("Lesson Plan", response.data["lesson"])
+
+    @patch("kolibri.core.ai.viewsets.call_ai_chat")
+    def test_ai_generate_activity_endpoint(self, mock_call_ai_chat):
+        mock_call_ai_chat.return_value = "Here is an interactive activity:\n```html\n<div><canvas id='c'></canvas></div>\n```"
+        self.client.force_authenticate(user=self.superuser)
+        url = reverse("kolibri:core:ai_generate_activity")
+        response = self.client.post(
+            url,
+            {
+                "topic": "Solar System",
+                "grade_level": "Middle School",
+                "activity_type": "simulation",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("```html", response.data["activity"])
+        self.assertEqual(response.data["topic"], "Solar System")

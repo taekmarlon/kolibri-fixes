@@ -135,6 +135,31 @@
           <span class="item-text" v-html="formatInlineText(item)"></span>
         </li>
       </ul>
+
+      <!-- Interactive HTML5 Activity Card -->
+      <Html5ActivityRunner
+        v-else-if="block.type === 'html5_activity'"
+        :htmlCode="block.code"
+        :title="block.title || 'Interactive Activity / Simulation'"
+      />
+
+      <!-- Code Card -->
+      <div
+        v-else-if="block.type === 'code'"
+        class="code-block"
+        :style="{
+          backgroundColor: '#1e293b',
+          color: '#f8fafc',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          overflowX: 'auto',
+          fontFamily: 'monospace',
+          fontSize: '13px',
+          margin: '12px 0',
+        }"
+      >
+        <pre style="margin: 0; white-space: pre-wrap;"><code>{{ block.code }}</code></pre>
+      </div>
     </div>
   </div>
 </template>
@@ -142,9 +167,13 @@
 <script>
   import { computed } from 'vue';
   import useSpeechSynthesis from '../composables/useSpeechSynthesis';
+  import Html5ActivityRunner from './Html5ActivityRunner';
 
   export default {
     name: 'AiMessageRenderer',
+    components: {
+      Html5ActivityRunner,
+    },
     props: {
       content: {
         type: String,
@@ -212,6 +241,17 @@
       const parsedBlocks = computed(() => {
         if (!props.content) return [];
         const raw = props.content.trim();
+
+        if (/^\s*<!DOCTYPE html/i.test(raw) || /^\s*<html/i.test(raw)) {
+          return [
+            {
+              type: 'html5_activity',
+              code: raw,
+              title: 'Interactive HTML5 Activity',
+            },
+          ];
+        }
+
         const lines = raw.split('\n');
         const blocks = [];
         let currentList = [];
@@ -236,6 +276,49 @@
           if (line === '---' || line === '***' || line === '___') {
             flushList();
             i++;
+            continue;
+          }
+
+          if (line.match(/^```/)) {
+            flushList();
+            const lang = line.replace(/^```/, '').trim().toLowerCase();
+            const isHtml =
+              !lang ||
+              lang === 'html' ||
+              lang === 'html5' ||
+              lang === 'interactive-html5' ||
+              lang === 'h5p';
+            i++;
+            const codeLines = [];
+            while (i < lines.length && !lines[i].trim().startsWith('```')) {
+              codeLines.push(lines[i]);
+              i++;
+            }
+            if (i < lines.length && lines[i].trim().startsWith('```')) {
+              i++;
+            }
+            const fullCode = codeLines.join('\n');
+            if (
+              isHtml &&
+              (/<[a-z][\s\S]*>/i.test(fullCode) ||
+                fullCode.includes('<html') ||
+                fullCode.includes('<div') ||
+                fullCode.includes('<button') ||
+                fullCode.includes('<canvas') ||
+                fullCode.includes('<script'))
+            ) {
+              blocks.push({
+                type: 'html5_activity',
+                code: fullCode,
+                title: 'Interactive Activity / Simulation',
+              });
+            } else {
+              blocks.push({
+                type: 'code',
+                code: fullCode,
+                lang: lang || 'text',
+              });
+            }
             continue;
           }
 

@@ -162,9 +162,60 @@ class AiGenerateLessonView(APIView):
 
         try:
             ai_reply = call_ai_chat(messages)
-            return Response({"lesson_plan": ai_reply, "lesson": ai_reply, "topic": topic})
+            return Response(
+                {"lesson_plan": ai_reply, "lesson": ai_reply, "topic": topic}
+            )
         except Exception as e:
             logger.error(f"AI Lesson Generation Error: {e}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class AiGenerateActivityView(APIView):
+    """
+    Coach Interactive HTML5 Activity & Tutorial Generator.
+    Generates playable interactive mini-apps, simulations, or tutorials with mouse and keyboard engagement.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        config = get_ai_config()
+        if not config["enabled"]:
+            return Response(
+                {"error": "AI Assistant is currently disabled by administrator."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        data = request.data
+        topic = data.get("topic", "General Science")
+        grade_level = data.get("grade_level", "Middle School")
+        activity_type = data.get("activity_type", "simulation")
+
+        prompt = (
+            f"Generate a fun, highly engaging, interactive HTML5 educational activity for grade level '{grade_level}' "
+            f"on the topic '{topic}'. Activity Type: '{activity_type}'.\n\n"
+            f"REQUIREMENTS:\n"
+            f"1. Provide a short pedagogical introduction and instructions at the start.\n"
+            f"2. Provide the complete, self-contained interactive application inside a single ```html ... ``` code block.\n"
+            f"3. The HTML5 application MUST be playable and interactive using BOTH mouse and keyboard:\n"
+            f"   - Interactive controls (buttons, sliders, clickable elements, canvas, drag-and-drop, or keys).\n"
+            f"   - Keyboard support (e.g. arrow keys, spacebar, number keys, or Enter to interact).\n"
+            f"   - Immediate visual feedback (score tracker, correct/wrong indicators, particle or color animations).\n"
+            f"   - A 'Reset / Play Again' button.\n"
+            f"4. All CSS styling and JavaScript logic must be strictly inline within <style> and <script> tags.\n"
+            f"5. Zero external dependencies (pure vanilla HTML5, CSS, and JS with no CDN imports).\n"
+            f"6. Clean, responsive, modern layout with high-contrast text and engaging colors."
+        )
+
+        messages = [{"role": "user", "content": prompt}]
+
+        try:
+            ai_reply = call_ai_chat(messages, grade_level=grade_level)
+            return Response({"activity": ai_reply, "content": ai_reply, "topic": topic})
+        except Exception as e:
+            logger.error(f"AI Activity Generation Error: {e}")
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

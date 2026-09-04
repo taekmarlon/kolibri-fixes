@@ -15,6 +15,14 @@
       </p>
 
       <div class="form-grid">
+        <KSelect
+          v-model="selectedType"
+          :label="generationTypeLabel$()"
+          :options="typeOptions"
+          :disabled="isLoading"
+          style="margin-bottom: 8px;"
+        />
+
         <KTextbox
           v-model="topic"
           :label="topicLabel$()"
@@ -33,6 +41,7 @@
           />
 
           <KSelect
+            v-if="selectedType && selectedType.value === 'quiz'"
             v-model="selectedCount"
             :label="numQuestionsLabel$()"
             :options="countOptions"
@@ -100,19 +109,23 @@
 
   const modalStrings = createTranslator('AiQuizGeneratorModalStrings', {
     modalTitle: {
-      message: 'AI Practice Question & Quiz Generator',
+      message: 'AI Interactive Activity & Quiz Generator',
       context: 'Title of the AI generator modal',
     },
     modalDescription: {
-      message: 'Automatically generate high-quality practice questions and quizzes tailored to any topic and grade level.',
+      message: 'Automatically generate playable interactive HTML5 activities, tutorials, simulations, and quizzes tailored to any topic and grade level.',
       context: 'Subtitle description of modal',
+    },
+    generationTypeLabel: {
+      message: 'Activity / Content Type',
+      context: 'Label for content type dropdown',
     },
     topicLabel: {
       message: 'Topic or Learning Standard',
       context: 'Label for topic input',
     },
     topicPlaceholder: {
-      message: 'e.g. Quadratic Equations, Photosynthesis, Fractions',
+      message: 'e.g. Solar System Orbit, Fractions Pizza, Quadratic Equations, Photosynthesis',
       context: 'Placeholder for topic input',
     },
     gradeLevelLabel: {
@@ -124,7 +137,7 @@
       context: 'Label for question count dropdown',
     },
     generateButton: {
-      message: 'Generate Questions with AI',
+      message: 'Generate with AI',
       context: 'Button to trigger AI generation',
     },
     generating: {
@@ -132,15 +145,15 @@
       context: 'Loading button text',
     },
     generatingText: {
-      message: 'Generating educational questions with AI model...',
+      message: 'Generating interactive educational content with AI model...',
       context: 'Loading status text',
     },
     generatedResult: {
-      message: 'Generated Questions',
+      message: 'Generated Content',
       context: 'Header for result box',
     },
     copyToClipboardButton: {
-      message: 'Copy Questions',
+      message: 'Copy Content',
       context: 'Submit button text to copy content',
     },
     closeButton: {
@@ -164,10 +177,11 @@
     },
     emits: ['close'],
     setup(props, { emit }) {
-      const { isAiEnabled, generateQuiz, isLoading } = useAiTutor();
+      const { isAiEnabled, generateQuiz, generateActivity, isLoading } = useAiTutor();
       const {
         modalTitle$,
         modalDescription$,
+        generationTypeLabel$,
         topicLabel$,
         topicPlaceholder$,
         gradeLevelLabel$,
@@ -181,6 +195,13 @@
         copiedNotice$,
         topicRequiredError$,
       } = modalStrings;
+
+      const typeOptions = [
+        { label: '🎮 Interactive HTML5 Activity / Simulation (Mouse & Keyboard)', value: 'simulation' },
+        { label: '📖 Interactive Tutorial & Guided Practice', value: 'tutorial' },
+        { label: '📝 Standard Practice Quiz (Multiple Choice)', value: 'quiz' },
+      ];
+      const selectedType = ref(typeOptions[0]);
 
       const topic = ref('');
       const topicError = ref('');
@@ -211,12 +232,21 @@
         copied.value = false;
 
         try {
-          const res = await generateQuiz({
-            topic: topic.value.trim(),
-            grade_level: selectedGrade.value.value,
-            num_questions: selectedCount.value.value,
-          });
-          generatedContent.value = res.quiz || '';
+          if (selectedType.value.value === 'quiz') {
+            const res = await generateQuiz({
+              topic: topic.value.trim(),
+              grade_level: selectedGrade.value.value,
+              num_questions: selectedCount.value.value,
+            });
+            generatedContent.value = res.quiz || '';
+          } else {
+            const res = await generateActivity({
+              topic: topic.value.trim(),
+              grade_level: selectedGrade.value.value,
+              activity_type: selectedType.value.value,
+            });
+            generatedContent.value = res.activity || res.content || '';
+          }
         } catch (err) {
           // handled in composable
         }
@@ -237,6 +267,8 @@
       return {
         isAiEnabled,
         isLoading,
+        typeOptions,
+        selectedType,
         topic,
         topicError,
         gradeOptions,
@@ -249,6 +281,7 @@
         copyContent,
         modalTitle$,
         modalDescription$,
+        generationTypeLabel$,
         topicLabel$,
         topicPlaceholder$,
         gradeLevelLabel$,

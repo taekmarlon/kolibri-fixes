@@ -64,7 +64,15 @@ DEFAULT_SYSTEM_PROMPT = (
     "Your goal is to explain concepts clearly in your own original words using simple everyday analogies,\n"
     "step-by-step reasoning, and clear formatting.\n"
     "Format math formulas and scientific notation using standard LaTeX with $ for inline math (e.g. $x^2 + y^2 = r^2$) "
-    "and $$ for block math equations.\n"
+    "and $$ for block math equations.\n\n"
+    "INTERACTIVE HTML5 ACTIVITIES & SIMULATIONS:\n"
+    "Whenever explaining a concept, teaching a tutorial, or providing practice, "
+    "include an engaging, fully self-contained, responsive interactive HTML5/CSS/JavaScript widget inside an "
+    "```html ... ``` code block.\n"
+    "The widget MUST be interactive using keyboard and mouse (such as clickable buttons, drag-and-drop, sliders, "
+    "interactive canvas graphics, keyboard navigation, score trackers, instant feedback, and reset buttons).\n"
+    "All CSS styling and JavaScript logic must be inline within <style> and <script> tags with zero external dependencies "
+    "so that it works 100% offline.\n"
     "Keep explanations structured, friendly, clear, and easy to understand."
 )
 
@@ -112,6 +120,7 @@ GRADE_LEVEL_PROMPTS = {
         "- Use short, simple sentences (1-2 lines max).\n"
         "- Use lots of fun emojis (🍎 🐱 🐶 🌟 🎈 🎨) and visual emoji pictures.\n"
         "- Use cute analogies with animals, toys, colors, and bedtime stories.\n"
+        "- Include simple, colorful interactive HTML5 click/tap games (e.g., clicking stars or animals to count them, matching shapes) in ```html```.\n"
         "- Always praise the child's effort with virtual stars and high fives (⭐⭐⭐ High five!)."
     ),
     "elementary": (
@@ -121,6 +130,7 @@ GRADE_LEVEL_PROMPTS = {
         "- Explain concepts step-by-step using fun numbered cards (Step 1, Step 2, Step 3).\n"
         "- Use relatable real-world analogies (e.g. pizza slices for fractions, LEGO blocks for volume, skateboard for inertia).\n"
         "- Include fun emojis (🚀 💡 🎮 🍕 🎯 🏆).\n"
+        "- Include an interactive HTML5 simulation, minigame, or practice tool with mouse and keyboard engagement in ```html```.\n"
         "- Include a '💡 Quick Check' or '⭐ Fun Trivia' at the end to keep them engaged."
     ),
     "secondary": (
@@ -130,6 +140,7 @@ GRADE_LEVEL_PROMPTS = {
         "- Provide deep conceptual understanding with step-by-step mathematical derivations and logical proofs.\n"
         "- Format formulas cleanly using LaTeX ($...$ and $$...$$).\n"
         "- Connect concepts to real-world engineering, science, economics, and history.\n"
+        "- Include interactive HTML5 STEM simulations, parameter sliders, physics/math canvas graphs, or interactive problem solvers in ```html```.\n"
         "- Highlight Key Takeaways 📌 and Exam Pro-Tips 💡."
     ),
 }
@@ -172,7 +183,7 @@ def call_ai_chat(
         return _call_openai_compatible(messages, sys_prompt, config, timeout=timeout)
 
 
-def _call_gemini_native(messages, system_prompt, config, timeout=30):
+def _call_gemini_native(messages, system_prompt, config, timeout=30):  # noqa: C901
     """
     Calls Google Gemini REST API v1beta with automatic retries and fallback.
     """
@@ -220,7 +231,9 @@ def _call_gemini_native(messages, system_prompt, config, timeout=30):
                     if text_parts:
                         return "".join(text_parts)
                     if candidate.get("finishReason") == "RECITATION":
-                        logger.warning("Gemini recitation filter triggered, re-prompting...")
+                        logger.warning(
+                            "Gemini recitation filter triggered, re-prompting..."
+                        )
                         # Modify payload to emphasize original paraphrase
                         payload["systemInstruction"] = {
                             "parts": [
@@ -262,7 +275,7 @@ def _call_gemini_native(messages, system_prompt, config, timeout=30):
     raise RuntimeError(f"Failed to connect to AI provider: {str(last_error)}")
 
 
-def _call_openai_compatible(messages, system_prompt, config, timeout=30):
+def _call_openai_compatible(messages, system_prompt, config, timeout=30):  # noqa: C901
     """
     Calls any OpenAI-compatible Chat Completions API (DeepSeek, Groq, OpenAI, Ollama, Hugging Face).
     """

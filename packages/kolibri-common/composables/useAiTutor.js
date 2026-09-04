@@ -130,6 +130,25 @@ export default function useAiTutor() {
     }
   }
 
+  async function generateActivity(params) {
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await client({
+        url: '/api/ai/generate_activity/',
+        method: 'POST',
+        data: params,
+      });
+      return response.data;
+    } catch (err) {
+      const errText = err.response?.data?.error || err.message || 'Activity generation failed.';
+      errorMessage.value = errText;
+      throw new Error(errText);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   async function testAiConnection(credentials) {
     try {
       const response = await client({
@@ -140,6 +159,7 @@ export default function useAiTutor() {
       return response.data;
     } catch (err) {
       const errText = err.response?.data?.error || err.message || 'Connection test failed.';
+      errorMessage.value = errText;
       throw new Error(errText);
     }
   }
@@ -164,6 +184,7 @@ export default function useAiTutor() {
     sendChatMessage,
     generateQuiz,
     generateLesson,
+    generateActivity,
     testAiConnection,
     clearChat,
   };
