@@ -206,9 +206,12 @@
       ]);
 
       onMounted(() => {
-        fetchClass(props.classId).then(() => {
-          pageLoading.value = false;
-        });
+        pageLoading.value = false;
+        fetchClass({ classId: props.classId })
+          .catch(() => {})
+          .finally(() => {
+            pageLoading.value = false;
+          });
         fetchLiveSessions();
       });
 

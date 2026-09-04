@@ -49,7 +49,7 @@
             appearance="raised-button"
             icon="openNewTab"
             style="background-color: #16a34a; color: #ffffff; font-weight: bold; font-size: 15px;"
-            :to="{ name: ClassesPageNames.CLASS_LIVE_CLASS, params: { classId: activeLiveClass.id } }"
+            @click="joinLiveMeeting(activeLiveClass.id)"
           />
         </div>
         <YourClasses
@@ -173,7 +173,7 @@
       const currentInstance = getCurrentInstance().proxy;
       const store = currentInstance.$store;
       const router = currentInstance.$router;
-      const { isUserLoggedIn, currentUserId, isLearner } = useUser();
+      const { isUserLoggedIn, currentUserId, isLearner, full_name, username } = useUser();
       const picturePasswordPending = useSessionStorage(
         PICTURE_PASSWORD_ASSIGNED_MODAL_PENDING,
         false,
@@ -204,6 +204,15 @@
         const classList = get(classes) || [];
         return classList.find(c => isClassLive(c.id)) || null;
       });
+
+      function joinLiveMeeting(classId) {
+        const studentName =
+          (full_name && full_name.value) || (username && username.value) || 'Student';
+        const name = encodeURIComponent(studentName);
+        const roomName = `kolibri_class_${classId}`;
+        const directUrl = `https://meet.jit.si/${roomName}#userInfo.displayName="${name}"&config.startWithAudioMuted=true&config.prejoinPageEnabled=false`;
+        window.open(directUrl, '_blank');
+      }
 
       const continueLearningFromClasses = computed(
         () =>
@@ -317,6 +326,7 @@
         isLearner,
         activeLiveClass,
         ClassesPageNames,
+        joinLiveMeeting,
       };
     },
     computed: {

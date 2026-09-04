@@ -62,7 +62,7 @@ export default [
       };
     },
     handler: () => {
-      return noClassesGuard();
+      pageLoading.value = false;
     },
     component: LearnerLiveClassPage,
   },

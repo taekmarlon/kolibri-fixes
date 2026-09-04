@@ -57,7 +57,7 @@
           appearance="raised-button"
           icon="openNewTab"
           :style="isLiveNow ? { backgroundColor: '#16a34a', color: '#ffffff', fontWeight: 'bold' } : {}"
-          :to="{ name: ClassesPageNames.CLASS_LIVE_CLASS, params: { classId } }"
+          @click="joinLiveMeeting"
         />
       </div>
 
@@ -115,6 +115,7 @@
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import { PageNames, ClassesPageNames } from '../../constants';
 
+  import useUser from 'kolibri/composables/useUser';
   import useLearnerResources from '../../composables/useLearnerResources';
   import useAiTutor from 'kolibri-common/composables/useAiTutor';
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
@@ -178,6 +179,16 @@
         return getClassActiveQuizzes(props.classId);
       });
 
+      const { full_name, username } = useUser();
+
+      function joinLiveMeeting() {
+        const studentName = full_name.value || username.value || 'Student';
+        const name = encodeURIComponent(studentName);
+        const roomName = `kolibri_class_${props.classId}`;
+        const directUrl = `https://meet.jit.si/${roomName}#userInfo.displayName="${name}"&config.startWithAudioMuted=true&config.prejoinPageEnabled=false`;
+        window.open(directUrl, '_blank');
+      }
+
       const polling = useTimeoutPoll(
         () => fetchClass(props.classId),
         30000, // poll every 30 seconds
@@ -195,6 +206,7 @@
         PageNames,
         isAiEnabled,
         isLiveNow,
+        joinLiveMeeting,
       };
     },
     props: {

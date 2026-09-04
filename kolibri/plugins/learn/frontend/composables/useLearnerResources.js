@@ -298,7 +298,9 @@ export default function useLearnerResources() {
    * @returns {Promise} - Resolves with the loaded classroom
    * @public
    */
-  function fetchClass({ classId, force = false }) {
+  function fetchClass(params = {}) {
+    const classId = typeof params === 'string' ? params : params.classId;
+    const force = typeof params === 'object' && params.force ? params.force : false;
     return LearnerClassroomResource.fetchModel({ id: classId, force }).then(classroom => {
       const updatedClasses = [...get(classes).filter(c => c.id !== classId), classroom];
       set(classes, updatedClasses);
