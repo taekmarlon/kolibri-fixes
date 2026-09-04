@@ -266,21 +266,25 @@
     },
     computed: {
       ...mapState('classSummary', { classId: 'id', className: 'name' }),
+      currentClassId() {
+        return this.classId || this.$route.params.classId || null;
+      },
       defaultClassRoomName() {
-        const id = this.classId || 'general';
+        const id = this.currentClassId || 'general';
         return `kolibri_class_${id}`;
       },
     },
     methods: {
       launchWindow(roomName, title) {
+        const classId = this.currentClassId;
         this.saveRecentRoom({
           roomId: roomName,
           title,
-          classId: this.classId,
+          classId,
         });
-        if (this.classId) {
+        if (classId) {
           this.setLiveSessionActive({
-            classId: this.classId,
+            classId,
             roomName,
             active: true,
           });

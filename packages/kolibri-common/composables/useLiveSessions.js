@@ -52,10 +52,27 @@ export default function useLiveSessions() {
       .catch(() => {});
   }
 
+  function normalizeId(id) {
+    return String(id || '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .toLowerCase();
+  }
+
   function isClassLive(classId) {
     if (!classId) return false;
-    const session = activeLiveSessions.value[classId];
-    return Boolean(session && session.active);
+    const target = normalizeId(classId);
+    if (!target) return false;
+
+    if (activeLiveSessions.value[classId] && activeLiveSessions.value[classId].active) {
+      return true;
+    }
+
+    for (const [key, session] of Object.entries(activeLiveSessions.value)) {
+      if (session && session.active && normalizeId(key) === target) {
+        return true;
+      }
+    }
+    return false;
   }
 
   const liveClassesCount = computed(() => {
