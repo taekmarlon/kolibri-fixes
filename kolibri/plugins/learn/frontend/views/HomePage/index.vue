@@ -20,6 +20,38 @@
           v-if="missingResources"
           @syncComplete="hydrateHomePage"
         />
+        <!-- Live Class in Session Alert Banner (When any enrolled class is live) -->
+        <div
+          v-if="activeLiveClass"
+          class="home-live-class-alert"
+          style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 18px 24px; margin-top: 16px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; box-shadow: 0 4px 18px rgba(34, 197, 94, 0.22);"
+        >
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div class="live-dot-wrapper">
+              <span class="pulse-ring"></span>
+              <span class="pulse-dot"></span>
+            </div>
+            <div>
+              <div style="display: inline-block; font-size: 11px; font-weight: 800; color: #166534; background: #bbf7d0; padding: 2px 8px; border-radius: 9999px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                🟢 LIVE IN SESSION NOW
+              </div>
+              <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: #15803d;">
+                {{ activeLiveClass.name }} is Live!
+              </h2>
+              <p style="margin: 4px 0 0; font-size: 14px; color: #166534;">
+                Your teacher has started this class meeting. Join now to participate in live video, audio, and discussion.
+              </p>
+            </div>
+          </div>
+          <KButton
+            text="Join Live Class Now ➔"
+            :primary="true"
+            appearance="raised-button"
+            icon="openNewTab"
+            style="background-color: #16a34a; color: #ffffff; font-weight: bold; font-size: 15px;"
+            :to="{ name: ClassesPageNames.CLASS_LIVE_CLASS, params: { classId: activeLiveClass.id } }"
+          />
+        </div>
         <YourClasses
           v-if="displayClasses"
           class="section"
@@ -85,8 +117,8 @@
 
 <script>
 
-  import { computed, getCurrentInstance } from 'vue';
-  import { get, set, useSessionStorage } from '@vueuse/core';
+  import { computed, onMounted, onBeforeUnmount, getCurrentInstance } from 'vue';
+  import { get, set, useSessionStorage, useTimeoutPoll } from '@vueuse/core';
   import client from 'kolibri/client';
   import urls from 'kolibri/urls';
   import useUser from 'kolibri/composables/useUser';
@@ -102,9 +134,10 @@
     setClasses,
     setResumableContentNodes,
   } from '../../composables/useLearnerResources';
+  import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
   import { setContentNodeProgress } from '../../composables/useContentNodeProgress';
   import { inClasses } from '../../composables/useCoreLearn';
-  import { PageNames } from '../../constants';
+  import { PageNames, ClassesPageNames } from '../../constants';
   import AssignedCoursesCards from '../classes/AssignedCoursesCards';
   import AssignedLessonsCards from '../classes/AssignedLessonsCards';
   import AssignedQuizzesCards from '../classes/AssignedQuizzesCards';
@@ -157,6 +190,20 @@
         resumableContentNodes,
         learnerFinishedAllClasses,
       } = useLearnerResources();
+
+      const { fetchLiveSessions, isClassLive } = useLiveSessions();
+
+      onMounted(() => {
+        fetchLiveSessions();
+      });
+
+      const liveSessionPolling = useTimeoutPoll(fetchLiveSessions, 10000);
+      onBeforeUnmount(liveSessionPolling.pause);
+
+      const activeLiveClass = computed(() => {
+        const classList = get(classes) || [];
+        return classList.find(c => isClassLive(c.id)) || null;
+      });
 
       const continueLearningFromClasses = computed(
         () =>
@@ -268,6 +315,8 @@
         picturePasswordPending,
         userId: currentUserId,
         isLearner,
+        activeLiveClass,
+        ClassesPageNames,
       };
     },
     computed: {
@@ -306,6 +355,48 @@
 
   .section:first-child {
     margin-top: 16px;
+  }
+
+  .live-dot-wrapper {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .pulse-dot {
+    width: 14px;
+    height: 14px;
+    background-color: #22c55e;
+    border-radius: 50%;
+    z-index: 2;
+  }
+
+  .pulse-ring {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    background-color: rgba(34, 197, 94, 0.45);
+    border-radius: 50%;
+    animation: pulse-ring-anim 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  }
+
+  @keyframes pulse-ring-anim {
+    0% {
+      transform: scale(0.6);
+      opacity: 0.9;
+    }
+    70% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
   }
 
 </style>

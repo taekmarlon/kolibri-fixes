@@ -33,12 +33,21 @@
         data-testid="classLink"
         :to="classAssignmentsLink(c.id)"
       >
-        <h3
-          dir="auto"
-          :style="{ margin: 0, fontWeight: 'normal' }"
-        >
-          {{ c.name }}
-        </h3>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <h3
+            dir="auto"
+            :style="{ margin: 0, fontWeight: isClassLive(c.id) ? 'bold' : 'normal', color: isClassLive(c.id) ? '#15803d' : 'inherit' }"
+          >
+            {{ c.name }}
+          </h3>
+          <span
+            v-if="isClassLive(c.id)"
+            style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; color: #166534; background: #bbf7d0; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;"
+          >
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+            LIVE
+          </span>
+        </div>
       </CardLink>
     </CardGrid>
 
@@ -55,6 +64,7 @@
 <script>
 
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
+  import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
   import { ClassesPageNames } from '../../constants';
   import { classAssignmentsLink } from '../classes/classPageLinks';
   import CardGrid from '../cards/CardGrid';
@@ -70,6 +80,12 @@
       CardLink,
     },
     mixins: [commonCoreStrings],
+    setup() {
+      const { isClassLive } = useLiveSessions();
+      return {
+        isClassLive,
+      };
+    },
     props: {
       classes: {
         type: Array,
