@@ -1,5 +1,24 @@
 <template>
   <div class="ai-rich-message-content">
+    <!-- Voice Read Aloud Button -->
+    <div v-if="isSupported && content" class="speech-action-bar">
+      <button
+        type="button"
+        class="read-aloud-btn"
+        :class="{ 'is-speaking': isCurrentSpeaking }"
+        @click="toggleSpeak"
+        :title="isCurrentSpeaking ? 'Stop reading' : 'Read aloud with audio voice'"
+      >
+        <span class="speaker-icon">{{ isCurrentSpeaking ? '⏹️' : '🔊' }}</span>
+        <span class="speaker-text">{{ isCurrentSpeaking ? 'Stop' : 'Listen' }}</span>
+        <span v-if="isCurrentSpeaking" class="speech-wave">
+          <span class="wave-bar bar-1"></span>
+          <span class="wave-bar bar-2"></span>
+          <span class="wave-bar bar-3"></span>
+        </span>
+      </button>
+    </div>
+
     <div
       v-for="(block, idx) in parsedBlocks"
       :key="idx"
@@ -122,6 +141,7 @@
 
 <script>
   import { computed } from 'vue';
+  import useSpeechSynthesis from '../composables/useSpeechSynthesis';
 
   export default {
     name: 'AiMessageRenderer',
@@ -308,11 +328,29 @@
         return blocks;
       });
 
+      const { isSupported, isPlaying, currentSpeakingId, speak, stop } = useSpeechSynthesis();
+      const instanceId = Math.random().toString(36).substring(2, 9);
+
+      const isCurrentSpeaking = computed(() => {
+        return isPlaying.value && currentSpeakingId.value === instanceId;
+      });
+
+      function toggleSpeak() {
+        if (isCurrentSpeaking.value) {
+          stop();
+        } else {
+          speak(props.content, { id: instanceId, gradeLevel: props.gradeLevel });
+        }
+      }
+
       return {
         parsedBlocks,
         formatInlineText,
         cleanMathString,
         getHeadingIcon,
+        isSupported,
+        isCurrentSpeaking,
+        toggleSpeak,
       };
     },
   };
@@ -325,6 +363,79 @@
     gap: 12px;
     font-size: 14.5px;
     line-height: 1.6;
+    position: relative;
+  }
+
+  .speech-action-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: -4px;
+  }
+
+  .read-aloud-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+
+    &:hover {
+      background: #e2e8f0;
+      color: #1e293b;
+      border-color: #94a3b8;
+    }
+
+    &.is-speaking {
+      background: #eff6ff;
+      color: #2563eb;
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+  }
+
+  .speech-wave {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 12px;
+    margin-left: 2px;
+  }
+
+  .wave-bar {
+    width: 2.5px;
+    background: #2563eb;
+    border-radius: 2px;
+    animation: wave-bounce 1s infinite ease-in-out;
+
+    &.bar-1 {
+      height: 6px;
+      animation-delay: 0s;
+    }
+    &.bar-2 {
+      height: 12px;
+      animation-delay: 0.2s;
+    }
+    &.bar-3 {
+      height: 8px;
+      animation-delay: 0.4s;
+    }
+  }
+
+  @keyframes wave-bounce {
+    0%, 100% {
+      transform: scaleY(0.4);
+    }
+    50% {
+      transform: scaleY(1);
+    }
   }
 
   .content-block {

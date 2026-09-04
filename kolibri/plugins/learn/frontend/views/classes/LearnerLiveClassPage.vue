@@ -34,6 +34,23 @@
           </div>
         </div>
 
+        <!-- Active Live Meeting Alert Banner -->
+        <div
+          v-if="isLiveNow"
+          class="live-active-alert"
+          style="background: #f0fdf4; border: 1.5px solid #4ade80; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);"
+        >
+          <span style="font-size: 22px;">🟢</span>
+          <div>
+            <div style="font-weight: 800; color: #15803d; font-size: 15px;">
+              Teacher is Live in this Room Right Now!
+            </div>
+            <div style="font-size: 13px; color: #166534; margin-top: 2px;">
+              Class is currently in session. Tap the button below to join the teacher and classmates.
+            </div>
+          </div>
+        </div>
+
         <div class="lobby-details">
           <div class="detail-item">
             <span class="detail-label" :style="{ color: $themeTokens.annotation }">
@@ -86,6 +103,7 @@
   import commonLearnStrings from '../commonLearnStrings';
   import LearnAppBarPage from '../LearnAppBarPage';
   import useLearnerResources from '../../composables/useLearnerResources';
+  import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
   import { ClassesPageNames } from '../../constants';
 
   const learnerLiveStrings = createTranslator('LearnerLiveClassStrings', {
@@ -136,6 +154,7 @@
     setup(props) {
       const { full_name, username } = useUser();
       const { getClass, fetchClass } = useLearnerResources();
+      const { fetchLiveSessions, isClassLive } = useLiveSessions();
       const meetingActive = ref(false);
 
       const {
@@ -147,6 +166,8 @@
         launchWindowButton$,
         backToClassButton$,
       } = learnerLiveStrings;
+
+      const isLiveNow = computed(() => isClassLive(props.classId));
 
       const currentClass = computed(() => {
         return getClass(props.classId) || {};
@@ -188,6 +209,7 @@
         fetchClass(props.classId).then(() => {
           pageLoading.value = false;
         });
+        fetchLiveSessions();
       });
 
       function launchWindow() {
@@ -209,6 +231,7 @@
         pageTitle,
         breadcrumbs,
         ClassesPageNames,
+        isLiveNow,
         liveClassHeader$,
         defaultClass$,
         lobbySubtitle$,

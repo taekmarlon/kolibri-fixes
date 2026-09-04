@@ -65,20 +65,25 @@
         v-if="generatedContent && !isLoading"
         class="result-box"
         :style="{
-          backgroundColor: $themePalette.grey.v_100,
-          border: `1px solid ${$themeTokens.fineLine}`,
-          color: $themeTokens.text,
+          backgroundColor: $themeTokens.surface,
+          border: `1.5px solid ${$themeTokens.fineLine}`,
+          borderRadius: '8px',
+          padding: '18px',
+          marginTop: '16px',
         }"
       >
-        <div class="result-header">
-          <span class="result-badge" :style="{ backgroundColor: $themeTokens.primary, color: 'white' }">
+        <div class="result-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <span class="result-badge" :style="{ backgroundColor: $themeTokens.primary, color: 'white', padding: '4px 10px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold' }">
             {{ generatedResult$() }}
           </span>
-          <span v-if="copied" class="copied-indicator" :style="{ color: $themeTokens.success }">
+          <span v-if="copied" class="copied-indicator" :style="{ color: $themeTokens.success, fontWeight: 'bold' }">
             {{ copiedNotice$() }}
           </span>
         </div>
-        <pre class="result-pre">{{ generatedContent }}</pre>
+        <AiMessageRenderer
+          :content="generatedContent"
+          :gradeLevel="selectedGrade ? selectedGrade.value : 'elementary'"
+        />
       </div>
     </div>
   </KModal>
@@ -91,6 +96,7 @@
   import { ref } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
   import useAiTutor from 'kolibri-common/composables/useAiTutor';
+  import AiMessageRenderer from 'kolibri-common/components/AiMessageRenderer';
 
   const modalStrings = createTranslator('AiQuizGeneratorModalStrings', {
     modalTitle: {
@@ -153,6 +159,9 @@
 
   export default {
     name: 'AiQuizGeneratorModal',
+    components: {
+      AiMessageRenderer,
+    },
     emits: ['close'],
     setup(props, { emit }) {
       const { isAiEnabled, generateQuiz, isLoading } = useAiTutor();

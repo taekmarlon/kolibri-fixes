@@ -14,6 +14,7 @@ from .viewsets.initialize_app import InitializeAppView
 from .viewsets.metered_connection import CheckMeteredConnectionView
 from .viewsets.path_permission import PathPermissionView
 from .viewsets.user_sync_status import UserSyncStatusViewSet
+from .viewsets.live_sessions import LiveClassSessionView
 
 router = routers.SimpleRouter()
 router.register(
@@ -31,6 +32,7 @@ urlpatterns = [
     re_path(r"^devicename/", DeviceNameView.as_view(), name="devicename"),
     re_path(r"^devicerestart/", DeviceRestartView.as_view(), name="devicerestart"),
     re_path(r"^pathpermission/", PathPermissionView.as_view(), name="pathpermission"),
+    re_path(r"^live_sessions/?$", LiveClassSessionView.as_view(), name="live_sessions"),
     re_path(
         r"^initialize/([0-9a-f]{32})$",
         InitializeAppView.as_view(),

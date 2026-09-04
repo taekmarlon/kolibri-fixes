@@ -20,30 +20,43 @@
         />
       </h1>
 
-      <!-- Live Classroom Banner -->
+      <!-- Live Virtual Classroom Banner with Real-time Presence -->
       <div
         class="live-class-card"
+        :class="{ 'is-live-now': isLiveNow }"
         :style="{
-          backgroundColor: $themeTokens.surface,
-          border: `1px solid ${$themeTokens.fineLine}`,
+          backgroundColor: isLiveNow ? '#f0fdf4' : $themeTokens.surface,
+          border: isLiveNow ? '2px solid #22c55e' : `1px solid ${$themeTokens.fineLine}`,
+          boxShadow: isLiveNow ? '0 4px 16px rgba(34, 197, 94, 0.25)' : 'none',
         }"
       >
         <div class="live-card-left">
-          <KIcon icon="group" class="live-card-icon" :style="{ color: $themeTokens.primary }" />
+          <div v-if="isLiveNow" class="live-dot-wrapper">
+            <span class="pulse-ring"></span>
+            <span class="pulse-dot"></span>
+          </div>
+          <KIcon v-else icon="group" class="live-card-icon" :style="{ color: $themeTokens.primary }" />
           <div>
-            <h2 class="live-card-title" :style="{ color: $themeTokens.text }">
-              {{ $tr('liveClassTitle') }}
+            <div
+              v-if="isLiveNow"
+              style="display: inline-block; font-size: 11px; font-weight: 800; color: #166534; background: #bbf7d0; padding: 2px 8px; border-radius: 9999px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;"
+            >
+              🟢 Teacher is Live Now
+            </div>
+            <h2 class="live-card-title" :style="{ color: isLiveNow ? '#15803d' : $themeTokens.text }">
+              {{ isLiveNow ? 'Live Class is in Session!' : $tr('liveClassTitle') }}
             </h2>
-            <p class="live-card-desc" :style="{ color: $themeTokens.annotation }">
-              {{ $tr('liveClassSubtext') }}
+            <p class="live-card-desc" :style="{ color: isLiveNow ? '#166534' : $themeTokens.annotation }">
+              {{ isLiveNow ? 'Your teacher has started this class meeting. Tap the button to join the live session now!' : $tr('liveClassSubtext') }}
             </p>
           </div>
         </div>
         <KButton
-          :text="$tr('joinLiveClassButton')"
+          :text="isLiveNow ? 'Join Live Class Now ➔' : $tr('joinLiveClassButton')"
           :primary="true"
           appearance="raised-button"
-          icon="group"
+          icon="openNewTab"
+          :style="isLiveNow ? { backgroundColor: '#16a34a', color: '#ffffff', fontWeight: 'bold' } : {}"
           :to="{ name: ClassesPageNames.CLASS_LIVE_CLASS, params: { classId } }"
         />
       </div>
@@ -94,7 +107,7 @@
 
 <script>
 
-  import { computed, onBeforeUnmount } from 'vue';
+  import { computed, onMounted, onBeforeUnmount } from 'vue';
   import { useTimeoutPoll } from '@vueuse/core';
   import KBreadcrumbs from 'kolibri-design-system/lib/KBreadcrumbs';
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
@@ -104,6 +117,7 @@
 
   import useLearnerResources from '../../composables/useLearnerResources';
   import useAiTutor from 'kolibri-common/composables/useAiTutor';
+  import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
   import commonLearnStrings from '../commonLearnStrings';
   import LearnAppBarPage from '../LearnAppBarPage';
   import AssignedCoursesCards from './AssignedCoursesCards';
@@ -135,6 +149,18 @@
       } = useLearnerResources();
 
       const { isAiEnabled } = useAiTutor();
+      const { fetchLiveSessions, isClassLive } = useLiveSessions();
+
+      onMounted(() => {
+        fetchLiveSessions();
+      });
+
+      const liveSessionPolling = useTimeoutPoll(fetchLiveSessions, 15000);
+      onBeforeUnmount(liveSessionPolling.pause);
+
+      const isLiveNow = computed(() => {
+        return isClassLive(props.classId);
+      });
 
       const className = computed(() => {
         return (getClass(props.classId) || {}).name;
@@ -168,6 +194,7 @@
         ClassesPageNames,
         PageNames,
         isAiEnabled,
+        isLiveNow,
       };
     },
     props: {
@@ -267,6 +294,45 @@
   .live-card-desc {
     margin: 0;
     font-size: 0.9rem;
+  }
+
+  .live-dot-wrapper {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .pulse-dot {
+    width: 14px;
+    height: 14px;
+    background-color: #22c55e;
+    border-radius: 50%;
+    position: relative;
+    z-index: 2;
+  }
+
+  .pulse-ring {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    background-color: rgba(34, 197, 94, 0.45);
+    border-radius: 50%;
+    animation: pulse-ring-anim 1.6s infinite ease-out;
+  }
+
+  @keyframes pulse-ring-anim {
+    0% {
+      transform: scale(0.6);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
   }
 
 </style>

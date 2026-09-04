@@ -125,6 +125,7 @@
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import LiveMeeting from 'kolibri-common/components/LiveMeeting';
   import useLiveMeeting from 'kolibri-common/composables/useLiveMeeting';
+  import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
   import CoachAppBarPage from './CoachAppBarPage';
   import commonCoach from './common';
 
@@ -208,6 +209,7 @@
     mixins: [commonCoach],
     setup() {
       const { saveRecentRoom } = useLiveMeeting();
+      const { setLiveSessionActive } = useLiveSessions();
       const meetingActive = ref(false);
       const activeRoomName = ref('');
       const activeMeetingTitle = ref('');
@@ -242,6 +244,7 @@
         customRoomInput,
         customRoomError,
         saveRecentRoom,
+        setLiveSessionActive,
         liveClassTitle$,
         liveClassDescription$,
         classMeetingTitle$,
@@ -275,6 +278,13 @@
           title,
           classId: this.classId,
         });
+        if (this.classId) {
+          this.setLiveSessionActive({
+            classId: this.classId,
+            roomName,
+            active: true,
+          });
+        }
         const directUrl = `https://meet.jit.si/${roomName}#config.startWithAudioMuted=false&config.prejoinPageEnabled=false`;
         window.open(directUrl, '_blank');
       },
