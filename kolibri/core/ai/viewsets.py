@@ -78,8 +78,12 @@ class AiChatView(APIView):
 
         system_instruction = (
             f"{config['system_prompt']}\n\n"
-            "MANDATORY: You MUST include a complete, self-contained, playable interactive HTML5 simulation, tutorial, "
-            "or practice tool inside an ```html ... ``` code block with keyboard and mouse controls."
+            "CRITICAL REQUIREMENT:\n"
+            "In your ```html ... ``` widget, ALWAYS provide tangible, usable interactive elements:\n"
+            "- If a math problem (e.g. 1 + 3) or quiz question: ALWAYS include an actual `<input type='number' autofocus>` or text input "
+            "with a 'Submit' button AND Enter key listener (`if(event.key==='Enter') check()`) so the student can type their answer with the keyboard!\n"
+            "- If a simulation: ALWAYS include real clickable buttons (e.g. [☀️ Add Sunlight], [💧 Add Water]), sliders, or keyboard listeners (1, 2, 3)!\n"
+            "NEVER display instructions or tasks without providing the interactive input fields or buttons to interact with."
         )
 
         try:
@@ -207,17 +211,18 @@ class AiGenerateActivityView(APIView):
         prompt = (
             f"Generate a fun, highly engaging, interactive HTML5 educational activity for grade level '{grade_level}' "
             f"on the topic '{topic}'. Activity Type: '{activity_type}'.\n\n"
-            f"REQUIREMENTS:\n"
+            f"CRITICAL INTERACTIVE REQUIREMENTS:\n"
             f"1. Provide a short pedagogical introduction and instructions at the start.\n"
             f"2. Provide the complete, self-contained interactive application inside a single ```html ... ``` code block.\n"
-            f"3. The HTML5 application MUST be playable and interactive using BOTH mouse and keyboard:\n"
-            f"   - Interactive controls (buttons, sliders, clickable elements, canvas, drag-and-drop, or keys).\n"
-            f"   - Keyboard support (e.g. arrow keys, spacebar, number keys, or Enter to interact).\n"
-            f"   - Immediate visual feedback (score tracker, correct/wrong indicators, particle or color animations).\n"
-            f"   - A 'Reset / Play Again' button.\n"
+            f"3. The application MUST actively accept BOTH mouse and keyboard inputs:\n"
+            f"   - For questions/problems: ALWAYS include an `<input type='text' autofocus>` or `<input type='number'>` with a 'Submit' button "
+            f"and Enter key listener (`if(event.key==='Enter') check()`) so learners can type answers!\n"
+            f"   - For simulations/games: ALWAYS include real, clickable buttons with `cursor: pointer` (e.g. [☀️ Add Sunlight], [💧 Add Water]), "
+            f"sliders (`<input type='range'>`), and keyboard listeners (e.g. keys 1, 2, 3 or arrows).\n"
+            f"   - NEVER just show instructions or text without the actual interactive buttons/inputs to play with!\n"
+            f"   - Immediate visual feedback (score counters, progress badges, correct/try-again indicators, and a 'Reset' button).\n"
             f"4. All CSS styling and JavaScript logic must be strictly inline within <style> and <script> tags.\n"
-            f"5. Zero external dependencies (pure vanilla HTML5, CSS, and JS with no CDN imports).\n"
-            f"6. Clean, responsive, modern layout with high-contrast text and engaging colors."
+            f"5. Zero external dependencies (pure vanilla HTML5, CSS, and JS with no CDN imports)."
         )
 
         messages = [{"role": "user", "content": prompt}]

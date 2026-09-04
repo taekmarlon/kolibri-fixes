@@ -76,7 +76,7 @@
         ref="iframeRef"
         :key="reloadKey"
         :srcdoc="processedSrcdoc"
-        sandbox="allow-scripts"
+        sandbox="allow-scripts allow-forms allow-modals allow-pointer-lock"
         class="activity-iframe"
         title="Interactive HTML5 Activity"
       ></iframe>
@@ -121,6 +121,46 @@
 
       const processedSrcdoc = computed(() => {
         let code = (props.htmlCode || '').trim();
+        const helperHead = `
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      background-color: #ffffff;
+      line-height: 1.5;
+    }
+    button, [role="button"], input[type="button"], input[type="submit"] {
+      cursor: pointer !important;
+      touch-action: manipulation;
+    }
+    input[type="text"], input[type="number"] {
+      border: 2px solid #94a3b8;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 16px;
+      outline: none;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+  </style>
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {
+      var el = document.querySelector('input[type="text"], input[type="number"], input:not([type="hidden"]), button');
+      if (el) el.focus();
+    });
+    window.addEventListener('click', function(e) {
+      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        var inp = document.querySelector('input[type="text"], input[type="number"]');
+        if (inp) inp.focus();
+      }
+    });
+  <\/script>`;
+
         const hasDoctype = /<!doctype\s+html/i.test(code) || /<html/i.test(code);
         if (!hasDoctype) {
           code = `<!DOCTYPE html>
@@ -128,22 +168,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 12px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      color: #1e293b;
-      background-color: #ffffff;
-      line-height: 1.5;
-    }
-  </style>
+  ${helperHead}
 </head>
 <body>
   ${code}
 </body>
 </html>`;
+        } else if (code.includes('<head>')) {
+          code = code.replace('<head>', '<head>' + helperHead);
+        } else if (code.includes('<html>')) {
+          code = code.replace('<html>', '<html><head>' + helperHead + '</head>');
         }
         return code;
       });
