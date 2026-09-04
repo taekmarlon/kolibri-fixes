@@ -42,7 +42,26 @@ function readPythonPlugins({ pluginFile, plugins, pluginPath }) {
       args.push('--plugin_path', pluginPath);
     }
   }
-  execFileSync('python', args);
+  let pythonPath = process.env.PYTHON;
+  if (!pythonPath && process.env.VIRTUAL_ENV) {
+    pythonPath = path.join(
+      process.env.VIRTUAL_ENV,
+      process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python'
+    );
+  }
+  if (!pythonPath) {
+    const venvPython = path.resolve(
+      __dirname,
+      '../../../.venv',
+      process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python'
+    );
+    if (fs.existsSync(venvPython)) {
+      pythonPath = venvPython;
+    } else {
+      pythonPath = 'python';
+    }
+  }
+  execFileSync(pythonPath, args);
 
   const result = fs.readFileSync(webpack_json_tempfile);
 
