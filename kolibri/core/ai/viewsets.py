@@ -76,9 +76,18 @@ class AiChatView(APIView):
 
         grade_level = data.get("grade_level", "elementary")
 
+        system_instruction = (
+            f"{config['system_prompt']}\n\n"
+            "MANDATORY: You MUST include a complete, self-contained, playable interactive HTML5 simulation, tutorial, "
+            "or practice tool inside an ```html ... ``` code block with keyboard and mouse controls."
+        )
+
         try:
             ai_reply = call_ai_chat(
-                messages, context_info=context_info, grade_level=grade_level
+                messages,
+                system_instruction=system_instruction,
+                context_info=context_info,
+                grade_level=grade_level,
             )
             return Response({"response": ai_reply, "reply": ai_reply})
         except PermissionError as e:
@@ -92,7 +101,7 @@ class AiChatView(APIView):
 
 class AiGenerateQuizView(APIView):
     """
-    Coach Quiz Generator. Generates structured practice questions.
+    Coach Quiz Generator. Generates structured practice questions with interactive widget.
     """
 
     permission_classes = (IsAuthenticated,)
@@ -114,13 +123,15 @@ class AiGenerateQuizView(APIView):
             f"Generate {num_questions} high-quality educational quiz questions for grade level '{grade_level}' "
             f"on the topic '{topic}'.\n"
             f"Provide the output formatted as clear numbered questions with multiple choice options (A, B, C, D), "
-            f"the correct answer, and a short explanation for each."
+            f"the correct answer, and a short explanation for each.\n"
+            f"ALSO include a complete, playable, interactive HTML5 quiz mini-app inside an ```html ... ``` code block "
+            f"allowing learners to answer questions with mouse clicks or keyboard numbers, view instant feedback, and see a score counter."
         )
 
         messages = [{"role": "user", "content": prompt}]
 
         try:
-            ai_reply = call_ai_chat(messages)
+            ai_reply = call_ai_chat(messages, grade_level=grade_level)
             return Response({"quiz": ai_reply, "topic": topic})
         except Exception as e:
             logger.error(f"AI Quiz Generation Error: {e}")

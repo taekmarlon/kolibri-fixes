@@ -399,6 +399,7 @@
       });
 
       const quickHelperChips = [
+        { icon: '🎮', label: 'Playable Simulation', template: 'Can you create an interactive HTML5 simulation or game for this that I can play with keyboard and mouse?' },
         { icon: '🧩', label: 'Explain like I’m 5', template: 'Can you explain this in the simplest way possible with a fun analogy?' },
         { icon: '🎨', label: 'Draw an Emoji Diagram', template: 'Can you show this using a visual emoji picture diagram?' },
         { icon: '🔍', label: 'Give me a hint', template: 'Don’t give me the full answer yet, just give me a helpful hint!' },
@@ -407,6 +408,7 @@
       ];
 
       const quickActionFollowups = [
+        { icon: '🎮', label: 'Interactive Simulation', prompt: 'Can you create an interactive HTML5 simulation or game for this with keyboard and mouse controls?' },
         { icon: '🔍', label: 'Give me a hint', prompt: 'Can you give me a hint for the next step?' },
         { icon: '📝', label: 'Another example', prompt: 'Can you give me another example problem to practice?' },
         { icon: '🏆', label: 'Quiz me!', prompt: 'Quiz me on this topic with 1 practice question!' },

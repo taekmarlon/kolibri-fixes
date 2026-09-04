@@ -61,6 +61,23 @@
         </div>
       </div>
 
+      <!-- Error Banner -->
+      <div
+        v-if="genError && !isLoading"
+        class="error-banner"
+        :style="{
+          backgroundColor: '#fef2f2',
+          border: '1px solid #f87171',
+          color: '#991b1b',
+          padding: '12px',
+          borderRadius: '8px',
+          marginTop: '14px',
+          fontSize: '13px',
+        }"
+      >
+        ⚠️ {{ genError }}
+      </div>
+
       <!-- Loading State -->
       <div v-if="isLoading" class="loading-state">
         <KCircularLoader :delay="false" />
@@ -205,6 +222,7 @@
 
       const topic = ref('');
       const topicError = ref('');
+      const genError = ref('');
       const generatedContent = ref('');
       const copied = ref(false);
 
@@ -229,6 +247,7 @@
           return;
         }
         topicError.value = '';
+        genError.value = '';
         copied.value = false;
 
         try {
@@ -248,7 +267,7 @@
             generatedContent.value = res.activity || res.content || '';
           }
         } catch (err) {
-          // handled in composable
+          genError.value = err.message || 'Generation failed. Please check AI settings and try again.';
         }
       }
 
@@ -271,6 +290,7 @@
         selectedType,
         topic,
         topicError,
+        genError,
         gradeOptions,
         selectedGrade,
         countOptions,
