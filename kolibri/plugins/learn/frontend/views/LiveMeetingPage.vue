@@ -75,10 +75,10 @@
                 </div>
               </div>
               <KButton
-                :text="`Join ${classroom.name}`"
+                :text="`Join ${classroom.name} (Unlimited)`"
                 :primary="true"
                 appearance="raised-button"
-                icon="group"
+                icon="openNewTab"
                 @click="joinSpecificRoom(`kolibri_class_${classroom.id}`, `${classroom.name} — Live Class`)"
               />
             </div>
@@ -128,7 +128,7 @@
                   :text="joinMeetingButton$()"
                   :primary="true"
                   appearance="raised-button"
-                  icon="group"
+                  icon="openNewTab"
                   @click="joinRoom"
                 />
                 <KButton
@@ -236,7 +236,7 @@
       context: 'Label indicating the user display name',
     },
     joinMeetingButton: {
-      message: 'Join Meeting',
+      message: 'Join Meeting (Unlimited)',
       context: 'Button to join meeting',
     },
     generateRandomButton: {
@@ -338,13 +338,14 @@
       }
 
       function joinSpecificRoom(roomId, title) {
-        currentRoomName.value = roomId;
-        currentMeetingTitle.value = title || roomId;
-        meetingActive.value = true;
         saveRecentRoom({
           roomId,
           title: title || roomId,
         });
+        const cleanName = roomId.replace(/[^a-zA-Z0-9-_]/g, '_');
+        const displayName = encodeURIComponent(userDisplayName.value);
+        const directUrl = `https://meet.jit.si/${cleanName}#userInfo.displayName="${displayName}"&config.prejoinPageEnabled=false&config.startWithAudioMuted=false`;
+        window.open(directUrl, '_blank');
       }
 
       function leaveMeeting() {

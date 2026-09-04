@@ -62,13 +62,6 @@
             @click="launchWindow"
           />
           <KButton
-            :text="joinClassButton$()"
-            :primary="false"
-            appearance="flat-button"
-            icon="group"
-            @click="joinMeeting"
-          />
-          <KButton
             :text="backToClassButton$()"
             :primary="false"
             appearance="flat-button"
@@ -117,12 +110,8 @@
       context: 'Label indicating the learner display name',
     },
     launchWindowButton: {
-      message: 'Join Live Class (Unlimited Window)',
+      message: 'Join Live Class (Unlimited)',
       context: 'Button to join live video meeting in external window with no limits',
-    },
-    joinClassButton: {
-      message: 'Join In-Page',
-      context: 'Button to enter the video conference in page',
     },
     backToClassButton: {
       message: 'Back to Class',
@@ -156,7 +145,6 @@
         roomCodeLabel$,
         studentNameLabel$,
         launchWindowButton$,
-        joinClassButton$,
         backToClassButton$,
       } = learnerLiveStrings;
 
@@ -208,10 +196,6 @@
         window.open(directUrl, '_blank');
       }
 
-      function joinMeeting() {
-        meetingActive.value = true;
-      }
-
       function leaveMeeting() {
         meetingActive.value = false;
       }
@@ -231,10 +215,8 @@
         roomCodeLabel$,
         studentNameLabel$,
         launchWindowButton$,
-        joinClassButton$,
         backToClassButton$,
         launchWindow,
-        joinMeeting,
         leaveMeeting,
       };
     },

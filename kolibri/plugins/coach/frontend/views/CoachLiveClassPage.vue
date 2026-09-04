@@ -71,13 +71,6 @@
                   icon="openNewTab"
                   @click="launchWindow(defaultClassRoomName, className ? classMeetingTitle$({ className }) : liveClassTitle$())"
                 />
-                <KButton
-                  :text="startEmbeddedButton$()"
-                  :primary="false"
-                  appearance="flat-button"
-                  icon="group"
-                  @click="startMeeting(defaultClassRoomName, className ? classMeetingTitle$({ className }) : liveClassTitle$())"
-                />
               </div>
             </div>
           </KGridItem>
@@ -173,12 +166,8 @@
       context: 'List of features in Jitsi meeting',
     },
     launchWindowButton: {
-      message: 'Launch Live Class (Unlimited Window)',
+      message: 'Launch Live Class (Unlimited)',
       context: 'Button to open video meeting in external window with no limits',
-    },
-    startEmbeddedButton: {
-      message: 'Open In-Page',
-      context: 'Button to open meeting embedded in page',
     },
     startClassMeetingButton: {
       message: 'Start Live Class Now',
@@ -201,7 +190,7 @@
       context: 'Placeholder for room name',
     },
     startCustomMeetingButton: {
-      message: 'Start Custom Meeting',
+      message: 'Start Custom Meeting (Unlimited)',
       context: 'Button to start meeting with custom room name',
     },
     enterRoomNameError: {
@@ -235,7 +224,6 @@
         featuresLabel$,
         featuresList$,
         launchWindowButton$,
-        startEmbeddedButton$,
         startClassMeetingButton$,
         customRoomTitle$,
         customRoomDesc$,
@@ -263,7 +251,6 @@
         featuresLabel$,
         featuresList$,
         launchWindowButton$,
-        startEmbeddedButton$,
         startClassMeetingButton$,
         customRoomTitle$,
         customRoomDesc$,
@@ -291,16 +278,6 @@
         const directUrl = `https://meet.jit.si/${roomName}#config.startWithAudioMuted=false&config.prejoinPageEnabled=false`;
         window.open(directUrl, '_blank');
       },
-      startMeeting(roomName, title) {
-        this.activeRoomName = roomName;
-        this.activeMeetingTitle = title;
-        this.meetingActive = true;
-        this.saveRecentRoom({
-          roomId: roomName,
-          title,
-          classId: this.classId,
-        });
-      },
       startCustomMeeting() {
         if (!this.customRoomInput.trim()) {
           this.customRoomError = this.enterRoomNameError$();
@@ -308,7 +285,7 @@
         }
         this.customRoomError = '';
         const roomName = `kolibri_${this.customRoomInput.trim().replace(/[^a-zA-Z0-9-_]/g, '_')}`;
-        this.startMeeting(roomName, this.customRoomInput.trim());
+        this.launchWindow(roomName, this.customRoomInput.trim());
       },
       endMeeting() {
         this.meetingActive = false;
