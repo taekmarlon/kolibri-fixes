@@ -14,8 +14,10 @@ describe('YouTubePlayer', () => {
     const iframe = document.querySelector('iframe');
     expect(iframe).toBeTruthy();
     expect(iframe.getAttribute('src')).toBe(
-      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1&enablejsapi=1'
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0'
     );
+    expect(iframe.getAttribute('referrerpolicy')).toBe('strict-origin-when-cross-origin');
+    expect(iframe.getAttribute('sandbox')).toBeNull();
   });
 
   it('renders correctly with a youtu.be short URL', () => {

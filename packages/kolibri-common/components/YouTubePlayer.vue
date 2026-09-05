@@ -51,8 +51,8 @@
           title="YouTube video player"
           frameborder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
           allowfullscreen
-          sandbox="allow-scripts allow-same-origin allow-presentation"
         ></iframe>
       </div>
       <div
@@ -155,7 +155,7 @@ export default {
         return '';
       }
       // Privacy-enhanced mode, rel=0 prevents external channel recommendations
-      return 'https://www.youtube-nocookie.com/embed/' + id + '?rel=0&modestbranding=1&enablejsapi=1';
+      return 'https://www.youtube-nocookie.com/embed/' + id + '?rel=0';
     });
 
     function toggleFullscreen() {

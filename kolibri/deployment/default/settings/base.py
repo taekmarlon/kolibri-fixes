@@ -124,6 +124,9 @@ MIDDLEWARE = [
     "django.middleware.cache.FetchFromCacheMiddleware",
 ]
 
+# Ensure modern browsers send the origin as Referer to cross-origin HTTPS embeds (e.g. YouTube)
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
 # By default don't cache anything unless it explicitly requests it to!
 CACHE_MIDDLEWARE_SECONDS = 0
 
