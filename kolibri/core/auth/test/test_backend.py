@@ -4,7 +4,12 @@ from datetime import timedelta
 import mock
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
+from django.test.client import RequestFactory
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError as RestValidationError
+
+from kolibri.core import error_constants
+from kolibri.core.auth.viewsets.session import CreateSessionSerializer
 
 from ..backends import BasicUserAuthScope
 from ..backends import FacilityAuthScope
@@ -568,3 +573,57 @@ class BasicUserAuthScopeTestCase(TestCase):
             self.facility, username="coach", password="wrong"
         )
         self.assertFalse(auth_scope.matches_credentials(self._set_has_roles(coach)))
+
+
+class SuperuserMultiFacilityAuthTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.facility_a = Facility.objects.create(name="Facility A")
+        cls.facility_b = Facility.objects.create(name="Facility B")
+        cls.superuser = create_superuser(cls.facility_a, username="superadmin")
+        cls.superuser.set_password("AdminPass123!")
+        cls.superuser.save()
+        cls.backend = FacilityUserBackend()
+        cls.rf = RequestFactory()
+        cls.request = cls.rf.post("/api/auth/session/")
+
+    def test_superuser_authenticates_with_different_facility(self):
+        user = self.backend.authenticate(
+            self.request,
+            username="superadmin",
+            password="AdminPass123!",
+            facility=self.facility_b,
+        )
+        self.assertEqual(user, self.superuser)
+
+    def test_superuser_session_step1_empty_password_prompts_password_for_other_facility(
+        self,
+    ):
+        serializer = CreateSessionSerializer(
+            data={
+                "username": "superadmin",
+                "password": "",
+                "facility": self.facility_b.id,
+            },
+            context={"request": self.request},
+        )
+        with self.assertRaises(RestValidationError) as ctx:
+            serializer.is_valid(raise_exception=True)
+
+        self.assertIn("password", ctx.exception.detail)
+        self.assertEqual(
+            ctx.exception.detail["password"][0]["id"],
+            error_constants.MISSING_PASSWORD,
+        )
+
+    def test_superuser_session_step2_authenticates_with_other_facility(self):
+        serializer = CreateSessionSerializer(
+            data={
+                "username": "superadmin",
+                "password": "AdminPass123!",
+                "facility": self.facility_b.id,
+            },
+            context={"request": self.request},
+        )
+        self.assertTrue(serializer.is_valid(raise_exception=True))
+        self.assertEqual(serializer.validated_data["user"], self.superuser)

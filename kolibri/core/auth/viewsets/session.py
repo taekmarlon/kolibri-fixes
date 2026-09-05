@@ -149,19 +149,32 @@ class CreateSessionSerializer(serializers.Serializer):
                 username__iexact=username, facility=facility
             )
         except (ValueError, ObjectDoesNotExist):
-            raise RestValidationError(
-                detail={
-                    "username": [
-                        {
-                            "id": error_constants.NOT_FOUND,
-                            "metadata": {
-                                "field": "username",
-                                "message": "Username not found.",
-                            },
-                        }
-                    ]
-                }
-            )
+            try:
+                # If not found in the selected facility, check if this is a device superuser,
+                # since superusers can authenticate across any facility on the device.
+                unauthenticated_user = FacilityUser.objects.get(
+                    username__iexact=username,
+                    devicepermissions__is_superuser=True,
+                )
+            except (ValueError, ObjectDoesNotExist):
+                raise RestValidationError(
+                    detail={
+                        "username": [
+                            {
+                                "id": error_constants.NOT_FOUND,
+                                "metadata": {
+                                    "field": "username",
+                                    "message": "Username not found.",
+                                },
+                            }
+                        ]
+                    }
+                )
+            except FacilityUser.MultipleObjectsReturned:
+                unauthenticated_user = FacilityUser.objects.filter(
+                    username__exact=username,
+                    devicepermissions__is_superuser=True,
+                ).first()
         except FacilityUser.MultipleObjectsReturned:
             # Handle case of multiple matching usernames
             unauthenticated_user = FacilityUser.objects.filter(
