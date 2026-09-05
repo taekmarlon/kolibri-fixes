@@ -62,6 +62,19 @@
             :activeTabId="activeTabId"
           >
             <template #[ReportsLessonTabs.REPORTS]>
+              <div
+                v-if="editable && !$isPrint"
+                class="resources-action-bar"
+              >
+                <KButton
+                  :text="addCustomResourceAction$()"
+                  icon="plus"
+                  appearance="raised-button"
+                  :primary="true"
+                  class="add-custom-resource-btn"
+                  @click="showAddCustomResourceModal = true"
+                />
+              </div>
               <LessonResourcesTable
                 ref="table"
                 :title="currentLesson.title"
@@ -104,7 +117,7 @@
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import { createTranslator } from 'kolibri/utils/i18n';
   import useSnackbar from 'kolibri/composables/useSnackbar';
-  import { computed, getCurrentInstance, watch, ref } from 'vue';
+  import { computed, getCurrentInstance, watch } from 'vue';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import { useRoute } from 'vue-router/composables';
   import commonCoach from '../../common';
@@ -235,10 +248,10 @@
               resource.resource_type === 'youtube'
                 ? 'video'
                 : resource.resource_type === 'image'
-                ? 'image'
-                : resource.resource_type === 'html5'
-                ? 'html5'
-                : 'document';
+                  ? 'image'
+                  : resource.resource_type === 'html5'
+                    ? 'html5'
+                    : 'document';
 
             const tally = this.getContentStatusTally(resource.content_id, this.recipients);
             return {
@@ -447,6 +460,13 @@
 
   .manage-resources-button {
     margin-right: 8px;
+  }
+
+  .resources-action-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+    margin-bottom: 16px;
   }
 
 </style>

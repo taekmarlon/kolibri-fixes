@@ -9,15 +9,33 @@
     @shouldFocusFirstEl="() => null"
   >
     <template #header>
-      <div style="display: flex; gap: 8px; align-items: center">
-        <KIconButton
-          v-if="goBack"
-          icon="back"
-          :tooltip="goBackAction$()"
-          :ariaLabel="goBackAction$()"
-          @click="goBack()"
+      <div
+        style="
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+        "
+      >
+        <div style="display: flex; gap: 8px; align-items: center">
+          <KIconButton
+            v-if="goBack"
+            icon="back"
+            :tooltip="goBackAction$()"
+            :ariaLabel="goBackAction$()"
+            @click="goBack()"
+          />
+          <h1 class="side-panel-title">{{ title }}</h1>
+        </div>
+        <KButton
+          icon="plus"
+          :text="addCustomResourceAction$()"
+          appearance="raised-button"
+          :primary="true"
+          style="margin-right: 16px"
+          @click="showAddCustomResourceModal = true"
         />
-        <h1 class="side-panel-title">{{ title }}</h1>
       </div>
     </template>
     <div v-if="subpageLoading">
@@ -93,6 +111,12 @@
     >
       {{ closeConfirmationMessage$() }}
     </KModal>
+    <AddCustomResourceModal
+      v-if="showAddCustomResourceModal"
+      :lessonId="currentLesson.id"
+      @close="showAddCustomResourceModal = false"
+      @added="handleCustomResourceAdded"
+    />
   </SidePanelModal>
 
 </template>
@@ -113,21 +137,32 @@
   import { isTouchDevice } from 'kolibri/utils/browserInfo';
   import useUser from 'kolibri/composables/useUser';
   import usePreviousRoute from 'kolibri-common/composables/usePreviousRoute.js';
+  import { createTranslator } from 'kolibri/utils/i18n';
   import { PageNames } from '../../../../../constants';
   import { coachStrings } from '../../../../common/commonCoachStrings';
   import { SelectionTarget } from '../../../../common/resourceSelection/contants';
   import useResourceSelection from '../../../../../composables/useResourceSelection';
   import autofocusFirstEl from '../../../../common/directives/autofocusFirstEl';
+  import AddCustomResourceModal from '../../AddCustomResourceModal';
+
+  const selectionStrings = createTranslator('LessonResourceSelectionStrings', {
+    addCustomResourceAction: {
+      message: 'Add Custom Resource',
+      context: 'Button label on resource selection side panel',
+    },
+  });
 
   export default {
     name: 'LessonResourceSelection',
     components: {
       SidePanelModal,
+      AddCustomResourceModal,
     },
     directives: {
       autofocusFirstEl,
     },
     setup() {
+      const { addCustomResourceAction$ } = selectionStrings;
       const previousRoute = usePreviousRoute();
       const isLandingRoute = computed(() => previousRoute.value === null);
 
@@ -250,6 +285,7 @@
         saveAndFinishAction$,
         closeConfirmationTitle$,
         closeConfirmationMessage$,
+        addCustomResourceAction$,
       };
     },
     data() {
@@ -258,6 +294,7 @@
         goBack: null,
         isSaving: false,
         isCloseConfirmationModalOpen: false,
+        showAddCustomResourceModal: false,
         PageNames,
       };
     },
@@ -354,6 +391,13 @@
             contentId: resourceId,
           },
         };
+      },
+      handleCustomResourceAdded(newResource) {
+        this.showAddCustomResourceModal = false;
+        const current = [...this.workingResources, newResource];
+        this.setWorkingResources(current);
+        this.$emit('workingResourcesUpdated');
+        this.closeSidePanel(false);
       },
     },
   };
