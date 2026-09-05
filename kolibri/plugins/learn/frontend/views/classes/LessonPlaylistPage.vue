@@ -36,7 +36,7 @@
             {{ currentLesson.description }}
           </p>
         </div>
-        <ResourceSyncingUiAlert v-if="lessonResources.length > contentNodes.length" />
+        <ResourceSyncingUiAlert v-if="hasMissingResources" />
       </section>
 
       <section
@@ -81,6 +81,7 @@
   import commonLearnStrings from '../commonLearnStrings';
   import LearnAppBarPage from '../LearnAppBarPage';
   import HybridLearningLessonCard from '../HybridLearningLessonCard';
+  import { LearningActivities } from 'kolibri/constants';
 
   export default {
     name: 'LessonPlaylistPage',
@@ -111,10 +112,58 @@
     },
     computed: {
       ...mapState('lessonPlaylist', ['contentNodesMap', 'currentLesson']),
+      hasMissingResources() {
+        if (this.currentLesson && this.currentLesson.missing_resource) {
+          return true;
+        }
+        const nonCustomResources = this.lessonResources.filter(r => !r.is_custom);
+        const nonCustomNodes = this.contentNodes.filter(n => !n.is_custom);
+        return nonCustomResources.length > nonCustomNodes.length;
+      },
       contentNodes() {
         return this.lessonResources
           .map(r => {
-            return this.contentNodesMap[r.contentnode_id] || null;
+            if (this.contentNodesMap && this.contentNodesMap[r.contentnode_id]) {
+              return this.contentNodesMap[r.contentnode_id];
+            }
+            if (r.contentnode) {
+              return r.contentnode;
+            }
+            if (r.is_custom) {
+              const kind =
+                r.resource_type === 'youtube'
+                  ? 'video'
+                  : r.resource_type === 'image'
+                  ? 'image'
+                  : r.resource_type === 'html5'
+                  ? 'html5'
+                  : 'document';
+              return {
+                id: r.contentnode_id,
+                content_id: r.content_id,
+                title: r.title || 'Custom Resource',
+                description: r.description || '',
+                kind,
+                is_custom: true,
+                is_leaf: true,
+                num_coach_contents: 0,
+                thumbnail: r.thumbnail || (r.resource_type === 'image' ? r.file_url : null),
+                learning_activities: [
+                  kind === 'video'
+                    ? LearningActivities.WATCH
+                    : kind === 'html5'
+                    ? LearningActivities.EXPLORE
+                    : LearningActivities.READ,
+                ],
+                resource_type: r.resource_type,
+                url: r.url,
+                file_url: r.file_url,
+                file_name: r.file_name,
+                file_size: r.file_size,
+                content: r.content,
+              };
+            }
+            return null;
           })
           .filter(Boolean);
       },
@@ -144,35 +193,41 @@
         return undefined;
       },
       breadcrumbs() {
-        return this.currentLesson && this.currentLesson.classroom
-          ? [
-            {
-              text: this.coreString('homeLabel'),
-              link: { name: PageNames.HOME },
+        const classroom = this.currentLesson && this.currentLesson.classroom;
+        const classId = (classroom && classroom.id) || this.$route.params.classId;
+        const classroomName = (classroom && classroom.name) || 'Class';
+        return [
+          {
+            text: this.coreString('homeLabel'),
+            link: { name: PageNames.HOME },
+          },
+          {
+            text: this.coreString('classesLabel'),
+            link: { name: ClassesPageNames.ALL_CLASSES },
+          },
+          {
+            text: classroomName,
+            link: {
+              name: ClassesPageNames.CLASS_ASSIGNMENTS,
+              params: { classId },
             },
-            {
-              text: this.coreString('classesLabel'),
-              link: { name: ClassesPageNames.ALL_CLASSES },
-            },
-            {
-              text: this.currentLesson.classroom.name,
-              link: {
-                name: ClassesPageNames.CLASS_ASSIGNMENTS,
-                params: { classId: this.currentLesson.classroom.id },
-              },
-            },
-            {
-              text: this.currentLesson.title,
-            },
-          ]
-          : [];
+          },
+          {
+            text: (this.currentLesson && this.currentLesson.title) || 'Lesson',
+          },
+        ];
       },
       customResourceLink() {
         return content => ({
           name: ClassesPageNames.LESSON_CUSTOM_RESOURCE,
           params: {
-            classId: this.currentLesson && this.currentLesson.classroom && this.currentLesson.classroom.id,
-            lessonId: this.currentLesson && this.currentLesson.id,
+            classId:
+              (this.currentLesson &&
+                this.currentLesson.classroom &&
+                this.currentLesson.classroom.id) ||
+              this.$route.params.classId,
+            lessonId:
+              (this.currentLesson && this.currentLesson.id) || this.$route.params.lessonId,
             resourceId: content.id,
           },
         });

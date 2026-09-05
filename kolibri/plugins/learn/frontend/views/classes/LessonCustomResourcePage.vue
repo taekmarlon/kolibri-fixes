@@ -320,7 +320,11 @@
       });
 
       const breadcrumbs = computed(() => {
-        if (!currentLesson.value || !currentLesson.value.classroom) return [];
+        const classroomName =
+          (currentLesson.value &&
+            currentLesson.value.classroom &&
+            currentLesson.value.classroom.name) ||
+          'Class';
         return [
           {
             text: 'Home',
@@ -331,14 +335,14 @@
             link: { name: ClassesPageNames.ALL_CLASSES },
           },
           {
-            text: currentLesson.value.classroom.name,
+            text: classroomName,
             link: {
               name: ClassesPageNames.CLASS_ASSIGNMENTS,
               params: { classId: classId.value },
             },
           },
           {
-            text: currentLesson.value.title,
+            text: (currentLesson.value && currentLesson.value.title) || 'Lesson',
             link: {
               name: ClassesPageNames.LESSON_PLAYLIST,
               params: {
@@ -364,7 +368,10 @@
       async function loadData() {
         pageLoading.value = true;
         try {
-          const lesson = await LearnerLessonResource.fetchModel({ id: lessonId.value });
+          const lesson = await LearnerLessonResource.fetchModel({
+            id: lessonId.value,
+            force: true,
+          });
           currentLesson.value = lesson;
           const found = (lesson.resources || []).find(
             r => r.contentnode_id === resourceId.value || r.content_id === resourceId.value,

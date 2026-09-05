@@ -2,6 +2,7 @@ from django.db.models import Count
 from django.db.models import Q
 from le_utils.constants import content_kinds
 from le_utils.constants import modalities
+from le_utils.constants.labels import learning_activities
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -107,6 +108,18 @@ def _consolidate_lessons_data(request, lessons):
                     "description": resource.get("description", ""),
                     "kind": kind,
                     "is_custom": True,
+                    "thumbnail": resource.get("file_url")
+                    if res_type == "image"
+                    else resource.get("thumbnail"),
+                    "learning_activities": [
+                        learning_activities.WATCH
+                        if kind == "video"
+                        else (
+                            learning_activities.EXPLORE
+                            if kind == "html5"
+                            else learning_activities.READ
+                        )
+                    ],
                     "resource_type": res_type,
                     "url": resource.get("url", ""),
                     "file_url": resource.get("file_url", ""),

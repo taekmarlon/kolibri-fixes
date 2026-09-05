@@ -4,6 +4,7 @@ import { handleApiError } from 'kolibri/utils/appError';
 import { get } from '@vueuse/core';
 import { pageLoading } from 'kolibri-common/composables/usePageLoading';
 import useContentNodeProgress from '../../composables/useContentNodeProgress';
+import { LearningActivities } from 'kolibri/constants';
 import { LearnerLessonResource } from '../../apiResources';
 import { ClassesPageNames } from '../../constants';
 
@@ -18,15 +19,14 @@ export function showLessonPlaylist(store, { lessonId }) {
     fetchContentNodeProgress({ lesson: lessonId });
   }
   let currentLessonObj = null;
-  const contentNodePromise = ContentNodeResource.fetchLessonResources(lessonId);
-  return LearnerLessonResource.fetchModel({ id: lessonId })
+  return LearnerLessonResource.fetchModel({ id: lessonId, force: true })
     .then(lesson => {
       currentLessonObj = lesson;
       store.commit('SET_PAGE_NAME', ClassesPageNames.LESSON_PLAYLIST);
       store.commit('lessonPlaylist/SET_CURRENT_LESSON', lesson);
       const hasChannelResources = (lesson.resources || []).some(r => !r.is_custom);
       if (hasChannelResources) {
-        return contentNodePromise;
+        return ContentNodeResource.fetchLessonResources(lessonId);
       }
       return Promise.resolve([]);
     })
@@ -55,6 +55,15 @@ export function showLessonPlaylist(store, { lessonId }) {
               kind,
               is_custom: true,
               is_leaf: true,
+              num_coach_contents: 0,
+              thumbnail: r.thumbnail || (r.resource_type === 'image' ? r.file_url : null),
+              learning_activities: [
+                kind === 'video'
+                  ? LearningActivities.WATCH
+                  : kind === 'html5'
+                  ? LearningActivities.EXPLORE
+                  : LearningActivities.READ,
+              ],
               resource_type: r.resource_type,
               url: r.url,
               file_url: r.file_url,
