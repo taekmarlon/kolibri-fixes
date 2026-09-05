@@ -68,4 +68,48 @@ describe('AssignedCourseworkCards', () => {
     expect(screen.getByText('🎥 Video Lesson')).toBeTruthy();
     expect(screen.getByText('100 pts')).toBeTruthy();
   });
+
+  it('renders Recent assignments header and class name on HomePage when recent: true', async () => {
+    AssignmentResource.fetchCollection.mockResolvedValue([
+      {
+        id: 'asgn-2',
+        title: 'Photosynthesis Lab',
+        description: 'Plant biology homework',
+        max_points: 100,
+        collection: 'class-456',
+        collection_name: 'Biology 101',
+      },
+    ]);
+    AssignmentSubmissionResource.fetchCollection.mockResolvedValue([]);
+
+    render(AssignedCourseworkCards, {
+      props: {
+        recent: true,
+        displayClassName: true,
+      },
+      routes,
+    });
+
+    expect((await screen.findAllByText('Photosynthesis Lab')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Biology 101')).toBeTruthy();
+    expect(screen.getByText('Recent assignments')).toBeTruthy();
+    expect(screen.queryByText('Classroom Q&A & Discussions')).toBeNull();
+  });
+
+  it('renders nothing when recent: true and there are no assignments', async () => {
+    AssignmentResource.fetchCollection.mockResolvedValue([]);
+    AssignmentSubmissionResource.fetchCollection.mockResolvedValue([]);
+
+    const { container } = render(AssignedCourseworkCards, {
+      props: {
+        recent: true,
+      },
+      routes,
+    });
+
+    // When recent is true and no assignments, container should be empty (no coursework-section rendered)
+    expect(screen.queryByText('Recent assignments')).toBeNull();
+    expect(screen.queryByText('Homework & Assignments')).toBeNull();
+    expect(container.querySelector('.coursework-section')).toBeNull();
+  });
 });

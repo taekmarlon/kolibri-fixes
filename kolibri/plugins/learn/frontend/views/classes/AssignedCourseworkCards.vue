@@ -1,14 +1,18 @@
 <template>
 
-  <div class="coursework-section">
+  <div
+    v-if="!recent || (assignments && assignments.length > 0)"
+    class="coursework-section"
+  >
     <div class="header-row">
       <h2>
         <KLabeledIcon
           icon="edit"
-          :label="courseworkHeader$()"
+          :label="header"
         />
       </h2>
       <KButton
+        v-if="classId"
         appearance="basic-link"
         icon="people"
         :text="goToDiscussions$()"
@@ -16,8 +20,9 @@
       />
     </div>
 
-    <!-- Quick Access Discussion Board Banner -->
+    <!-- Quick Access Discussion Board Banner (only when on a specific class page) -->
     <div
+      v-if="classId"
       class="discussions-banner"
       :style="{
         backgroundColor: $themeTokens.surface,
@@ -57,13 +62,20 @@
       <KCard
         v-for="assignment in assignments"
         :key="assignment.id"
-        :to="getAssignmentLink(assignment.id)"
+        :to="getAssignmentLink(assignment)"
         :title="assignment.title"
         :headingLevel="3"
         orientation="vertical"
         thumbnailDisplay="none"
       >
         <template #aboveTitle>
+          <div
+            v-if="displayClassName && getAssignmentClassName(assignment)"
+            class="class-name-badge"
+            :style="{ color: $themeTokens.annotation }"
+          >
+            {{ getAssignmentClassName(assignment) }}
+          </div>
           <div class="card-tags">
             <span
               v-if="assignment.video_url"
@@ -79,7 +91,7 @@
               v-if="getSubmissionStatus(assignment.id).graded"
               class="status-badge graded-badge"
             >
-              ✓ {{ gradedBadge$() }}: {{ getSubmissionStatus(assignment.id).score }}/{{ assignment.points_possible }}
+              ✓ {{ gradedBadge$() }}: {{ getSubmissionStatus(assignment.id).score }}/{{ assignment.max_points || assignment.points_possible }}
             </span>
             <span
               v-else-if="getSubmissionStatus(assignment.id).submitted"
@@ -100,7 +112,7 @@
           <div class="card-footer" :style="{ color: $themeTokens.annotation }">
             <div class="footer-meta">
               <span class="points-label">
-                {{ assignment.points_possible }} {{ pointsLabel$() }}
+                {{ assignment.max_points || assignment.points_possible }} {{ pointsLabel$() }}
               </span>
               <span v-if="assignment.due_date" class="due-date">
                 • {{ dueLabel$() }}: {{ formatDate(assignment.due_date) }}
@@ -112,7 +124,7 @@
             <KButton
               :text="viewAssignment$()"
               appearance="basic-link"
-              :to="getAssignmentLink(assignment.id)"
+              :to="getAssignmentLink(assignment)"
             />
           </div>
         </template>
@@ -120,7 +132,7 @@
     </KCardGrid>
 
     <p
-      v-else-if="!loading"
+      v-else-if="!loading && !recent"
       :style="{ color: $themeTokens.annotation, marginTop: '8px' }"
     >
       {{ noAssignmentsMessage$() }}
@@ -135,12 +147,17 @@
   import { createTranslator } from 'kolibri/utils/i18n';
   import AssignmentResource from 'kolibri-common/apiResources/AssignmentResource';
   import AssignmentSubmissionResource from 'kolibri-common/apiResources/AssignmentSubmissionResource';
+  import useLearnerResources from '../../composables/useLearnerResources';
   import { assignmentDetailLink, classDiscussionsLink } from './classPageLinks';
 
   const strings = createTranslator('AssignedCourseworkCardsStrings', {
     courseworkHeader: {
       message: 'Homework & Assignments',
       context: 'Section header for coursework assignments in the learner view',
+    },
+    recentAssignmentsHeader: {
+      message: 'Recent assignments',
+      context: 'Header for recent assignments list on home page',
     },
     goToDiscussions: {
       message: 'Classroom Discussions',
@@ -201,28 +218,52 @@
     props: {
       classId: {
         type: String,
-        required: true,
+        default: null,
+      },
+      recent: {
+        type: Boolean,
+        default: false,
+      },
+      displayClassName: {
+        type: Boolean,
+        default: false,
       },
     },
     setup(props) {
+      const { getClass } = useLearnerResources();
       const loading = ref(true);
       const assignments = ref([]);
       const submissions = ref([]);
 
-      const discussionsLink = computed(() => {
-        return classDiscussionsLink(props.classId);
+      const header = computed(() => {
+        return props.recent ? strings.recentAssignmentsHeader$() : strings.courseworkHeader$();
       });
 
-      function getAssignmentLink(assignmentId) {
-        return assignmentDetailLink(props.classId, assignmentId);
+      const discussionsLink = computed(() => {
+        return props.classId ? classDiscussionsLink(props.classId) : null;
+      });
+
+      function getAssignmentLink(assignment) {
+        const classId = props.classId || assignment.collection;
+        return assignmentDetailLink(classId, assignment.id);
+      }
+
+      function getAssignmentClassName(assignment) {
+        if (!assignment) return '';
+        if (assignment.collection_name) return assignment.collection_name;
+        const cls = getClass(assignment.collection);
+        return cls ? cls.name : '';
       }
 
       function loadData() {
         loading.value = true;
+        const getParams = { is_active: true };
+        if (props.classId) {
+          getParams.collection = props.classId;
+        }
+
         Promise.all([
-          AssignmentResource.fetchCollection({
-            getParams: { collection: props.classId, active: true },
-          }),
+          AssignmentResource.fetchCollection({ getParams }),
           AssignmentSubmissionResource.fetchCollection(),
         ])
           .then(([assignmentsData, submissionsData]) => {
@@ -265,10 +306,12 @@
       });
 
       return {
+        header,
         loading,
         assignments,
         discussionsLink,
         getAssignmentLink,
+        getAssignmentClassName,
         getSubmissionStatus,
         formatDate,
         ...strings,
@@ -318,6 +361,14 @@
   .banner-subtitle {
     font-size: 13px;
     margin-top: 2px;
+  }
+
+  .class-name-badge {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .card-tags {

@@ -77,6 +77,13 @@
           recent
           data-testid="recentCourses"
         />
+        <AssignedCourseworkCards
+          v-if="isUserLoggedIn"
+          class="section"
+          displayClassName
+          recent
+          data-testid="recentAssignments"
+        />
         <AssignedLessonsCards
           v-if="hasActiveClassesLessons"
           class="section"
@@ -139,6 +146,7 @@
   import { inClasses } from '../../composables/useCoreLearn';
   import { PageNames, ClassesPageNames } from '../../constants';
   import AssignedCoursesCards from '../classes/AssignedCoursesCards';
+  import AssignedCourseworkCards from '../classes/AssignedCourseworkCards';
   import AssignedLessonsCards from '../classes/AssignedLessonsCards';
   import AssignedQuizzesCards from '../classes/AssignedQuizzesCards';
   import YourClasses from '../YourClasses';
@@ -159,6 +167,7 @@
     name: 'HomePage',
     components: {
       AssignedCoursesCards,
+      AssignedCourseworkCards,
       AssignedLessonsCards,
       AssignedQuizzesCards,
       YourClasses,
@@ -324,6 +333,7 @@
         picturePasswordPending,
         userId: currentUserId,
         isLearner,
+        isUserLoggedIn,
         activeLiveClass,
         ClassesPageNames,
         joinLiveMeeting,
