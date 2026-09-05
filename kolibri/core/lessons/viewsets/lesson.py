@@ -1,8 +1,18 @@
+import os
+import uuid
+import zipfile
+
+from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser
+from rest_framework.parsers import JSONParser
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.serializers import BooleanField
 from rest_framework.serializers import CharField
+from rest_framework.serializers import IntegerField
 from rest_framework.serializers import ListField
 from rest_framework.serializers import ModelSerializer
 from rest_framework.serializers import PrimaryKeyRelatedField
@@ -10,7 +20,6 @@ from rest_framework.serializers import Serializer
 from rest_framework.serializers import ValidationError
 
 from kolibri.core import error_constants
-from kolibri.core.api import HexUUIDField
 from kolibri.core.api import ValuesMethodField
 from kolibri.core.api import ValuesViewset
 from kolibri.core.auth.constants.collection_kinds import ADHOCLEARNERSGROUP
@@ -29,9 +38,18 @@ from kolibri.core.query import annotate_array_aggregate
 
 
 class ResourceSerializer(Serializer):
-    content_id = HexUUIDField()
-    channel_id = HexUUIDField()
-    contentnode_id = HexUUIDField()
+    content_id = CharField()
+    channel_id = CharField()
+    contentnode_id = CharField()
+    is_custom = BooleanField(required=False, default=False)
+    resource_type = CharField(required=False, allow_blank=True, allow_null=True)
+    title = CharField(required=False, allow_blank=True, allow_null=True)
+    description = CharField(required=False, allow_blank=True, allow_null=True)
+    url = CharField(required=False, allow_blank=True, allow_null=True)
+    file_url = CharField(required=False, allow_blank=True, allow_null=True)
+    file_name = CharField(required=False, allow_blank=True, allow_null=True)
+    file_size = IntegerField(required=False, allow_null=True, default=0)
+    content = CharField(required=False, allow_blank=True, allow_null=True)
 
 
 class ClassroomSerializer(ModelSerializer):
@@ -270,6 +288,20 @@ class LessonSerializer(ModelSerializer):
 class LessonPermissions(KolibriAuthPermissions):
     # Overrides the default validator to sanitize the Lesson POST Payload
     # before validation
+    def has_permission(self, request, view):
+        if getattr(view, "action", None) == "custom_resource":
+            return request.user.is_authenticated
+        return super().has_permission(request, view)
+
+    def has_object_permission(self, request, view, obj):
+        if getattr(view, "action", None) == "custom_resource":
+            return (
+                request.user.is_superuser
+                or request.user.can_update(obj)
+                or getattr(obj, "created_by", None) == request.user
+            )
+        return super().has_object_permission(request, view, obj)
+
     def validator(self, request, view, datum):
         model = view.get_serializer_class().Meta.model
         validated_data = view.get_serializer().to_internal_value(
@@ -280,6 +312,56 @@ class LessonPermissions(KolibriAuthPermissions):
         validated_data.pop("assignments", [])
         validated_data.pop("learner_ids", [])
         return request.user.can_create(model, validated_data)
+
+
+def _detect_file_resource_type(file_name, requested_type):
+    if requested_type:
+        return requested_type
+    ext = os.path.splitext(file_name)[1].lower()
+    if ext in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]:
+        return "image"
+    if ext == ".pdf":
+        return "pdf"
+    if ext == ".zip":
+        return "html5"
+    return "document"
+
+
+def _extract_html5_zip(file_obj, resource_id):
+    extract_dir = os.path.join(
+        settings.MEDIA_ROOT, "lessons", "html5", resource_id
+    )
+    os.makedirs(extract_dir, exist_ok=True)
+    with zipfile.ZipFile(file_obj, "r") as z:
+        for member in z.infolist():
+            target_path = os.path.abspath(
+                os.path.join(extract_dir, member.filename)
+            )
+            if not target_path.startswith(os.path.abspath(extract_dir)):
+                continue
+            z.extract(member, extract_dir)
+
+    entry_point = "index.html"
+    if not os.path.exists(os.path.join(extract_dir, "index.html")):
+        for root, _, files in os.walk(extract_dir):
+            if "index.html" in files:
+                rel = os.path.relpath(
+                    os.path.join(root, "index.html"), extract_dir
+                )
+                entry_point = rel.replace("\\", "/")
+                break
+    return f"/media/lessons/html5/{resource_id}/{entry_point}"
+
+
+def _save_uploaded_custom_file(file_obj, resource_id):
+    save_dir = os.path.join(settings.MEDIA_ROOT, "lessons", "resources")
+    os.makedirs(save_dir, exist_ok=True)
+    safe_name = f"{resource_id}_{os.path.basename(file_obj.name)}"
+    full_path = os.path.join(save_dir, safe_name)
+    with open(full_path, "wb+") as destination:
+        for chunk in file_obj.chunks():
+            destination.write(chunk)
+    return f"/media/lessons/resources/{safe_name}"
 
 
 class LessonViewset(ValuesViewset):
@@ -331,8 +413,99 @@ class LessonViewset(ValuesViewset):
         lessons_set = []
         for lesson in lessons:
             resource_nodes = ContentNode.objects.filter(
-                id__in=[r["contentnode_id"] for r in lesson.resources]
+                id__in=[
+                    r["contentnode_id"]
+                    for r in lesson.resources
+                    if not r.get("is_custom")
+                ]
             )
-            lessons_set.append({lesson.id: total_file_size(resource_nodes)})
+            custom_size = sum(
+                r.get("file_size", 0)
+                for r in lesson.resources
+                if r.get("is_custom")
+            )
+            lessons_set.append(
+                {lesson.id: total_file_size(resource_nodes) + custom_size}
+            )
 
         return Response(lessons_set)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        parser_classes=(MultiPartParser, FormParser, JSONParser),
+    )
+    def custom_resource(self, request, pk=None):
+        try:
+            lesson = self.get_object()
+        except Exception:
+            return Response(
+                {"detail": "You do not have permission to modify this lesson."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        user = request.user
+        if not (
+            user.is_superuser
+            or user.can_update(lesson)
+            or lesson.created_by == user
+        ):
+            return Response(
+                {"detail": "You do not have permission to add resources to this lesson."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        resource_id = uuid.uuid4().hex
+        data = request.data
+        title = (data.get("title") or "").strip() or "Custom Resource"
+        description = (data.get("description") or "").strip()
+        resource_type = data.get("resource_type") or ""
+        file_obj = request.FILES.get("file")
+
+        file_url = ""
+        file_name = ""
+        file_size = 0
+        url = ""
+        content = ""
+
+        if file_obj:
+            file_name = file_obj.name
+            file_size = getattr(file_obj, "size", 0)
+            resource_type = _detect_file_resource_type(file_name, resource_type)
+            if resource_type == "html5" and file_name.lower().endswith(".zip"):
+                file_url = _extract_html5_zip(file_obj, resource_id)
+            else:
+                file_url = _save_uploaded_custom_file(file_obj, resource_id)
+        elif resource_type == "youtube" or (
+            "youtube.com" in data.get("url", "")
+            or "youtu.be" in data.get("url", "")
+        ):
+            resource_type = "youtube"
+            url = (data.get("url") or "").strip()
+        elif resource_type == "ai_text" or data.get("content"):
+            resource_type = "ai_text"
+            content = (data.get("content") or "").strip()
+        else:
+            url = (data.get("url") or "").strip()
+
+        custom_res = {
+            "contentnode_id": resource_id,
+            "content_id": resource_id,
+            "channel_id": "00000000000000000000000000000000",
+            "is_custom": True,
+            "resource_type": resource_type,
+            "title": title,
+            "description": description,
+            "url": url,
+            "file_url": file_url,
+            "file_name": file_name,
+            "file_size": file_size,
+            "content": content,
+        }
+
+        current_resources = list(lesson.resources or [])
+        current_resources.append(custom_res)
+        lesson.resources = current_resources
+        lesson.save()
+
+        return Response(custom_res, status=status.HTTP_200_OK)

@@ -11,10 +11,18 @@
           "
         >
           <template #dropdown>
+            <KButton
+              :text="addCustomResourceAction$()"
+              icon="plus"
+              appearance="raised-button"
+              :primary="true"
+              class="add-custom-resource-button"
+              @click="showAddCustomResourceModal = true"
+            />
             <KRouterLink
               :to="lessonSelectionRootPage"
               :text="coachString('manageResourcesAction')"
-              appearance="raised-button"
+              appearance="flat-button"
               class="manage-resources-button"
             />
             <LessonOptionsDropdownMenu @select="handleSelectOption" />
@@ -78,6 +86,12 @@
       </KGridItem>
     </KGrid>
     <router-view @workingResourcesUpdated="workingResourcesBackup = [...workingResources]" />
+    <AddCustomResourceModal
+      v-if="showAddCustomResourceModal"
+      :lessonId="lessonId"
+      @close="showAddCustomResourceModal = false"
+      @added="handleCustomResourceAdded"
+    />
   </CoachAppBarPage>
 
 </template>
@@ -88,8 +102,9 @@
   import sortBy from 'lodash/sortBy';
   import { mapState, mapActions, mapMutations } from 'vuex';
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
+  import { createTranslator } from 'kolibri/utils/i18n';
   import useSnackbar from 'kolibri/composables/useSnackbar';
-  import { computed, getCurrentInstance, watch } from 'vue';
+  import { computed, getCurrentInstance, watch, ref } from 'vue';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import { useRoute } from 'vue-router/composables';
   import commonCoach from '../../common';
@@ -102,8 +117,16 @@
   import LessonLearnersTable from './tables/LessonLearnersTable';
   import LessonOptionsDropdownMenu from './LessonOptionsDropdownMenu';
   import ManageLessonModals from './ManageLessonModals';
+  import AddCustomResourceModal from './AddCustomResourceModal';
 
   const REMOVAL_SNACKBAR_TIME = 5000;
+
+  const summaryStrings = createTranslator('LessonSummaryPageStrings', {
+    addCustomResourceAction: {
+      message: 'Add Custom Resource',
+      context: 'Button label on lesson summary page',
+    },
+  });
 
   export default {
     name: 'LessonSummaryPage',
@@ -119,19 +142,27 @@
       LessonOptionsDropdownMenu,
       LessonLearnersTable,
       LessonResourcesTable,
+      AddCustomResourceModal,
     },
     mixins: [commonCoach, commonCoreStrings],
     setup() {
       const store = getCurrentInstance().proxy.$store;
       const route = useRoute();
       const lessonId = computed(() => route.params.lessonId);
+      const { addCustomResourceAction$ } = summaryStrings;
 
       showLessonSummaryPage(store, route.params);
 
       watch(lessonId, () => showLessonSummaryPage(store, route.params));
 
       const { createSnackbar, clearSnackbar } = useSnackbar();
-      return { lessonId, pageLoading, createSnackbar, clearSnackbar };
+      return {
+        lessonId,
+        pageLoading,
+        createSnackbar,
+        clearSnackbar,
+        addCustomResourceAction$,
+      };
     },
     props: {
       editable: {
@@ -144,6 +175,7 @@
 
       return {
         currentAction: '',
+        showAddCustomResourceModal: false,
         ReportsLessonTabs,
         workingResourcesBackup,
         REPORTS_LESSON_TABS_ID,
@@ -198,6 +230,30 @@
       },
       resourcesTable() {
         return this.workingResources.map(resource => {
+          if (resource.is_custom) {
+            const kind =
+              resource.resource_type === 'youtube'
+                ? 'video'
+                : resource.resource_type === 'image'
+                ? 'image'
+                : resource.resource_type === 'html5'
+                ? 'html5'
+                : 'document';
+
+            const tally = this.getContentStatusTally(resource.content_id, this.recipients);
+            return {
+              ...resource,
+              id: resource.contentnode_id,
+              node_id: resource.contentnode_id,
+              title: resource.title || 'Custom Resource',
+              kind,
+              avgTimeSpent: this.getContentAvgTimeSpent(resource.content_id, this.recipients),
+              tally,
+              hasAssignments: Object.values(tally).reduce((a, b) => a + b, 0),
+              link: null,
+            };
+          }
+
           const content = this.resourceCache[resource.contentnode_id];
           if (!content) {
             return this.missingResourceObj(resource.contentnode_id);
@@ -341,6 +397,12 @@
         }
         await this.updateCurrentLesson(this.lessonId);
         await this.fetchLessonsSizes({ classId: this.classId });
+      },
+      handleCustomResourceAdded(newResource) {
+        const current = [...this.workingResources, newResource];
+        this.setWorkingResources(current);
+        this.workingResourcesBackup = [...current];
+        this.updateCurrentLesson(this.lessonId);
       },
     },
     $trs: {

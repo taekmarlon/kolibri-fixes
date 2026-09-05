@@ -20,6 +20,7 @@ import LessonPlaylistPage from '../views/classes/LessonPlaylistPage';
 import LearnerLiveClassPage from '../views/classes/LearnerLiveClassPage';
 import LearnerAssignmentDetailPage from '../views/classes/LearnerAssignmentDetailPage';
 import ClassroomDiscussionsPage from '../views/classes/ClassroomDiscussionsPage';
+import LessonCustomResourcePage from '../views/classes/LessonCustomResourcePage';
 
 function noClassesGuard() {
   const { canAccessUnassignedContent } = store.getters;
@@ -104,6 +105,17 @@ export default [
       return noClassesGuard() || showLessonPlaylist(store, { classId, lessonId });
     },
     component: LessonPlaylistPage,
+  },
+  {
+    name: ClassesPageNames.LESSON_CUSTOM_RESOURCE,
+    path: '/classes/:classId/lesson/:lessonId/resource/:resourceId',
+    handler: toRoute => {
+      if (noClassesGuard()) {
+        return noClassesGuard();
+      }
+      pageLoading.value = false;
+    },
+    component: LessonCustomResourcePage,
   },
   {
     name: ClassesPageNames.EXAM_VIEWER,

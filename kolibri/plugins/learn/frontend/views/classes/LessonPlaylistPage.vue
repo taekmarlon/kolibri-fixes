@@ -49,7 +49,7 @@
           :content="content"
           class="content-card"
           :isMobile="windowIsSmall"
-          :link="genContentLinkBackLinkCurrentPage(content.id, true)"
+          :link="content.is_custom ? customResourceLink(content) : genContentLinkBackLinkCurrentPage(content.id, true)"
         />
       </section>
       <p
@@ -166,6 +166,16 @@
             },
           ]
           : [];
+      },
+      customResourceLink() {
+        return content => ({
+          name: ClassesPageNames.LESSON_CUSTOM_RESOURCE,
+          params: {
+            classId: this.currentLesson && this.currentLesson.classroom && this.currentLesson.classroom.id,
+            lessonId: this.currentLesson && this.currentLesson.id,
+            resourceId: content.id,
+          },
+        });
       },
     },
     beforeDestroy() {

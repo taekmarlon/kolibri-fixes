@@ -22,7 +22,12 @@ def lesson_assignment_lookup(resources):
     :return: a tuple of contentnode_id and metadata
     """
     for resource in resources:
-        yield (resource["contentnode_id"], dict(channel_id=resource["channel_id"]))
+        if (
+            not resource.get("is_custom")
+            and "contentnode_id" in resource
+            and "channel_id" in resource
+        ):
+            yield (resource["contentnode_id"], dict(channel_id=resource["channel_id"]))
 
 
 class Lesson(AbstractFacilityDataModel):

@@ -1637,7 +1637,11 @@ class UserContentNodeFilter(ContentNodeFilter):
         )
         if lesson is None:
             return queryset.none()
-        node_ids = list(map(lambda x: x["contentnode_id"], lesson.resources))
+        node_ids = [
+            x["contentnode_id"]
+            for x in lesson.resources
+            if not x.get("is_custom") and "contentnode_id" in x
+        ]
         return queryset.filter(pk__in=node_ids)
 
     def filter_by_resume(self, queryset, name, value):

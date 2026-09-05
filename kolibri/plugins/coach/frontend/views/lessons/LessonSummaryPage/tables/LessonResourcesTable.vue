@@ -50,6 +50,21 @@
                   <span v-else>
                     {{ tableRow.title }}
                   </span>
+                  <span
+                    v-if="tableRow.is_custom"
+                    class="custom-badge"
+                    :style="{
+                      backgroundColor: $themePalette.grey.v_200,
+                      color: $themeTokens.annotation,
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      marginLeft: '8px',
+                    }"
+                  >
+                    {{ tableRow.resource_type ? tableRow.resource_type.toUpperCase() : 'CUSTOM' }}
+                  </span>
                 </div>
               </td>
               <td>

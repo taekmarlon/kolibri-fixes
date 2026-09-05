@@ -59,7 +59,9 @@ def _consolidate_lessons_data(request, lessons):
     lesson_contentnode_ids = set()
     for lesson in lessons:
         lesson_contentnode_ids |= {
-            resource["contentnode_id"] for resource in lesson["resources"]
+            resource["contentnode_id"]
+            for resource in lesson["resources"]
+            if not resource.get("is_custom") and "contentnode_id" in resource
         }
 
     contentnode_progress = (
@@ -88,10 +90,34 @@ def _consolidate_lessons_data(request, lessons):
         missing_resource = False
         for resource in lesson["resources"]:
             resource["progress"] = progress_map.get(resource["content_id"], 0)
-            resource["contentnode"] = contentnode_map.get(
-                resource["contentnode_id"], None
-            )
-            missing_resource = missing_resource or not resource["contentnode"]
+            if resource.get("is_custom"):
+                kind = "document"
+                res_type = resource.get("resource_type")
+                if res_type == "youtube":
+                    kind = "video"
+                elif res_type == "image":
+                    kind = "image"
+                elif res_type == "html5":
+                    kind = "html5"
+
+                resource["contentnode"] = {
+                    "id": resource["contentnode_id"],
+                    "content_id": resource["content_id"],
+                    "title": resource.get("title", "Custom Resource"),
+                    "description": resource.get("description", ""),
+                    "kind": kind,
+                    "is_custom": True,
+                    "resource_type": res_type,
+                    "url": resource.get("url", ""),
+                    "file_url": resource.get("file_url", ""),
+                    "file_name": resource.get("file_name", ""),
+                    "content": resource.get("content", ""),
+                }
+            else:
+                resource["contentnode"] = contentnode_map.get(
+                    resource["contentnode_id"], None
+                )
+                missing_resource = missing_resource or not resource["contentnode"]
         lesson["missing_resource"] = missing_resource
 
 
