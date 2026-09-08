@@ -52,6 +52,8 @@ describe('useFacilityTheme', () => {
       expect(themeConfig.signIn.subtext).toBe('Empowering Young Leaders');
       expect(themeConfig.background.image).toBe('https://example.com/bg.png');
       expect(themeConfig.background.opacity).toBe(0.35);
+      expect(document.body.style.backgroundColor).toBe('transparent');
+      expect(document.documentElement.style.backgroundColor).toBe('transparent');
     });
 
     it('resets theme to defaults when passed empty theme', () => {
@@ -62,6 +64,8 @@ describe('useFacilityTheme', () => {
       expect(themeConfig.signIn.subtext).toBeNull();
       expect(themeConfig.background.image).toBeNull();
       expect(themeConfig.background.opacity).toBeNull();
+      expect(document.body.style.backgroundColor).toBe('');
+      expect(document.documentElement.style.backgroundColor).toBe('');
     });
   });
 

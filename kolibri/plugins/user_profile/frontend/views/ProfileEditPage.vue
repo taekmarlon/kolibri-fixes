@@ -86,6 +86,7 @@
   import FacilityUserResource from 'kolibri-common/apiResources/FacilityUserResource';
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import useFacility from 'kolibri-common/composables/useFacility';
+  import useFacilityTheme from 'kolibri-common/composables/useFacilityTheme';
   import { handleApiError } from 'kolibri/utils/appError';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import { RoutesMap } from '../constants';
@@ -106,6 +107,7 @@
     },
     mixins: [commonCoreStrings],
     setup() {
+      useFacilityTheme();
       const { isLearnerOnlyImport, isLearner, currentUserId } = useUser();
       const { facilityConfig } = useFacility();
       return {

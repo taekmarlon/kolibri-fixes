@@ -218,6 +218,7 @@
   import useTotalProgress from 'kolibri/composables/useTotalProgress';
   import useFacilities from 'kolibri-common/composables/useFacilities';
   import useFacility from 'kolibri-common/composables/useFacility';
+  import useFacilityTheme from 'kolibri-common/composables/useFacilityTheme';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import useUserKind from '../../composables/useUserKind';
   import { RoutesMap } from '../../constants';
@@ -244,6 +245,7 @@
     },
     mixins: [commonCoreStrings],
     setup() {
+      useFacilityTheme();
       const showPasswordModal = ref(false);
       const showLearnModal = ref(false);
       const { currentUser } = useCurrentUser();

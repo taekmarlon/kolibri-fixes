@@ -1,7 +1,9 @@
 import { ref, computed, watch, set } from 'vue';
 import themeConfig from 'kolibri/styles/themeConfig';
 import FacilityDatasetResource from 'kolibri-common/apiResources/FacilityDatasetResource';
+import useUser from 'kolibri/composables/useUser';
 import useFacility from './useFacility';
+import useFacilities from './useFacilities';
 
 // Retain base theme defaults so we can revert when a facility has no custom theme
 const baseDefaults = {
@@ -35,6 +37,20 @@ const baseDefaults = {
  */
 export function applyFacilityTheme(theme = {}, facilityName = '') {
   const custom = theme || {};
+  if (!themeConfig) return;
+
+  if (!themeConfig.appBar) {
+    set(themeConfig, 'appBar', {});
+  }
+  if (!themeConfig.signIn) {
+    set(themeConfig, 'signIn', {});
+  }
+  if (!themeConfig.sideNav) {
+    set(themeConfig, 'sideNav', {});
+  }
+  if (!themeConfig.background) {
+    set(themeConfig, 'background', { image: null, opacity: null });
+  }
 
   // 1. App Bar Header Styling
   if (custom.header_background) {
@@ -140,9 +156,23 @@ export function applyFacilityTheme(theme = {}, facilityName = '') {
       bgEl.style.backgroundImage = `url("${bgImage}")`;
       bgEl.style.opacity = String(bgOpacity);
       bgEl.style.display = 'block';
+
+      if (document.body) {
+        document.body.style.backgroundColor = 'transparent';
+      }
+      if (document.documentElement) {
+        document.documentElement.style.backgroundColor = 'transparent';
+      }
     } else if (bgEl) {
       bgEl.style.display = 'none';
       bgEl.style.backgroundImage = 'none';
+
+      if (document.body) {
+        document.body.style.backgroundColor = '';
+      }
+      if (document.documentElement) {
+        document.documentElement.style.backgroundColor = '';
+      }
     }
 
     if (document.documentElement) {
@@ -163,20 +193,47 @@ export default function useFacilityTheme() {
     facilityConfig,
     facilityId,
     selectedFacilityId,
+    selectedFacility,
     currentFacilityName,
     fetchFacilityConfig,
     fetchFacility,
+    fetchFacilities,
+    setFacilityId,
   } = useFacility();
+  const { facilities } = useFacilities();
+  const { userFacilityId } = useUser();
 
   const targetFacilityId = selectedFacilityId || facilityId;
 
   const facilityTheme = computed(() => {
-    return (
-      (facilityConfig.value &&
-        facilityConfig.value.extra_fields &&
-        facilityConfig.value.extra_fields.theme) ||
-      {}
-    );
+    const configTheme =
+      facilityConfig.value &&
+      facilityConfig.value.extra_fields &&
+      facilityConfig.value.extra_fields.theme;
+
+    if (configTheme && Object.keys(configTheme).length > 0) {
+      return configTheme;
+    }
+
+    const facilityObj =
+      (selectedFacility && selectedFacility.value) ||
+      (facilities.value &&
+        facilities.value.find(
+          f => f.id === (targetFacilityId && targetFacilityId.value),
+        )) ||
+      (facilities.value && facilities.value[0]);
+
+    const datasetTheme =
+      facilityObj &&
+      facilityObj.dataset &&
+      facilityObj.dataset.extra_fields &&
+      facilityObj.dataset.extra_fields.theme;
+
+    if (datasetTheme && Object.keys(datasetTheme).length > 0) {
+      return datasetTheme;
+    }
+
+    return {};
   });
 
   const hasCustomTheme = computed(() => {
@@ -201,7 +258,44 @@ export default function useFacilityTheme() {
     { immediate: true, deep: true },
   );
 
-  // Auto-fetch facility dataset config if not loaded yet or when selected facility changes
+  // Auto-fetch facility dataset config across all plugins (Learn, Coach, Facility, Device, etc.)
+  async function ensureFacilityLoaded() {
+    if (fetchFacilities && (!facilities.value || facilities.value.length === 0)) {
+      try {
+        await fetchFacilities();
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    let id =
+      (targetFacilityId && targetFacilityId.value) ||
+      (userFacilityId && userFacilityId.value) ||
+      (facilities.value && facilities.value[0] ? facilities.value[0].id : null);
+
+    if (id) {
+      if (setFacilityId && (!targetFacilityId || !targetFacilityId.value)) {
+        try {
+          await setFacilityId(id);
+        } catch (e) {
+          // ignore
+        }
+      }
+      try {
+        if (fetchFacility) {
+          await fetchFacility(id);
+        }
+        if (fetchFacilityConfig) {
+          await fetchFacilityConfig(id);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
+  ensureFacilityLoaded();
+
   watch(
     targetFacilityId,
     newId => {
@@ -210,6 +304,8 @@ export default function useFacilityTheme() {
         if (fetchFacility) {
           fetchFacility(newId);
         }
+      } else {
+        ensureFacilityLoaded();
       }
     },
     { immediate: true },

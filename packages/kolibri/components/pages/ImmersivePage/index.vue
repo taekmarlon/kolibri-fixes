@@ -41,6 +41,7 @@
 
   import useUser from 'kolibri/composables/useUser';
   import useKResponsiveWindow from 'kolibri-design-system/lib/composables/useKResponsiveWindow';
+  import themeConfig from 'kolibri/styles/themeConfig';
 
   import ScrollingHeader from '../ScrollingHeader';
   import ImmersiveToolbar from './internal/ImmersiveToolbar';
@@ -107,12 +108,16 @@
     },
     computed: {
       wrapperStyles() {
+        const bg =
+          themeConfig.background && themeConfig.background.image
+            ? 'transparent'
+            : this.$themePalette.grey.v_100;
         return this.appearanceOverrides
-          ? this.appearanceOverrides
+          ? { backgroundColor: bg, ...this.appearanceOverrides }
           : {
             width: '100%',
             display: this.$isPrint ? undefined : 'inline-block',
-            backgroundColor: this.$themePalette.grey.v_100,
+            backgroundColor: bg,
             paddingBottom: '72px',
             paddingLeft: this.paddingLeftRight,
             paddingRight: this.paddingLeftRight,

@@ -2,6 +2,7 @@ import redirectBrowser from 'kolibri/utils/redirectBrowser';
 import useUser from 'kolibri/composables/useUser';
 import { get } from '@vueuse/core';
 import useFacility from 'kolibri-common/composables/useFacility';
+import useFacilities from 'kolibri-common/composables/useFacilities';
 import { pageLoading } from 'kolibri-common/composables/usePageLoading';
 import ProfilePage from './views/ProfilePage';
 import ProfileEditPage from './views/ProfileEditPage';
@@ -21,12 +22,36 @@ import MergeDifferentAccounts from './views/ChangeFacility/MergeDifferentAccount
 
 function preload(next) {
   const { userFacilityId } = useUser();
-  const { setFacilityId } = useFacility();
+  const { setFacilityId, selectedFacilityId } = useFacility();
+  const { facilities, fetchFacilities } = useFacilities();
   pageLoading.value = true;
-  setFacilityId(get(userFacilityId)).then(() => {
-    pageLoading.value = false;
-    next();
-  });
+
+  const targetId =
+    get(userFacilityId) ||
+    (selectedFacilityId && selectedFacilityId.value) ||
+    null;
+
+  if (targetId) {
+    setFacilityId(targetId).then(() => {
+      pageLoading.value = false;
+      next();
+    });
+  } else {
+    fetchFacilities().then(() => {
+      const fallbackId =
+        (selectedFacilityId && selectedFacilityId.value) ||
+        (facilities.value && facilities.value[0] ? facilities.value[0].id : null);
+      if (fallbackId) {
+        setFacilityId(fallbackId).then(() => {
+          pageLoading.value = false;
+          next();
+        });
+      } else {
+        pageLoading.value = false;
+        next();
+      }
+    });
+  }
 }
 
 export default [
