@@ -23,13 +23,13 @@ export default function useLiveSessions() {
   }
 
   function setLiveSessionActive({ classId, roomName, active = true }) {
-    if (!classId) return Promise.resolve();
+    if (!classId && !roomName) return Promise.resolve();
     return client({
       url: '/api/device/live_sessions/',
       method: 'POST',
       data: {
-        class_id: classId,
-        room_name: roomName || `phiedu_class_${classId}`,
+        class_id: classId || roomName,
+        room_name: roomName || (classId ? `phiedu_class_${classId}` : ''),
         active,
       },
     })
@@ -39,27 +39,53 @@ export default function useLiveSessions() {
       .catch(() => {});
   }
 
-  function normalizeId(id) {
-    return String(id || '')
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .toLowerCase();
+  function getVariants(id) {
+    const str = String(id || '').trim().toLowerCase();
+    if (!str) return [];
+    const setOfVariants = new Set();
+    setOfVariants.add(str);
+
+    const alnum = str.replace(/[^a-z0-9]/g, '');
+    if (alnum) setOfVariants.add(alnum);
+
+    const prefixes = ['phiedu_class_', 'kolibri_class_', 'phiedu_room_', 'phiedu_', 'room_', 'class_'];
+    for (const p of prefixes) {
+      if (str.startsWith(p)) {
+        const sub = str.slice(p.length);
+        if (sub) {
+          setOfVariants.add(sub);
+          const subAlnum = sub.replace(/[^a-z0-9]/g, '');
+          if (subAlnum) setOfVariants.add(subAlnum);
+        }
+      }
+    }
+    return Array.from(setOfVariants);
   }
 
   function isClassLive(classId) {
     if (!classId) return false;
-    const target = normalizeId(classId);
-    if (!target) return false;
+    const targets = getVariants(classId);
+    if (!targets.length) return false;
 
-    if (activeLiveSessions.value[classId] && activeLiveSessions.value[classId].active) {
-      return true;
-    }
-
-    for (const [key, session] of Object.entries(activeLiveSessions.value)) {
-      if (session && session.active && normalizeId(key) === target) {
+    for (const t of targets) {
+      if (activeLiveSessions.value[t] && activeLiveSessions.value[t].active) {
         return true;
       }
     }
+
+    for (const [key, session] of Object.entries(activeLiveSessions.value)) {
+      if (session && session.active) {
+        const keyVariants = getVariants(key);
+        if (targets.some(t => keyVariants.includes(t))) {
+          return true;
+        }
+      }
+    }
     return false;
+  }
+
+  function isRoomLive(roomIdentifier) {
+    return isClassLive(roomIdentifier);
   }
 
   const liveClassesCount = computed(() => {
@@ -72,6 +98,7 @@ export default function useLiveSessions() {
     fetchLiveSessions,
     setLiveSessionActive,
     isClassLive,
+    isRoomLive,
     liveClassesCount,
   };
 }

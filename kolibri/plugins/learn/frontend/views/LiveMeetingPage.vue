@@ -42,10 +42,10 @@
             <KIcon icon="classes" class="header-icon" :style="{ color: '#1d4ed8', fontSize: '28px' }" />
             <div>
               <h2 class="card-title" :style="{ color: '#1e3a8a', margin: '0', fontSize: '18px', fontWeight: '800' }">
-                🎓 Your Enrolled Class Live Rooms
+                🎓 School & Enrolled Class Live Rooms
               </h2>
               <p class="card-desc" :style="{ color: '#3b82f6', margin: '4px 0 0', fontSize: '13px' }">
-                Join the live virtual classroom with your teacher and classmates with one click:
+                Join the live virtual classroom with teachers and classmates with one click:
               </p>
             </div>
           </div>
@@ -182,20 +182,49 @@
                   v-for="room in recentRooms"
                   :key="room.roomId"
                   class="recent-item"
-                  :style="{ borderBottom: `1px solid ${$themeTokens.fineLine}` }"
+                  :style="{
+                    backgroundColor: isRoomLive(room.roomId) ? '#f0fdf4' : 'transparent',
+                    border: isRoomLive(room.roomId) ? '1.5px solid #22c55e' : 'none',
+                    borderRadius: '8px',
+                    padding: isRoomLive(room.roomId) ? '10px 12px' : '8px 0',
+                    marginBottom: '8px',
+                    borderBottom: isRoomLive(room.roomId) ? '1.5px solid #22c55e' : `1px solid ${$themeTokens.fineLine}`,
+                  }"
                 >
-                  <div class="recent-info">
-                    <span class="recent-room-title" :style="{ color: $themeTokens.text }">
-                      {{ room.title || room.roomId }}
-                    </span>
-                    <span class="recent-room-id" :style="{ color: $themeTokens.annotation }">
-                      {{ room.roomId }}
-                    </span>
+                  <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+                    <div v-if="isRoomLive(room.roomId)" class="live-dot-wrapper">
+                      <span class="pulse-ring"></span>
+                      <span class="pulse-dot"></span>
+                    </div>
+                    <div class="recent-info">
+                      <div
+                        v-if="isRoomLive(room.roomId)"
+                        style="display: inline-block; font-size: 10px; font-weight: 800; color: #166534; background: #bbf7d0; padding: 1px 6px; border-radius: 9999px; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;"
+                      >
+                        🟢 LIVE NOW
+                      </div>
+                      <span
+                        class="recent-room-title"
+                        :style="{
+                          color: isRoomLive(room.roomId) ? '#15803d' : $themeTokens.text,
+                          fontWeight: isRoomLive(room.roomId) ? 'bold' : 'normal',
+                        }"
+                      >
+                        {{ room.title || room.roomId }}
+                      </span>
+                      <span
+                        class="recent-room-id"
+                        :style="{ color: isRoomLive(room.roomId) ? '#166534' : $themeTokens.annotation }"
+                      >
+                        {{ room.roomId }}
+                      </span>
+                    </div>
                   </div>
                   <KButton
-                    :text="rejoinButton$()"
-                    appearance="basic-flat-button"
-                    :primary="false"
+                    :text="isRoomLive(room.roomId) ? 'Join Live Now ➔' : rejoinButton$()"
+                    :appearance="isRoomLive(room.roomId) ? 'raised-button' : 'basic-flat-button'"
+                    :primary="isRoomLive(room.roomId)"
+                    :style="isRoomLive(room.roomId) ? { backgroundColor: '#16a34a', color: '#ffffff', fontWeight: 'bold' } : {}"
                     @click="joinSpecificRoom(room.roomId, room.title)"
                   />
                 </div>
@@ -225,6 +254,7 @@
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
   import useUser from 'kolibri/composables/useUser';
   import { buildLiveMeetingUrl } from 'kolibri-common/utils/liveMeeting';
+  import ClassroomResource from 'kolibri-common/apiResources/ClassroomResource';
   import { LearnerClassroomResource } from '../apiResources';
   import commonLearnStrings from './commonLearnStrings';
   import LearnAppBarPage from './LearnAppBarPage';
@@ -298,7 +328,8 @@
     setup() {
       const { full_name, username } = useUser();
       const { recentRooms, generateRoomId, saveRecentRoom } = useLiveMeeting();
-      const { fetchLiveSessions, isClassLive } = useLiveSessions();
+      const { fetchLiveSessions, isClassLive, isRoomLive, setLiveSessionActive } =
+        useLiveSessions();
 
       const {
         virtualMeetingTitle$,
@@ -328,13 +359,32 @@
         fetchLiveSessions();
         LearnerClassroomResource.fetchCollection()
           .then(classes => {
-            enrolledClassrooms.value = classes || [];
-            if (classes && classes.length > 0 && !roomInput.value) {
-              roomInput.value = `class_${classes[0].id}`;
+            if (classes && classes.length > 0) {
+              enrolledClassrooms.value = classes;
+              if (!roomInput.value) {
+                roomInput.value = `class_${classes[0].id}`;
+              }
+            } else {
+              ClassroomResource.fetchCollection()
+                .then(facClasses => {
+                  enrolledClassrooms.value = facClasses || [];
+                  if (facClasses && facClasses.length > 0 && !roomInput.value) {
+                    roomInput.value = `class_${facClasses[0].id}`;
+                  }
+                })
+                .catch(() => {
+                  enrolledClassrooms.value = [];
+                });
             }
           })
           .catch(() => {
-            enrolledClassrooms.value = [];
+            ClassroomResource.fetchCollection()
+              .then(facClasses => {
+                enrolledClassrooms.value = facClasses || [];
+              })
+              .catch(() => {
+                enrolledClassrooms.value = [];
+              });
           });
       });
 
@@ -371,6 +421,10 @@
           title: title || roomId,
         });
         const cleanName = roomId.replace(/[^a-zA-Z0-9-_]/g, '_');
+        setLiveSessionActive({
+          roomName: cleanName,
+          active: true,
+        });
         const directUrl = buildLiveMeetingUrl({
           roomName: cleanName,
           displayName: userDisplayName.value,
@@ -414,10 +468,8 @@
         rejoinButton$,
         noRecentRooms$,
         isClassLive,
-        joinRoom,
-        generateRandomRoom,
-        joinSpecificRoom,
-        leaveMeeting,
+        isRoomLive,
+        setLiveSessionActive,
       };
     },
   };

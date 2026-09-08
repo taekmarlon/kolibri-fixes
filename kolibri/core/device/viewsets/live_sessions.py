@@ -33,6 +33,32 @@ def _write_sessions(data):
         pass
 
 
+def _get_variants(val):
+    val_str = str(val).strip()
+    if not val_str:
+        return []
+    res = [val_str]
+    clean = "".join(ch for ch in val_str if ch.isalnum()).lower()
+    if clean:
+        res.append(clean)
+    for prefix in (
+        "phiedu_class_",
+        "kolibri_class_",
+        "phiedu_room_",
+        "phiedu_",
+        "room_",
+    ):
+        if val_str.startswith(prefix):
+            sub = val_str[len(prefix) :]
+            res.append(sub)
+            res.append("".join(ch for ch in sub if ch.isalnum()).lower())
+    return [r for r in res if r]
+
+
+def _get_session_keys(class_id, room_name):
+    return set(_get_variants(class_id) + _get_variants(room_name))
+
+
 class LiveClassSessionView(APIView):
     permission_classes = (IsAuthenticatedOrReadOnly,)
 
@@ -49,21 +75,24 @@ class LiveClassSessionView(APIView):
 
     def post(self, request):
         class_id = str(request.data.get("class_id", "")).strip()
-        if not class_id:
+        room_name = str(request.data.get("room_name", "")).strip()
+
+        if not class_id and not room_name:
             return Response(
-                {"error": "class_id is required"},
+                {"error": "Either class_id or room_name is required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        room_name = room_name or f"phiedu_class_{class_id}"
+        class_id = class_id or room_name
         active = request.data.get("active", True)
-        room_name = request.data.get("room_name", f"phiedu_class_{class_id}")
         teacher_name = getattr(request.user, "full_name", None) or getattr(
-            request.user, "username", "Teacher"
+            request.user, "username", "Participant"
         )
 
         sessions = _read_sessions()
         now = time.time()
-        normalized_id = "".join(ch for ch in class_id if ch.isalnum()).lower()
+        keys = _get_session_keys(class_id, room_name)
 
         if active:
             session_data = {
@@ -73,13 +102,11 @@ class LiveClassSessionView(APIView):
                 "teacher_name": teacher_name,
                 "updated_at": now,
             }
-            sessions[class_id] = session_data
-            if normalized_id:
-                sessions[normalized_id] = session_data
+            for k in keys:
+                sessions[k] = session_data
         else:
-            sessions.pop(class_id, None)
-            if normalized_id:
-                sessions.pop(normalized_id, None)
+            for k in keys:
+                sessions.pop(k, None)
 
         # prune expired sessions
         sessions = {
@@ -89,4 +116,11 @@ class LiveClassSessionView(APIView):
         }
 
         _write_sessions(sessions)
-        return Response({"status": "ok", "class_id": class_id, "active": active})
+        return Response(
+            {
+                "status": "ok",
+                "class_id": class_id,
+                "room_name": room_name,
+                "active": active,
+            }
+        )
