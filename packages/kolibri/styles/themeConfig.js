@@ -36,6 +36,10 @@ const themeConfig = Vue.observable({
     brandedFooter: {},
     showKFooterLogo: true,
   },
+  background: {
+    image: null,
+    opacity: null,
+  },
 });
 
 export default themeConfig;

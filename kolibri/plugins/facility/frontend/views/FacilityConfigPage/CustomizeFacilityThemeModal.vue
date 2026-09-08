@@ -13,56 +13,75 @@
       </p>
 
       <!-- Real-Time Live Preview -->
-      <div class="preview-card" :style="{ border: `1px solid ${$themeTokens.fineLine}` }">
-        <div class="preview-label" :style="{ color: $themeTokens.annotation }">
-          {{ livePreviewLabel$() }}
-        </div>
-        <!-- Mini Header Bar Preview -->
+      <div
+        class="preview-card"
+        :style="{
+          border: `1px solid ${$themeTokens.fineLine}`,
+          position: 'relative',
+          overflow: 'hidden',
+        }"
+      >
         <div
-          class="mini-app-bar"
+          v-if="formTheme.background_image_url"
+          class="preview-bg-layer"
           :style="{
-            backgroundColor: formTheme.header_background || '#0f172a',
-            color: formTheme.header_text_color || '#ffffff',
+            backgroundImage: `url('${formTheme.background_image_url}')`,
+            opacity: formTheme.background_opacity !== undefined && formTheme.background_opacity !== null
+              ? formTheme.background_opacity
+              : 0.2,
           }"
-        >
-          <div class="mini-app-bar-left">
-            <KIcon icon="menu" class="mini-icon" :style="{ fill: formTheme.header_text_color || '#ffffff' }" />
+        ></div>
+        <div class="preview-content-layer">
+          <div class="preview-label" :style="{ color: $themeTokens.annotation }">
+            {{ livePreviewLabel$() }}
+          </div>
+          <!-- Mini Header Bar Preview -->
+          <div
+            class="mini-app-bar"
+            :style="{
+              backgroundColor: formTheme.header_background || '#0f172a',
+              color: formTheme.header_text_color || '#ffffff',
+            }"
+          >
+            <div class="mini-app-bar-left">
+              <KIcon icon="menu" class="mini-icon" :style="{ fill: formTheme.header_text_color || '#ffffff' }" />
+              <img
+                v-if="formTheme.logo_url"
+                :src="formTheme.logo_url"
+                alt="Logo"
+                class="mini-logo"
+              >
+              <span class="mini-title">
+                {{ formTheme.header_title || facilityName || defaultSchoolTitle$() }}
+              </span>
+            </div>
+            <div class="mini-app-bar-right">
+              <span
+                class="mini-badge"
+                :style="{
+                  backgroundColor: formTheme.primary_color || '#2563eb',
+                  color: '#ffffff',
+                }"
+              >
+                {{ activeBadge$() }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Mini Sign-In Box Preview -->
+          <div class="mini-signin-preview" :style="{ backgroundColor: $themeTokens.surface }">
             <img
               v-if="formTheme.logo_url"
               :src="formTheme.logo_url"
               alt="Logo"
-              class="mini-logo"
+              class="mini-signin-logo"
             >
-            <span class="mini-title">
-              {{ formTheme.header_title || facilityName || defaultSchoolTitle$() }}
-            </span>
-          </div>
-          <div class="mini-app-bar-right">
-            <span
-              class="mini-badge"
-              :style="{
-                backgroundColor: formTheme.primary_color || '#2563eb',
-                color: '#ffffff',
-              }"
-            >
-              {{ activeBadge$() }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Mini Sign-In Box Preview -->
-        <div class="mini-signin-preview" :style="{ backgroundColor: $themeTokens.surface }">
-          <img
-            v-if="formTheme.logo_url"
-            :src="formTheme.logo_url"
-            alt="Logo"
-            class="mini-signin-logo"
-          >
-          <div class="mini-signin-title" :style="{ color: formTheme.primary_color || '#1e293b' }">
-            {{ formTheme.sign_in_title || formTheme.header_title || facilityName || defaultSchoolTitle$() }}
-          </div>
-          <div v-if="formTheme.sign_in_subtext" class="mini-signin-subtext" :style="{ color: $themeTokens.annotation }">
-            {{ formTheme.sign_in_subtext }}
+            <div class="mini-signin-title" :style="{ color: formTheme.primary_color || '#1e293b' }">
+              {{ formTheme.sign_in_title || formTheme.header_title || facilityName || defaultSchoolTitle$() }}
+            </div>
+            <div v-if="formTheme.sign_in_subtext" class="mini-signin-subtext" :style="{ color: $themeTokens.annotation }">
+              {{ formTheme.sign_in_subtext }}
+            </div>
           </div>
         </div>
       </div>
@@ -119,22 +138,13 @@
           </div>
 
           <div class="logo-actions">
-            <label class="file-upload-button">
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
-                style="display: none;"
-                @change="handleLogoFileUpload"
-              >
-              <KButton
-                :text="uploadLogoButton$()"
-                appearance="raised-button"
-                :primary="false"
-                icon="upload"
-                @click.prevent="$event.target.parentElement.querySelector('input').click()"
-              />
-            </label>
-
+            <KButton
+              :text="uploadLogoButton$()"
+              appearance="raised-button"
+              :primary="false"
+              icon="upload"
+              @click="triggerLogoUpload"
+            />
             <KButton
               v-if="formTheme.logo_url"
               :text="removeLogoButton$()"
@@ -152,6 +162,107 @@
             :label="orEnterLogoUrlLabel$()"
             placeholder="https://example.com/school-crest.png"
           />
+        </div>
+      </div>
+
+      <!-- School / Facility Background Image & Transparency Section -->
+      <div class="form-section">
+        <h3 class="section-title">{{ schoolBackgroundLabel$() }}</h3>
+        <p class="section-subtitle" :style="{ color: $themeTokens.annotation }">
+          {{ schoolBackgroundDesc$() }}
+        </p>
+
+        <div class="logo-upload-row">
+          <div
+            class="background-preview-box"
+            :style="{ border: `1px dashed ${$themeTokens.fineLine}` }"
+          >
+            <div
+              v-if="formTheme.background_image_url"
+              class="bg-thumbnail-fill"
+              :style="{
+                backgroundImage: `url('${formTheme.background_image_url}')`,
+                opacity: formTheme.background_opacity,
+              }"
+            ></div>
+            <div v-else class="logo-placeholder" :style="{ color: $themeTokens.annotation }">
+              {{ noBackgroundUploaded$() }}
+            </div>
+          </div>
+
+          <div class="logo-actions">
+            <KButton
+              :text="uploadBackgroundButton$()"
+              appearance="raised-button"
+              :primary="false"
+              icon="upload"
+              @click="triggerBackgroundUpload"
+            />
+            <KButton
+              v-if="formTheme.background_image_url"
+              :text="removeBackgroundButton$()"
+              appearance="basic-flat-button"
+              :primary="false"
+              icon="clear"
+              @click="formTheme.background_image_url = ''"
+            />
+          </div>
+        </div>
+
+        <div class="url-input-wrapper">
+          <KTextbox
+            v-model="formTheme.background_image_url"
+            :label="orEnterBackgroundUrlLabel$()"
+            placeholder="https://example.com/school-campus-wallpaper.jpg"
+          />
+        </div>
+
+        <!-- Opacity / Transparency Slider -->
+        <div v-if="formTheme.background_image_url" class="opacity-slider-section">
+          <div class="opacity-label-row">
+            <label class="color-label">{{ backgroundTransparencyLabel$() }}</label>
+            <span
+              class="opacity-percentage-pill"
+              :style="{ backgroundColor: $themeTokens.surface, color: $themeTokens.text }"
+            >
+              {{ Math.round((formTheme.background_opacity || 0.2) * 100) }}% Opacity
+              ({{ 100 - Math.round((formTheme.background_opacity || 0.2) * 100) }}% Transparent)
+            </span>
+          </div>
+          <input
+            v-model.number="formTheme.background_opacity"
+            type="range"
+            min="0.05"
+            max="1.0"
+            step="0.05"
+            class="opacity-range-slider"
+          >
+          <div class="opacity-quick-buttons">
+            <KButton
+              appearance="basic-flat-button"
+              size="small"
+              text="Subtle (15%)"
+              @click="formTheme.background_opacity = 0.15"
+            />
+            <KButton
+              appearance="basic-flat-button"
+              size="small"
+              text="Medium (30%)"
+              @click="formTheme.background_opacity = 0.3"
+            />
+            <KButton
+              appearance="basic-flat-button"
+              size="small"
+              text="Vivid (50%)"
+              @click="formTheme.background_opacity = 0.5"
+            />
+            <KButton
+              appearance="basic-flat-button"
+              size="small"
+              text="Opaque (100%)"
+              @click="formTheme.background_opacity = 1.0"
+            />
+          </div>
         </div>
       </div>
 
@@ -247,6 +358,8 @@
   import { ref, reactive, computed } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
+  import client from 'kolibri/client';
+  import urls from 'kolibri/urls';
 
   const themeModalStrings = createTranslator('CustomizeFacilityThemeModalStrings', {
     customizeThemeTitle: {
@@ -312,6 +425,34 @@
     orEnterLogoUrlLabel: {
       message: 'Or provide an Image URL',
       context: 'Input label for URL',
+    },
+    schoolBackgroundLabel: {
+      message: 'School / Facility Background Wallpaper & Theme',
+      context: 'Section header for background image and transparency',
+    },
+    schoolBackgroundDesc: {
+      message: 'Upload a background image (PNG, JPG, WebP) for this facility and set its transparency/opacity so it blends smoothly without obscuring content.',
+      context: 'Help text for background image upload',
+    },
+    uploadBackgroundButton: {
+      message: 'Upload Background Image',
+      context: 'Button to upload a background image',
+    },
+    removeBackgroundButton: {
+      message: 'Remove Background',
+      context: 'Button to remove current background image',
+    },
+    noBackgroundUploaded: {
+      message: 'No background wallpaper set yet',
+      context: 'Placeholder when no background image is set',
+    },
+    orEnterBackgroundUrlLabel: {
+      message: 'Or provide an Image URL',
+      context: 'Input label for background image URL',
+    },
+    backgroundTransparencyLabel: {
+      message: 'Background Opacity / Transparency',
+      context: 'Label for background opacity slider',
     },
     customColorsLabel: {
       message: 'Custom Color Palette',
@@ -387,6 +528,13 @@
         removeLogoButton$,
         noLogoUploaded$,
         orEnterLogoUrlLabel$,
+        schoolBackgroundLabel$,
+        schoolBackgroundDesc$,
+        uploadBackgroundButton$,
+        removeBackgroundButton$,
+        noBackgroundUploaded$,
+        orEnterBackgroundUrlLabel$,
+        backgroundTransparencyLabel$,
         customColorsLabel$,
         headerBgColorLabel$,
         headerTextColorLabel$,
@@ -405,6 +553,12 @@
         header_text_color: props.currentTheme.header_text_color || '#ffffff',
         primary_color: props.currentTheme.primary_color || '#2563eb',
         logo_url: props.currentTheme.logo_url || '',
+        background_image_url: props.currentTheme.background_image_url || '',
+        background_opacity:
+          props.currentTheme.background_opacity !== undefined &&
+          props.currentTheme.background_opacity !== null
+            ? Number(props.currentTheme.background_opacity)
+            : 0.2,
         sign_in_title: props.currentTheme.sign_in_title || '',
         sign_in_subtext: props.currentTheme.sign_in_subtext || '',
         sign_in_background: props.currentTheme.sign_in_background || '',
@@ -477,15 +631,80 @@
         formTheme.primary_color = preset.primary;
       }
 
-      function handleLogoFileUpload(event) {
-        const file = event.target.files && event.target.files[0];
-        if (!file) return;
+      function triggerLogoUpload() {
+        if (typeof document === 'undefined') return;
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/png, image/jpeg, image/jpg, image/webp, image/gif, image/svg+xml';
+        input.onchange = async event => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = e => {
-          formTheme.logo_url = e.target.result;
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const endpoint =
+              urls && urls['kolibri:core:facilitydataset_upload_theme_image']
+                ? urls['kolibri:core:facilitydataset_upload_theme_image']()
+                : '/api/auth/facilitydataset/upload_theme_image/';
+            const response = await client({
+              url: endpoint,
+              method: 'POST',
+              data: formData,
+            });
+            if (response && response.data && response.data.url) {
+              formTheme.logo_url = response.data.url;
+              return;
+            }
+          } catch (err) {
+            // Fall back to local DataURL if server upload fails
+          }
+
+          const reader = new FileReader();
+          reader.onload = e => {
+            formTheme.logo_url = e.target.result;
+          };
+          reader.readAsDataURL(file);
         };
-        reader.readAsDataURL(file);
+        input.click();
+      }
+
+      function triggerBackgroundUpload() {
+        if (typeof document === 'undefined') return;
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/png, image/jpeg, image/jpg, image/webp, image/gif, image/svg+xml';
+        input.onchange = async event => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const endpoint =
+              urls && urls['kolibri:core:facilitydataset_upload_theme_image']
+                ? urls['kolibri:core:facilitydataset_upload_theme_image']()
+                : '/api/auth/facilitydataset/upload_theme_image/';
+            const response = await client({
+              url: endpoint,
+              method: 'POST',
+              data: formData,
+            });
+            if (response && response.data && response.data.url) {
+              formTheme.background_image_url = response.data.url;
+              return;
+            }
+          } catch (err) {
+            // Fall back to local DataURL if server upload fails
+          }
+
+          const reader = new FileReader();
+          reader.onload = e => {
+            formTheme.background_image_url = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        };
+        input.click();
       }
 
       function handleReset() {
@@ -494,6 +713,8 @@
         formTheme.header_text_color = '';
         formTheme.primary_color = '';
         formTheme.logo_url = '';
+        formTheme.background_image_url = '';
+        formTheme.background_opacity = 0.2;
         formTheme.sign_in_title = '';
         formTheme.sign_in_subtext = '';
         formTheme.sign_in_background = '';
@@ -508,7 +729,8 @@
         colorPresets,
         activePresetId,
         applyPreset,
-        handleLogoFileUpload,
+        triggerLogoUpload,
+        triggerBackgroundUpload,
         handleReset,
         handleSubmit,
         customizeThemeTitle$,
@@ -527,6 +749,13 @@
         removeLogoButton$,
         noLogoUploaded$,
         orEnterLogoUrlLabel$,
+        schoolBackgroundLabel$,
+        schoolBackgroundDesc$,
+        uploadBackgroundButton$,
+        removeBackgroundButton$,
+        noBackgroundUploaded$,
+        orEnterBackgroundUrlLabel$,
+        backgroundTransparencyLabel$,
         customColorsLabel$,
         headerBgColorLabel$,
         headerTextColorLabel$,
@@ -561,6 +790,25 @@
     padding: 16px;
     margin-bottom: 24px;
     background: #f8fafc;
+  }
+
+  .preview-bg-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  .preview-content-layer {
+    position: relative;
+    z-index: 1;
   }
 
   .preview-label {
@@ -710,6 +958,27 @@
     padding: 6px;
   }
 
+  .background-preview-box {
+    width: 130px;
+    height: 80px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bg-thumbnail-fill {
+    width: 100%;
+    height: 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    transition: opacity 0.2s ease-in-out;
+  }
+
   .uploaded-logo-preview {
     max-width: 100%;
     max-height: 100%;
@@ -730,6 +999,46 @@
 
   .url-input-wrapper {
     margin-top: 8px;
+  }
+
+  .opacity-slider-section {
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .opacity-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .opacity-percentage-pill {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+  }
+
+  .opacity-range-slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #cbd5e1;
+    outline: none;
+    cursor: pointer;
+    margin: 8px 0;
+  }
+
+  .opacity-quick-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
   }
 
   .color-pickers-grid {

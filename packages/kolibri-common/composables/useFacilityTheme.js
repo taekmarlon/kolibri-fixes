@@ -6,20 +6,24 @@ import useFacility from './useFacility';
 // Retain base theme defaults so we can revert when a facility has no custom theme
 const baseDefaults = {
   appBar: {
-    background: themeConfig.appBar.background,
-    textColor: themeConfig.appBar.textColor,
+    background: themeConfig.appBar ? themeConfig.appBar.background : null,
+    textColor: themeConfig.appBar ? themeConfig.appBar.textColor : null,
     headerTitle: null,
     primaryColor: null,
-    topLogo: themeConfig.appBar.topLogo ? { ...themeConfig.appBar.topLogo } : null,
+    topLogo: themeConfig.appBar && themeConfig.appBar.topLogo ? { ...themeConfig.appBar.topLogo } : null,
   },
   signIn: {
-    title: themeConfig.signIn.title,
+    title: themeConfig.signIn ? themeConfig.signIn.title : null,
     subtext: null,
-    topLogo: themeConfig.signIn.topLogo ? { ...themeConfig.signIn.topLogo } : null,
-    background: themeConfig.signIn.background,
+    topLogo: themeConfig.signIn && themeConfig.signIn.topLogo ? { ...themeConfig.signIn.topLogo } : null,
+    background: themeConfig.signIn ? themeConfig.signIn.background : null,
   },
   sideNav: {
-    topLogo: themeConfig.sideNav.topLogo ? { ...themeConfig.sideNav.topLogo } : null,
+    topLogo: themeConfig.sideNav && themeConfig.sideNav.topLogo ? { ...themeConfig.sideNav.topLogo } : null,
+  },
+  background: {
+    image: null,
+    opacity: null,
   },
 };
 
@@ -98,6 +102,57 @@ export function applyFacilityTheme(theme = {}, facilityName = '') {
       document.documentElement.style.removeProperty('--facility-brand-primary');
     }
   }
+
+  // 5. Facility Background Image & Transparency
+  const bgImage = custom.background_image_url || null;
+  const bgOpacity =
+    custom.background_opacity !== undefined && custom.background_opacity !== null
+      ? Number(custom.background_opacity)
+      : 0.2;
+
+  if (themeConfig) {
+    if (!themeConfig.background) {
+      set(themeConfig, 'background', { image: null, opacity: null });
+    }
+    set(themeConfig.background, 'image', bgImage);
+    set(themeConfig.background, 'opacity', bgImage ? bgOpacity : null);
+  }
+
+  if (typeof document !== 'undefined' && document.body) {
+    let bgEl = document.getElementById('facility-theme-background-layer');
+    if (bgImage) {
+      if (!bgEl) {
+        bgEl = document.createElement('div');
+        bgEl.id = 'facility-theme-background-layer';
+        bgEl.style.position = 'fixed';
+        bgEl.style.top = '0';
+        bgEl.style.left = '0';
+        bgEl.style.width = '100vw';
+        bgEl.style.height = '100vh';
+        bgEl.style.zIndex = '-1';
+        bgEl.style.pointerEvents = 'none';
+        bgEl.style.backgroundPosition = 'center';
+        bgEl.style.backgroundRepeat = 'no-repeat';
+        bgEl.style.backgroundSize = 'cover';
+        bgEl.style.transition = 'opacity 0.25s ease-in-out';
+        document.body.prepend(bgEl);
+      }
+      bgEl.style.backgroundImage = `url("${bgImage}")`;
+      bgEl.style.opacity = String(bgOpacity);
+      bgEl.style.display = 'block';
+    } else if (bgEl) {
+      bgEl.style.display = 'none';
+      bgEl.style.backgroundImage = 'none';
+    }
+
+    if (document.documentElement) {
+      if (bgImage) {
+        document.documentElement.style.setProperty('--facility-bg-opacity', String(bgOpacity));
+      } else {
+        document.documentElement.style.removeProperty('--facility-bg-opacity');
+      }
+    }
+  }
 }
 
 /**
@@ -130,6 +185,7 @@ export default function useFacilityTheme() {
       t.header_background ||
         t.header_title ||
         t.logo_url ||
+        t.background_image_url ||
         t.primary_color ||
         t.sign_in_title ||
         t.sign_in_subtext,

@@ -1,5 +1,8 @@
 import logging
+import os
+import uuid
 
+from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.core.validators import MinLengthValidator
 from django.http import Http404
@@ -10,6 +13,9 @@ from django_filters.rest_framework import UUIDFilter
 from rest_framework import decorators
 from rest_framework import serializers
 from rest_framework import status
+from rest_framework.parsers import FormParser
+from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from kolibri.core import error_constants
@@ -240,4 +246,58 @@ class FacilityDatasetViewSet(ValuesViewset):
 
         return Response(
             {"detail": "Invalid request."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    @decorators.action(
+        detail=False,
+        methods=["post"],
+        permission_classes=(IsAuthenticated,),
+        parser_classes=(MultiPartParser, FormParser),
+    )
+    def upload_theme_image(self, request, **kwargs):
+        user = request.user
+        if not (
+            user.is_superuser
+            or (
+                hasattr(user, "roles")
+                and user.roles.filter(kind__in=["admin", "coach"]).exists()
+            )
+        ):
+            return Response(
+                {"detail": "You do not have permission to customize facility themes."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        file_obj = request.FILES.get("file") or request.FILES.get("image")
+        if not file_obj:
+            return Response(
+                {"detail": "No image file provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext not in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]:
+            return Response(
+                {"detail": f"Unsupported image file extension: {ext}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if file_obj.size > 15 * 1024 * 1024:
+            return Response(
+                {"detail": "Image file size exceeds maximum limit of 15MB."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        save_dir = os.path.join(settings.MEDIA_ROOT, "facility_themes", "backgrounds")
+        os.makedirs(save_dir, exist_ok=True)
+        image_id = uuid.uuid4().hex
+        safe_name = f"{image_id}_{os.path.basename(file_obj.name)}"
+        full_path = os.path.join(save_dir, safe_name)
+        with open(full_path, "wb+") as destination:
+            for chunk in file_obj.chunks():
+                destination.write(chunk)
+
+        url = f"/media/facility_themes/backgrounds/{safe_name}"
+        return Response(
+            {"url": url, "file_name": file_obj.name}, status=status.HTTP_200_OK
         )

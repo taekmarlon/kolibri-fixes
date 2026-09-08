@@ -48,6 +48,7 @@
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import AppError from 'kolibri/components/error/AppError';
   import GlobalSnackbar from 'kolibri/components/GlobalSnackbar';
+  import themeConfig from 'kolibri/styles/themeConfig';
   import { error } from 'kolibri/utils/appError';
   import { ComponentMap } from '../constants';
   import CoreBanner from './CoreBanner';
@@ -92,7 +93,10 @@
       mainWrapperStyles() {
         return {
           width: '100vw',
-          backgroundColor: this.$themePalette.grey.v_200,
+          backgroundColor:
+            themeConfig.background && themeConfig.background.image
+              ? 'transparent'
+              : this.$themePalette.grey.v_200,
           paddingTop: '0px',
           paddingBottom: '0px',
         };

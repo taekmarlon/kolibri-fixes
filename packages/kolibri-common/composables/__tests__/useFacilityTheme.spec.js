@@ -37,6 +37,8 @@ describe('useFacilityTheme', () => {
         header_title: 'St. Jude Academy',
         primary_color: '#2563eb',
         logo_url: 'https://example.com/logo.png',
+        background_image_url: 'https://example.com/bg.png',
+        background_opacity: 0.35,
         sign_in_title: 'Welcome to St. Jude',
         sign_in_subtext: 'Empowering Young Leaders',
       });
@@ -48,6 +50,8 @@ describe('useFacilityTheme', () => {
       expect(themeConfig.appBar.topLogo.src).toBe('https://example.com/logo.png');
       expect(themeConfig.signIn.title).toBe('Welcome to St. Jude');
       expect(themeConfig.signIn.subtext).toBe('Empowering Young Leaders');
+      expect(themeConfig.background.image).toBe('https://example.com/bg.png');
+      expect(themeConfig.background.opacity).toBe(0.35);
     });
 
     it('resets theme to defaults when passed empty theme', () => {
@@ -56,6 +60,8 @@ describe('useFacilityTheme', () => {
       expect(themeConfig.appBar.headerTitle).toBeNull();
       expect(themeConfig.appBar.primaryColor).toBeNull();
       expect(themeConfig.signIn.subtext).toBeNull();
+      expect(themeConfig.background.image).toBeNull();
+      expect(themeConfig.background.opacity).toBeNull();
     });
   });
 

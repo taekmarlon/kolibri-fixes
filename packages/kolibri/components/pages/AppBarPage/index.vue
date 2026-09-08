@@ -65,6 +65,7 @@
   import useUser from 'kolibri/composables/useUser';
   import { ref, getCurrentInstance } from 'vue';
   import { useSwipe } from '@vueuse/core';
+  import themeConfig from 'kolibri/styles/themeConfig';
   import ScrollingHeader from '../ScrollingHeader';
   import AppBar from './internal/AppBar';
   import SideNav from './internal/SideNav';
@@ -136,13 +137,17 @@
         return this.isAppContext && isTouchDevice;
       },
       wrapperStyles() {
+        const bg =
+          themeConfig.background && themeConfig.background.image
+            ? 'transparent'
+            : this.$themePalette.grey.v_100;
         return this.appearanceOverrides
-          ? { ...this.paddingTop, ...this.appearanceOverrides }
+          ? { ...this.paddingTop, backgroundColor: bg, ...this.appearanceOverrides }
           : {
             width: '100%',
             maxWidth: '1064px',
             margin: 'auto',
-            backgroundColor: this.$themePalette.grey.v_100,
+            backgroundColor: bg,
             paddingLeft: this.paddingLeftRight,
             paddingRight: this.paddingLeftRight,
             paddingBottom: '72px',
