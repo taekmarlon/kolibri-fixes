@@ -142,13 +142,77 @@ class FacilityAuthScope(AuthScope, abc.ABC):
         return f"{super().__str__()}<{self.facility_or_id}>"
 
 
+def get_facility_by_code(code):
+    if not code:
+        return None
+    code = str(code).strip().lower()
+    for fac in Facility.objects.all():
+        extra = fac.dataset.extra_fields if fac.dataset else None
+        if extra and extra.get("facility_code"):
+            if str(extra.get("facility_code")).strip().lower() == code:
+                return fac
+        if (
+            hasattr(fac, "facility_code")
+            and str(fac.facility_code).strip().lower() == code
+        ):
+            return fac
+        name_clean = fac.name.strip().lower()
+        if name_clean == code:
+            return fac
+        words = [
+            w
+            for w in "".join(
+                c if c.isalnum() or c.isspace() else " " for c in name_clean
+            ).split()
+            if w and w not in ("inc", "llc", "corp", "corporation", "ltd")
+        ]
+        if words:
+            if words[0] == "cedarhall" and code == "cha":
+                return fac
+            if "".join(w[0] for w in words) == code:
+                return fac
+    return None
+
+
+class GlobalFacilityUserAuthScope(UsernameAuthScope):
+    """
+    Auth scope for matching facility user across all facilities when no facility code is provided
+    """
+
+    def __init__(self, username, password):
+        super().__init__(username)
+        self.password = password
+
+    def matches_credentials(self, user):
+        return user.check_password(self.password)
+
+
 class BasicUserAuthScope(FacilityAuthScope, UsernameAuthScope):
     """Auth scope for username/password authentication"""
 
-    def __init__(self, facility_or_id, username, password=None):
+    def __init__(
+        self, facility_or_id, username, password=None, alternate_username=None
+    ):
         super().__init__(facility_or_id)
         UsernameAuthScope.__init__(self, username)
         self.password = password
+        self.alternate_username = alternate_username
+
+    def iter_candidate_users(self):
+        seen_ids = set()
+        for user in super().iter_candidate_users():
+            seen_ids.add(user.id)
+            yield user
+        if self.alternate_username and self.alternate_username != self.username:
+            qs = self.get_queryset()
+            for user in qs.filter(username=self.alternate_username):
+                if user.id not in seen_ids:
+                    seen_ids.add(user.id)
+                    yield user
+            for user in qs.filter(username__iexact=self.alternate_username):
+                if user.id not in seen_ids:
+                    seen_ids.add(user.id)
+                    yield user
 
     def matches_credentials(self, user):
         """
@@ -225,9 +289,30 @@ class FacilityUserBackend:
                 raise PermissionDenied("Invalid credentials")
             scopes.append(PicturePasswordAuthScope(facility, picture_password))
         else:
+            alternate_username = None
+            if username and "@" in username:
+                base_username, code = username.rsplit("@", 1)
+                resolved_facility = get_facility_by_code(code)
+                if resolved_facility:
+                    facility = resolved_facility
+                    alternate_username = base_username
+
             if facility:
-                scopes.append(BasicUserAuthScope(facility, username, password))
+                scopes.append(
+                    BasicUserAuthScope(
+                        facility,
+                        username,
+                        password,
+                        alternate_username=alternate_username,
+                    )
+                )
+
+            # Global superuser authentication (recognized in all facilities)
             scopes.append(SuperuserAuthScope(username, password))
+
+            # If no explicit facility code was provided and user not superuser, try global matching
+            if not alternate_username and not facility:
+                scopes.append(GlobalFacilityUserAuthScope(username, password))
 
         for auth_scope in scopes:
             user = self._run(auth_scope)

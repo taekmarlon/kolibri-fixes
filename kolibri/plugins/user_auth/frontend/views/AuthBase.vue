@@ -246,7 +246,7 @@
   import urls from 'kolibri/urls';
   import plugin_data from 'kolibri-plugin-data';
   import useUser from 'kolibri/composables/useUser';
-  import useFacilityTheme from 'kolibri-common/composables/useFacilityTheme';
+  import { revertToDefaultTheme } from 'kolibri-common/composables/useFacilityTheme';
   import useAuthFlow from '../composables/useAuthFlow';
   import useAuthRouter from '../composables/useAuthRouter';
   import LanguageSwitcherFooter from './LanguageSwitcherFooter';
@@ -258,7 +258,7 @@
     components: { CoreLogo, LanguageSwitcherFooter, PrivacyInfoModal, DeviceUnusableMessage },
     mixins: [commonCoreStrings, commonUserStrings],
     setup(props) {
-      useFacilityTheme();
+      revertToDefaultTheme();
       const route = useRoute();
       const { nextParam, pictureSignInRoute, usernameSignInRoute, signUpRoute } =
         useAuthRouter(route);

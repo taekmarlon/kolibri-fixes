@@ -12,7 +12,7 @@ import useFacilities from './useFacilities';
  * @returns {object} The reactive selected facility ID and its setter.
  */
 export function useFacilitySelect(listenToStorageChanges = false) {
-  const { facilities, userIsMultiFacilityAdmin } = useFacilities();
+  const { facilities, userIsMultiFacilityAdmin, hasMultipleFacilities } = useFacilities();
   const { userFacilityId, isUserLoggedIn } = useUser();
 
   const defaultFacilityId = useLocalStorage('facilityId', null, {
@@ -24,6 +24,11 @@ export function useFacilitySelect(listenToStorageChanges = false) {
     // don't bother with the persisted store value if user is logged in and not multi-facility admin
     if (isUserLoggedIn.value && !userIsMultiFacilityAdmin.value) {
       return userFacilityId.value;
+    }
+
+    // When not logged in on a multi-facility system, keep facility unselected for generic sign-in
+    if (!isUserLoggedIn.value && hasMultipleFacilities.value) {
+      return null;
     }
 
     return (

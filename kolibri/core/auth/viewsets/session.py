@@ -8,7 +8,6 @@ from django.contrib.auth import authenticate
 from django.contrib.auth import login
 from django.contrib.auth import logout
 from django.contrib.auth.models import AnonymousUser
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.decorators import method_decorator
@@ -29,6 +28,7 @@ from kolibri.core.logger.models import UserSessionLog
 from kolibri.core.serializers import HexOnlyUUIDField
 from kolibri.core.utils.token_generator import TokenGenerator
 
+from ..backends import get_facility_by_code
 from ..models import Facility
 from ..models import FacilityUser
 
@@ -111,6 +111,7 @@ class CreateSessionSerializer(serializers.Serializer):
 
         if user is not None and user.is_active:
             attrs["user"] = user
+            attrs["facility"] = user.facility
             return attrs
 
         # Otherwise, throw a meaningful validation error
@@ -143,43 +144,48 @@ class CreateSessionSerializer(serializers.Serializer):
                     ]
                 }
             )
+
+        target_facility = facility
+        candidate_usernames = [username]
+        if username and "@" in username:
+            base_user, code = username.rsplit("@", 1)
+            resolved = get_facility_by_code(code)
+            if resolved:
+                target_facility = resolved
+                candidate_usernames.append(base_user)
+
         # Find the FacilityUser we're looking for
-        try:
-            unauthenticated_user = FacilityUser.objects.get(
-                username__iexact=username, facility=facility
-            )
-        except (ValueError, ObjectDoesNotExist):
-            try:
-                # If not found in the selected facility, check if this is a device superuser,
-                # since superusers can authenticate across any facility on the device.
-                unauthenticated_user = FacilityUser.objects.get(
-                    username__iexact=username,
-                    devicepermissions__is_superuser=True,
-                )
-            except (ValueError, ObjectDoesNotExist):
-                raise RestValidationError(
-                    detail={
-                        "username": [
-                            {
-                                "id": error_constants.NOT_FOUND,
-                                "metadata": {
-                                    "field": "username",
-                                    "message": "Username not found.",
-                                },
-                            }
-                        ]
-                    }
-                )
-            except FacilityUser.MultipleObjectsReturned:
-                unauthenticated_user = FacilityUser.objects.filter(
-                    username__exact=username,
-                    devicepermissions__is_superuser=True,
-                ).first()
-        except FacilityUser.MultipleObjectsReturned:
-            # Handle case of multiple matching usernames
+        unauthenticated_user = None
+        if target_facility:
             unauthenticated_user = FacilityUser.objects.filter(
-                username__exact=username, facility=facility
+                username__in=candidate_usernames, facility=target_facility
             ).first()
+
+        if not unauthenticated_user:
+            unauthenticated_user = FacilityUser.objects.filter(
+                username__in=candidate_usernames
+            ).first()
+
+        if not unauthenticated_user:
+            unauthenticated_user = FacilityUser.objects.filter(
+                username__iexact=username,
+                devicepermissions__is_superuser=True,
+            ).first()
+
+        if not unauthenticated_user:
+            raise RestValidationError(
+                detail={
+                    "username": [
+                        {
+                            "id": error_constants.NOT_FOUND,
+                            "metadata": {
+                                "field": "username",
+                                "message": "Username not found.",
+                            },
+                        }
+                    ]
+                }
+            )
 
         if unauthenticated_user.password == NOT_SPECIFIED and not hasattr(
             unauthenticated_user, "os_user"

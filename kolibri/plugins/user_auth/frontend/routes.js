@@ -20,8 +20,8 @@ async function signInHook(method, to, from, next) {
   if (signInMethod.value !== method) {
     signInMethod.value = method;
   }
-  // If no facility has been selected, take user to facility selection
-  if (!facilityId.value) {
+  // If picture password and no facility has been selected, take user to facility selection
+  if (method === OptionsForSignIn.PICTURE_PASSWORD && !facilityId.value) {
     next(getFacilitySelectionRoute(false));
     return;
   }

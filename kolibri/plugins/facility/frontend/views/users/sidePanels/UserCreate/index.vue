@@ -51,6 +51,18 @@
             :isUniqueValidator="usernameIsUnique"
             :errors.sync="caughtErrors"
           />
+          <p
+            v-if="facilityCode"
+            class="facility-code-hint"
+            :style="{
+              color: $themeTokens.annotation,
+              fontSize: '12px',
+              marginTop: '-16px',
+              marginBottom: '16px',
+            }"
+          >
+            User will sign in as: <strong>{{ formattedUsernamePreview }}</strong>
+          </p>
           <template v-if="showPasswordInput">
             <PasswordTextbox
               ref="passwordTextbox"
@@ -249,6 +261,20 @@
         fetchFacilities,
         isPictureLoginFeatureEnabled,
       } = useFacility();
+      const facilityCode = computed(() => selectedFacility.value?.facility_code || '');
+
+      const formattedUsernamePreview = computed(() => {
+        if (!facilityCode.value) {
+          return username.value;
+        }
+        if (!username.value) {
+          return `@${facilityCode.value}`;
+        }
+        if (username.value.includes('@')) {
+          return username.value;
+        }
+        return `${username.value}@${facilityCode.value}`;
+      });
       const picturePasswordSettings = computed(
         () => facilityConfig.value?.picture_password_settings || null,
       );
@@ -378,8 +404,14 @@
       );
 
       const usernameIsUnique = value => {
+        const valLower = value.toLowerCase();
+        const candidate =
+          facilityCode.value && !value.includes('@')
+            ? `${value}@${facilityCode.value}`.toLowerCase()
+            : valLower;
         return !facilityUsers.value.find(
-          ({ username }) => username.toLowerCase() === value.toLowerCase(),
+          ({ username }) =>
+            username.toLowerCase() === valLower || username.toLowerCase() === candidate,
         );
       };
 
@@ -445,10 +477,14 @@
         if (!showPasswordInput.value) {
           passwordValue = NOT_SPECIFIED;
         }
+        let finalUsername = username.value.trim();
+        if (facilityCode.value && !finalUsername.includes('@')) {
+          finalUsername = `${finalUsername}@${facilityCode.value}`;
+        }
         const facilityUser = await FacilityUserResource.saveModel({
           data: {
             facility: facilityId.value,
-            username: username.value,
+            username: finalUsername,
             full_name: fullName.value,
             password: passwordValue,
             id_number: idNumber.value,
@@ -597,6 +633,8 @@
         signingInHeading$,
         learnersPictureSignInInfo$,
         learnMoreAction$,
+        facilityCode,
+        formattedUsernamePreview,
       };
     },
     props: {

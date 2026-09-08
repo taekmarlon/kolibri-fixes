@@ -145,6 +145,7 @@ extra_fields_schema = {
         "on_my_own_setup": {"type": "boolean", "optional": True},
         "pin_code": {"type": ["string", "null"], "optional": True},
         "theme": {"type": "object", "optional": True},
+        "facility_code": {"type": ["string", "null"], "optional": True},
         DEMOGRAPHIC_FIELDS_KEY: custom_demographics_schema,
     },
 }
@@ -470,14 +471,14 @@ class AbstractFacilityDataModel(FacilityDataSyncableModel):
 
 
 validate_username_allowed_chars = validators.RegexValidator(
-    r'[\s`~!@#$%^&*()\-+={}\[\]\|\\\/:;"\'<>,\.\?]',
-    "Enter a valid username. This value can contain only letters, numbers, and underscores.",
+    r'[\s`~!#$%^&*()\-+={}\[\]\|\\\/:;"\'<>,\.\?]',
+    "Enter a valid username. This value can contain only letters, numbers, underscores, and @.",
     code=error_constants.INVALID,
     inverse_match=True,
 )
 
 validate_username_max_length = validators.MaxLengthValidator(
-    30, "Required. 30 characters or fewer. Letters and digits only"
+    64, "Required. 64 characters or fewer."
 )
 
 
@@ -1683,6 +1684,35 @@ class Facility(Collection):
 
     class Meta:
         proxy = True
+
+    @property
+    def facility_code(self):
+        if self.dataset and self.dataset.extra_fields:
+            code = self.dataset.extra_fields.get("facility_code")
+            if code:
+                return str(code).strip().lower()
+        name_clean = "".join(
+            c if c.isalnum() or c.isspace() else " " for c in self.name.lower()
+        )
+        words = [
+            w
+            for w in name_clean.split()
+            if w and w not in ("inc", "llc", "corp", "corporation", "ltd")
+        ]
+        if words:
+            if words[0] == "cedarhall":
+                return "cha"
+            if len(words) == 1:
+                return words[0][:3].lower()
+            return "".join(w[0] for w in words)[:5].lower()
+        return "fac"
+
+    def set_facility_code(self, code):
+        self.ensure_dataset()
+        if self.dataset.extra_fields is None:
+            self.dataset.extra_fields = {}
+        self.dataset.extra_fields["facility_code"] = str(code).strip().lower()
+        self.dataset.save(update_fields=["extra_fields"])
 
     @classmethod
     def get_default_facility(cls):

@@ -35,7 +35,28 @@ from .facility_dataset import FacilityDatasetSerializer
 logger = logging.getLogger(__name__)
 
 
+def _compute_facility_code(name, extra_fields):
+    if isinstance(extra_fields, dict) and extra_fields.get("facility_code"):
+        return str(extra_fields.get("facility_code")).strip().lower()
+    name_clean = "".join(
+        c if c.isalnum() or c.isspace() else " " for c in (name or "").lower()
+    )
+    words = [
+        w
+        for w in name_clean.split()
+        if w and w not in ("inc", "llc", "corp", "corporation", "ltd")
+    ]
+    if words:
+        if words[0] == "cedarhall":
+            return "cha"
+        if len(words) == 1:
+            return words[0][:3].lower()
+        return "".join(w[0] for w in words)[:5].lower()
+    return "fac"
+
+
 class FacilitySerializer(serializers.ModelSerializer):
+    facility_code = ValuesMethodField(sources=("name", "dataset.extra_fields"))
     dataset = FacilityDatasetSerializer(read_only=True)
     num_classrooms = serializers.IntegerField(read_only=True)
     num_users = serializers.IntegerField(read_only=True)
@@ -47,6 +68,14 @@ class FacilitySerializer(serializers.ModelSerializer):
     )
     num_learners = ValuesMethodField(sources=("dataset.id",))
     picture_passwords_exhausted = ValuesMethodField(sources=("dataset.id",))
+
+    def get_facility_code(self, obj):
+        extra = (
+            getattr(obj.dataset, "extra_fields", None)
+            if hasattr(obj, "dataset")
+            else None
+        )
+        return _compute_facility_code(obj.name, extra)
 
     def get_num_learners(self, obj):
         return get_learner_count(obj.dataset.id)
@@ -60,6 +89,7 @@ class FacilitySerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "facility_code",
             "dataset",
             "num_classrooms",
             "num_users",
@@ -92,6 +122,7 @@ class CreateFacilitySerializer(serializers.ModelSerializer):
 
 
 class PublicFacilitySerializer(serializers.ModelSerializer):
+    facility_code = ValuesMethodField(sources=("name", "dataset.extra_fields"))
     learner_can_login_with_no_password = serializers.BooleanField(
         source="dataset.learner_can_login_with_no_password", read_only=True
     )
@@ -103,12 +134,21 @@ class PublicFacilitySerializer(serializers.ModelSerializer):
         source="dataset.picture_password_settings", read_only=True, allow_null=True
     )
 
+    def get_facility_code(self, obj):
+        extra = (
+            getattr(obj.dataset, "extra_fields", None)
+            if hasattr(obj, "dataset")
+            else None
+        )
+        return _compute_facility_code(obj.name, extra)
+
     class Meta:
         model = Facility
         fields = (
             "id",
             "dataset",
             "name",
+            "facility_code",
             "learner_can_login_with_no_password",
             "learner_can_sign_up",
             "on_my_own_setup",

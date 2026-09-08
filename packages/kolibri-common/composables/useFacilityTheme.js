@@ -185,6 +185,10 @@ export function applyFacilityTheme(theme = {}, facilityName = '') {
   }
 }
 
+export function revertToDefaultTheme() {
+  applyFacilityTheme({}, '');
+}
+
 /**
  * Composable providing facility theme state, active theme getters, and save/reset actions.
  */
@@ -200,12 +204,17 @@ export default function useFacilityTheme() {
     fetchFacilities,
     setFacilityId,
   } = useFacility();
-  const { facilities } = useFacilities();
-  const { userFacilityId } = useUser();
+  const { facilities, hasMultipleFacilities } = useFacilities();
+  const { userFacilityId, isUserLoggedIn } = useUser();
 
   const targetFacilityId = selectedFacilityId || facilityId;
 
   const facilityTheme = computed(() => {
+    // When not logged in on a multi-facility system, keep generic branding
+    if (!isUserLoggedIn.value && hasMultipleFacilities.value && !targetFacilityId.value) {
+      return {};
+    }
+
     const configTheme =
       facilityConfig.value &&
       facilityConfig.value.extra_fields &&
@@ -220,8 +229,7 @@ export default function useFacilityTheme() {
       (facilities.value &&
         facilities.value.find(
           f => f.id === (targetFacilityId && targetFacilityId.value),
-        )) ||
-      (facilities.value && facilities.value[0]);
+        ));
 
     const datasetTheme =
       facilityObj &&

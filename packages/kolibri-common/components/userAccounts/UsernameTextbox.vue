@@ -6,7 +6,7 @@
     :disabled="$attrs.disabled"
     :label="coreString('usernameLabel')"
     :autofocus="$attrs.autofocus"
-    :maxlength="30"
+    :maxlength="64"
     :invalid="Boolean(shownInvalidText)"
     :invalidText="shownInvalidText"
     autocomplete="username"

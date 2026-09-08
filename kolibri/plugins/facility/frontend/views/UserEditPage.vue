@@ -389,8 +389,15 @@
         this.$router.push(this.$store.getters.facilityPageLinks.UserPage);
       },
       usernameIsUnique(value) {
+        const facilityCode = this.selectedFacility?.facility_code || '';
+        const valLower = value.toLowerCase();
+        const candidate =
+          facilityCode && !valLower.includes('@')
+            ? `${valLower}@${facilityCode.toLowerCase()}`
+            : valLower;
         const match = this.facilityUsers.find(
-          ({ username }) => username.toLowerCase() === value.toLowerCase(),
+          ({ username }) =>
+            username.toLowerCase() === valLower || username.toLowerCase() === candidate,
         );
         if (match && match.username.toLowerCase() === this.userCopy.username.toLowerCase()) {
           return true;
@@ -400,6 +407,11 @@
       // Returns the subset of the FacilityUserModel that has been changed
       getUpdates() {
         let roleUpdates;
+        let updatedUsername = this.username.trim();
+        const facilityCode = this.selectedFacility?.facility_code || '';
+        if (facilityCode && !updatedUsername.includes('@')) {
+          updatedUsername = `${updatedUsername}@${facilityCode}`;
+        }
         const facilityUserUpdates = pickBy(
           {
             birth_year: this.birthYear,
@@ -407,7 +419,7 @@
             gender: this.gender,
             id_number: this.idNumber,
             extra_demographics: this.extraDemographics,
-            username: this.username,
+            username: updatedUsername,
           },
           (value, key) => {
             return value !== this.userCopy[key];

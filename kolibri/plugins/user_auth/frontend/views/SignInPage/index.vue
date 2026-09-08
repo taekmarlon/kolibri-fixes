@@ -9,10 +9,11 @@
       <!-- ** Text and Backlinks ** -->
       <AuthContextHeading
         class="auth-heading"
-        :class="{ 'with-action': hasMultipleFacilities || showPasswordForm }"
-        :useBackAction="hasMultipleFacilities || showPasswordForm"
-        :backLabel="showPasswordForm ? $tr('changeUser') : coreString('changeLearningFacility')"
-        :backTo="showPasswordForm ? null : backToFacilitySelectionRoute"
+        :class="{ 'with-action': showPasswordForm }"
+        :useBackAction="showPasswordForm"
+        :backLabel="$tr('changeUser')"
+        :backTo="null"
+        :title="coreString('signInLabel')"
         @back="clearUser"
       />
 
@@ -193,7 +194,9 @@
 
       function doLogin(sessionPayload) {
         // ensure selected facility in local storage is synchronized
-        setSelectedFacilityId(facilityId.value);
+        if (facilityId.value) {
+          setSelectedFacilityId(facilityId.value);
+        }
         return login(sessionPayload);
       }
 
@@ -313,7 +316,7 @@
       },
     },
     created() {
-      if (this.isAppContext) {
+      if (this.isAppContext && this.selectedFacility) {
         FacilityUsernameResource.fetchCollection({
           getParams: {
             facility: this.selectedFacility.id,
@@ -370,6 +373,10 @@
         }
       },
       setSuggestions() {
+        if (!this.selectedFacility) {
+          this.usernameSuggestions = [];
+          return;
+        }
         FacilityUsernameResource.fetchCollection({
           getParams: {
             facility: this.selectedFacility.id,
@@ -455,7 +462,7 @@
         const sessionPayload = {
           username: this.username,
           password: this.password,
-          facility: this.selectedFacility.id,
+          facility: this.selectedFacility ? this.selectedFacility.id : undefined,
         };
 
         if (this.nextParam) {

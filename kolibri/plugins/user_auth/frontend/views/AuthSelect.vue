@@ -59,7 +59,7 @@
       const { canSignUpWithAnyFacility, hasMultipleFacilities } = useAuthFlow();
 
       const signInRoute = computed(() => {
-        return hasMultipleFacilities.value ? getFacilitySelectionRoute(false) : _signInRoute.value;
+        return _signInRoute.value;
       });
       const signUpRoute = computed(() => {
         return hasMultipleFacilities.value ? getFacilitySelectionRoute(true) : _signUpRoute.value;

@@ -12,7 +12,7 @@
       @click="backAction"
     />
     <h2>
-      {{ title || selectedFacility.name }}
+      {{ title || (selectedFacility && selectedFacility.name) || coreString('signInLabel') }}
     </h2>
   </div>
 
@@ -22,10 +22,12 @@
 <script>
 
   import { useRouter } from 'vue-router/composables';
+  import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import useAuthFlow from '../composables/useAuthFlow';
 
   export default {
     name: 'AuthContextHeading',
+    mixins: [commonCoreStrings],
     setup(props, { emit }) {
       const router = useRouter();
       const { selectedFacility } = useAuthFlow();
