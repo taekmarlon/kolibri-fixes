@@ -29,8 +29,8 @@
     },
     $trs: {
       languageFormHeader: {
-        message: 'Please select the default language for Kolibri',
-        context: 'Admins must pick the default language they want to use in Kolibri.',
+        message: 'Please select the default language for PHIEDU',
+        context: 'Admins must pick the default language they want to use in PHIEDU.',
       },
     },
   };

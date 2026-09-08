@@ -101,8 +101,56 @@
                 :id="`question-panel-${question.item}`"
                 :style="{ userSelect: dragActive ? 'none !important' : 'text' }"
               >
+                <div
+                  v-if="question.is_custom"
+                  class="custom-question-accordion-content"
+                  style="padding: 16px;"
+                >
+                  <p style="margin-bottom: 8px; font-size: 16px; font-weight: 600;">
+                    {{ question.prompt || question.title }}
+                  </p>
+                  <div
+                    v-if="question.prompt_image"
+                    style="margin-bottom: 12px;"
+                  >
+                    <img
+                      :src="question.prompt_image"
+                      alt="Question illustration"
+                      style="max-width: 100%; max-height: 200px; border-radius: 6px;"
+                    >
+                  </div>
+                  <div
+                    v-if="question.options && question.options.length"
+                    style="display: flex; flex-direction: column; gap: 8px;"
+                  >
+                    <div
+                      v-for="opt in question.options"
+                      :key="opt.id"
+                      style="display: flex; gap: 8px; align-items: center;"
+                    >
+                      <KIcon
+                        :icon="question.answer_key && question.answer_key.includes(opt.id) ? 'check' : 'radio_button_unchecked'"
+                        :style="{ color: question.answer_key && question.answer_key.includes(opt.id) ? '#16a34a' : $themeTokens.annotation }"
+                      />
+                      <span>{{ opt.text }}</span>
+                      <span
+                        v-if="question.answer_key && question.answer_key.includes(opt.id)"
+                        style="font-size: 12px; font-weight: 600; color: #16a34a;"
+                      >
+                        ({{ correctAnswerLabel$() }})
+                      </span>
+                    </div>
+                  </div>
+                  <div
+                    v-else-if="question.question_type === 'short_answer'"
+                    style="margin-top: 8px;"
+                  >
+                    <span style="font-weight: 600;">{{ acceptedAnswersLabel$() }}: </span>
+                    <span>{{ (question.answer_key || []).join(', ') }}</span>
+                  </div>
+                </div>
                 <ContentViewer
-                  v-if="questionContentExists(question)"
+                  v-else-if="questionContentExists(question)"
                   :ref="`contentRenderer-${question.item}`"
                   :lang="getQuestionContent(question).lang"
                   :files="getQuestionContent(question).files"
@@ -141,6 +189,7 @@
 <script>
 
   import { computed, ref } from 'vue';
+  import { createTranslator } from 'kolibri/utils/i18n';
   import { enhancedQuizManagementStrings } from 'kolibri-common/strings/enhancedQuizManagementStrings';
   import Draggable from 'kolibri-common/components/sortable/Draggable';
   import DragHandle from 'kolibri-common/components/sortable/DragHandle';
@@ -150,6 +199,17 @@
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import AccordionContainer from 'kolibri-common/components/accordion/AccordionContainer';
   import useDrag from './useDrag.js';
+
+  const accordionStrings = createTranslator('QuestionsAccordionStrings', {
+    correctAnswerLabel: {
+      message: 'Correct',
+      context: 'Label indicating correct answer',
+    },
+    acceptedAnswersLabel: {
+      message: 'Accepted answers',
+      context: 'Label indicating accepted short answers',
+    },
+  });
 
   export default {
     name: 'QuestionsAccordion',
@@ -167,6 +227,8 @@
 
       const { selectAllLabel$, expandAll$, collapseAll$, replacingThisQuestionLabel$ } =
         enhancedQuizManagementStrings;
+
+      const { correctAnswerLabel$, acceptedAnswersLabel$ } = accordionStrings;
 
       const { moveUpOne, moveDownOne } = useDrag();
 
@@ -257,6 +319,8 @@
         expandAll$,
         collapseAll$,
         replacingThisQuestionLabel$,
+        correctAnswerLabel$,
+        acceptedAnswersLabel$,
       };
     },
     props: {
@@ -356,9 +420,15 @@
         }
       },
       getDisplayQuestionTitle(question, title) {
+        if (question && question.is_custom) {
+          return question.prompt || question.title || 'Custom Question';
+        }
         return title || this.coreString('resourceNotFoundOnDevice');
       },
       questionContentExists(question) {
+        if (question && question.is_custom) {
+          return true;
+        }
         const content = this.getQuestionContent(question);
         return content && content.available;
       },

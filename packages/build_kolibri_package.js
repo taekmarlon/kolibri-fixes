@@ -17,14 +17,14 @@ const apiSpecHeader = `/* eslint-disable import-x/no-commonjs */
 function rebuildApiSpec() {
   // First we read the directory structure of the kolibri folder to infer the list of modules
   // that are available to be imported.
-  const kolibriFolder = path.resolve(__dirname, './kolibri');
+  const kolibriFolder = path.resolve(__dirname, './kolibri').split(path.sep).join('/');
   const kolibriFiles = glob
     .sync(`${kolibriFolder}/**/*.{js,vue}`, {
       ignore: ['**/internal/**', '**/__tests__/**', '**/__mocks__/**', '**/node_modules/**'],
     })
     .map(f => {
       const { dir, name } = path.parse(f);
-      return path.join(dir, name);
+      return path.posix.join(dir, name);
     })
     .map(f => f.replace(kolibriFolder, ''))
     .map(f => f.replace(/\/index$/, ''))

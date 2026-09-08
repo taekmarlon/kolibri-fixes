@@ -6,6 +6,7 @@ import { get } from '@vueuse/core';
 import { UserKinds, NavComponentSections } from 'kolibri/constants';
 import logger from 'kolibri-logging';
 import { useRoute } from 'vue-router/composables';
+import useUser from './useUser';
 import { generateNavRoute } from './internal/generateNavRoutes';
 
 const logging = logger.getLogger(__filename);
@@ -95,8 +96,21 @@ const _watcher = watch(i18nReady, newValue => {
 
 export default function useNav() {
   const route = useRoute();
+  const { userFacilityId } = useUser();
   const { windowIsSmall } = useKResponsiveWindow();
   const topBarHeight = computed(() => (get(windowIsSmall) ? 56 : 64));
+
+  const activeFacilityId = computed(() => {
+    return (
+      (route && route.params && route.params.facility_id) ||
+      (typeof window !== 'undefined' && window.localStorage
+        ? window.localStorage.getItem('facilityId')
+        : null) ||
+      get(userFacilityId) ||
+      null
+    );
+  });
+
   const exportedItems = computed(() =>
     navItems.value.map(item => {
       const output = {
@@ -104,9 +118,13 @@ export default function useNav() {
         active: window.location.pathname == item.url,
       };
       if (item.routes) {
+        const navParams = {
+          ...(route ? route.params : {}),
+          ...(activeFacilityId.value ? { facility_id: activeFacilityId.value } : {}),
+        };
         output.routes = item.routes.map(routeItem => ({
           ...routeItem,
-          href: generateNavRoute(item.url, routeItem.route, route.params),
+          href: generateNavRoute(item.url, routeItem.route, navParams),
         }));
       }
       return output;

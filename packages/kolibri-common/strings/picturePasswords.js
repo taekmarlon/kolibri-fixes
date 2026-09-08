@@ -92,7 +92,7 @@ export const picturePasswordStrings = createTranslator('PicturePasswordStrings',
       'Submit button label when all 3 pictures have been selected; lists them in order for screen readers.',
   },
   formAriaLabel: {
-    message: 'Select 3 pictures below to sign in to Kolibri',
+    message: 'Select 3 pictures below to sign in to PHIEDU',
     context:
       'Accessible label for the picture password form. Read by screen readers when the form receives focus.',
   },
@@ -129,7 +129,7 @@ export const picturePasswordStrings = createTranslator('PicturePasswordStrings',
       'Message shown to admins when they cannot create new learner accounts because the facility has reached the picture password learner limit.',
   },
   picturePasswordWillBeAssigned: {
-    message: 'Kolibri will automatically assign a picture password after the user is created.',
+    message: 'PHIEDU will automatically assign a picture password after the user is created.',
     context:
       'Informational message shown in the new user creation form when picture login is enabled and the facility is under the 1300 learner limit, explaining that new learners will receive a picture password automatically.',
   },

@@ -34,7 +34,9 @@ class FacilityManagementModule extends KolibriApp {
 
       pageLoading.value = true;
 
-      setSelectedFacilityId(to.params.facility_id || null);
+      if (to.params.facility_id) {
+        setSelectedFacilityId(to.params.facility_id);
+      }
 
       try {
         if (facilities.value.length === 0) {

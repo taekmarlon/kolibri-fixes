@@ -154,7 +154,7 @@
           'If Kolibri produces an unexpected error, this link appears which take the user back to the homepage.',
       },
       defaultErrorMessage: {
-        message: 'We care about your experience on Kolibri and are working hard to fix this issue',
+        message: 'We care about your experience on PHIEDU and are working hard to fix this issue',
         context:
           'Error message that a user will see if an error that is the result of a known bug has occurred.',
       },

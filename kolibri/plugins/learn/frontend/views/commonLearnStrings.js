@@ -69,8 +69,8 @@ export const learnStrings = createTranslator('CommonLearnStrings', {
     context: 'Title for Explore Libraries page',
   },
   kolibriLibrary: {
-    message: 'Kolibri Library',
-    context: 'Title for Kolibri Libraries',
+    message: 'PHIEDU Library',
+    context: 'Title for PHIEDU Libraries',
   },
 
   // Resource Metadata strings
@@ -113,7 +113,7 @@ export const learnStrings = createTranslator('CommonLearnStrings', {
   locationsInChannel: {
     message: 'Location in {channelname}',
     context:
-      "When there are multiple instances of the same resource, learner can see their 'locations' (positions in the respective folders of the channel) at the bottom of the sidebar with all the metadata, when they select the resource in the Kolibri Library.",
+      "When there are multiple instances of the same resource, learner can see their 'locations' (positions in the respective folders of the channel) at the bottom of the sidebar with all the metadata, when they select the resource in the PHIEDU Library.",
   },
   viewResource: {
     message: 'View resource',
@@ -132,13 +132,13 @@ export const learnStrings = createTranslator('CommonLearnStrings', {
     context: 'Title section containing unpinned devices',
   },
   loadingLibraries: {
-    message: 'Loading Kolibri libraries around you',
+    message: 'Loading PHIEDU libraries around you',
     context:
-      "Status message displayed on the Library page while Kolibri on the user's device is searching the local network for other devices with Kolibri, in order to make their libraries available for browsing.",
+      "Status message displayed on the Library page while PHIEDU on the user's device is searching the local network for other devices with PHIEDU, in order to make their libraries available for browsing.",
   },
   cannotConnectToLibrary: {
     message:
-      'Kolibri cannot connect to the library on {deviceName}. Your network connection may be unstable, or {deviceName} is no longer available.',
+      'PHIEDU cannot connect to the library on {deviceName}. Your network connection may be unstable, or {deviceName} is no longer available.',
     context: '',
   },
   backToAllLibraries: {

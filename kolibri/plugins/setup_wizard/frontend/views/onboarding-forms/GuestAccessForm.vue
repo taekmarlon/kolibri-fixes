@@ -74,17 +74,17 @@
       },
       description: {
         message:
-          'This option allows anyone to view educational materials on Kolibri without needing to make an account',
+          'This option allows anyone to view educational materials on PHIEDU without needing to make an account',
         context:
-          "Description of the 'Enable guest access?' option that an admin can configure in the set up process. It means that anyone can access Kolibri without having to create an account.",
+          "Description of the 'Enable guest access?' option that an admin can configure in the set up process. It means that anyone can access PHIEDU without having to create an account.",
       },
       header: {
-        message: 'Enable users to explore Kolibri without an account?',
+        message: 'Enable users to explore PHIEDU without an account?',
         context:
-          'Option that an admin can configure in the set up process. If selected, guests can access Kolibri without the need to create an account.',
+          'Option that an admin can configure in the set up process. If selected, guests can access PHIEDU without the need to create an account.',
       },
       noOptionLabel: {
-        message: 'No. Users must have an account to explore Kolibri.',
+        message: 'No. Users must have an account to explore PHIEDU.',
         context: "Possible answer to the 'Enable guest access?' question.",
       },
       changeLater: {

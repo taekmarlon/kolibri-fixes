@@ -328,15 +328,11 @@ def _detect_file_resource_type(file_name, requested_type):
 
 
 def _extract_html5_zip(file_obj, resource_id):
-    extract_dir = os.path.join(
-        settings.MEDIA_ROOT, "lessons", "html5", resource_id
-    )
+    extract_dir = os.path.join(settings.MEDIA_ROOT, "lessons", "html5", resource_id)
     os.makedirs(extract_dir, exist_ok=True)
     with zipfile.ZipFile(file_obj, "r") as z:
         for member in z.infolist():
-            target_path = os.path.abspath(
-                os.path.join(extract_dir, member.filename)
-            )
+            target_path = os.path.abspath(os.path.join(extract_dir, member.filename))
             if not target_path.startswith(os.path.abspath(extract_dir)):
                 continue
             z.extract(member, extract_dir)
@@ -345,9 +341,7 @@ def _extract_html5_zip(file_obj, resource_id):
     if not os.path.exists(os.path.join(extract_dir, "index.html")):
         for root, _, files in os.walk(extract_dir):
             if "index.html" in files:
-                rel = os.path.relpath(
-                    os.path.join(root, "index.html"), extract_dir
-                )
+                rel = os.path.relpath(os.path.join(root, "index.html"), extract_dir)
                 entry_point = rel.replace("\\", "/")
                 break
     return f"/media/lessons/html5/{resource_id}/{entry_point}"
@@ -420,9 +414,7 @@ class LessonViewset(ValuesViewset):
                 ]
             )
             custom_size = sum(
-                r.get("file_size", 0)
-                for r in lesson.resources
-                if r.get("is_custom")
+                r.get("file_size", 0) for r in lesson.resources if r.get("is_custom")
             )
             lessons_set.append(
                 {lesson.id: total_file_size(resource_nodes) + custom_size}
@@ -446,12 +438,12 @@ class LessonViewset(ValuesViewset):
 
         user = request.user
         if not (
-            user.is_superuser
-            or user.can_update(lesson)
-            or lesson.created_by == user
+            user.is_superuser or user.can_update(lesson) or lesson.created_by == user
         ):
             return Response(
-                {"detail": "You do not have permission to add resources to this lesson."},
+                {
+                    "detail": "You do not have permission to add resources to this lesson."
+                },
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -466,7 +458,7 @@ class LessonViewset(ValuesViewset):
         file_name = ""
         file_size = 0
         url = ""
-        content = ""
+        content = (data.get("content") or "").strip()
 
         if file_obj:
             file_name = file_obj.name
@@ -477,14 +469,14 @@ class LessonViewset(ValuesViewset):
             else:
                 file_url = _save_uploaded_custom_file(file_obj, resource_id)
         elif resource_type == "youtube" or (
-            "youtube.com" in data.get("url", "")
-            or "youtu.be" in data.get("url", "")
+            "youtube.com" in data.get("url", "") or "youtu.be" in data.get("url", "")
         ):
             resource_type = "youtube"
             url = (data.get("url") or "").strip()
-        elif resource_type == "ai_text" or data.get("content"):
+        elif resource_type == "content_card":
+            resource_type = "content_card"
+        elif resource_type == "ai_text" or content:
             resource_type = "ai_text"
-            content = (data.get("content") or "").strip()
         else:
             url = (data.get("url") or "").strip()
 

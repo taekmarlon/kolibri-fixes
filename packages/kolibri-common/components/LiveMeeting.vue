@@ -120,6 +120,7 @@
   import { ref, computed, onMounted } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
   import useUser from 'kolibri/composables/useUser';
+  import { buildLiveMeetingUrl } from '../utils/liveMeeting';
 
   const liveMeetingStrings = createTranslator('LiveMeetingStrings', {
     defaultTitle: {
@@ -207,7 +208,7 @@
       const isFullscreen = ref(false);
 
       const userDisplayName = computed(() => {
-        return full_name.value || username.value || 'Kolibri User';
+        return full_name.value || username.value || 'PHIEDU User';
       });
 
       const formattedRoomName = computed(() => {
@@ -215,13 +216,23 @@
       });
 
       const jitsiIframeUrl = computed(() => {
-        const name = encodeURIComponent(userDisplayName.value);
-        return `https://${props.jitsiDomain}/${formattedRoomName.value}#userInfo.displayName="${name}"&config.prejoinPageEnabled=false&config.startWithAudioMuted=true&config.disableDeepLinking=true`;
+        return buildLiveMeetingUrl({
+          domain: props.jitsiDomain,
+          roomName: formattedRoomName.value,
+          displayName: userDisplayName.value,
+          subject: props.meetingTitle || 'PHIEDU Live Class',
+          startWithAudioMuted: true,
+        });
       });
 
       const directMeetingUrl = computed(() => {
-        const name = encodeURIComponent(userDisplayName.value);
-        return `https://${props.jitsiDomain}/${formattedRoomName.value}#userInfo.displayName="${name}"&config.prejoinPageEnabled=false&config.startWithAudioMuted=false`;
+        return buildLiveMeetingUrl({
+          domain: props.jitsiDomain,
+          roomName: formattedRoomName.value,
+          displayName: userDisplayName.value,
+          subject: props.meetingTitle || 'PHIEDU Live Class',
+          startWithAudioMuted: false,
+        });
       });
 
       function onIframeLoad() {

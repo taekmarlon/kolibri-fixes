@@ -277,8 +277,8 @@
   "CoursesStrings.xOfYCorrectLabel": "{correct, number} of {total, number} correct",
   "CoursesStrings.yourCoursesHeader": "Your courses",
   "MissingContentStrings.upgradeKolibriLinkText": "Go to download page",
-  "MissingContentStrings.upgradeKolibriP1": "Some resources are not supported by this version of Kolibri. You may need to upgrade to view them.",
-  "MissingContentStrings.upgradeKolibriTitle": "Upgrade Kolibri to view resources",
+  "MissingContentStrings.upgradeKolibriP1": "Some resources are not supported by this version of PHIEDU. You may need to upgrade to view them.",
+  "MissingContentStrings.upgradeKolibriTitle": "Upgrade PHIEDU to view resources",
   "TruncatedItemsStrings.manyItems": "{item1}, {item2}, and {count, number, integer} others",
   "TruncatedItemsStrings.threeItems": "{item1}, {item2}, {item3}",
   "TruncatedItemsStrings.twoItems": "{item1}, {item2}"

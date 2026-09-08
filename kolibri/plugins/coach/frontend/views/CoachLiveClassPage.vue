@@ -162,6 +162,8 @@
   import LiveMeeting from 'kolibri-common/components/LiveMeeting';
   import useLiveMeeting from 'kolibri-common/composables/useLiveMeeting';
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
+  import useUser from 'kolibri/composables/useUser';
+  import { buildLiveMeetingUrl } from 'kolibri-common/utils/liveMeeting';
   import CoachAppBarPage from './CoachAppBarPage';
   import commonCoach from './common';
 
@@ -244,6 +246,7 @@
     },
     mixins: [commonCoach],
     setup() {
+      const { full_name, username } = useUser();
       const { saveRecentRoom } = useLiveMeeting();
       const { setLiveSessionActive, fetchLiveSessions, isClassLive } = useLiveSessions();
       const meetingActive = ref(false);
@@ -281,6 +284,8 @@
 
       return {
         pageLoading,
+        full_name,
+        username,
         meetingActive,
         activeRoomName,
         activeMeetingTitle,
@@ -319,7 +324,7 @@
       },
       defaultClassRoomName() {
         const id = this.currentClassId || 'general';
-        return `kolibri_class_${id}`;
+        return `phiedu_class_${id}`;
       },
     },
     methods: {
@@ -337,7 +342,13 @@
             active: true,
           });
         }
-        const directUrl = `https://meet.jit.si/${roomName}#config.startWithAudioMuted=false&config.prejoinPageEnabled=false`;
+        const teacherName = this.full_name || this.username || 'Teacher';
+        const directUrl = buildLiveMeetingUrl({
+          roomName,
+          displayName: teacherName,
+          subject: title || 'PHIEDU Live Class',
+          startWithAudioMuted: false,
+        });
         window.open(directUrl, '_blank');
       },
       endLiveSession() {
@@ -355,7 +366,7 @@
           return;
         }
         this.customRoomError = '';
-        const roomName = `kolibri_${this.customRoomInput.trim().replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+        const roomName = `phiedu_${this.customRoomInput.trim().replace(/[^a-zA-Z0-9-_]/g, '_')}`;
         this.launchWindow(roomName, this.customRoomInput.trim());
       },
       endMeeting() {

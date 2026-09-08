@@ -1,6 +1,7 @@
 import router from 'kolibri/router';
 import KolibriApp from 'kolibri-app';
 import useUser from 'kolibri/composables/useUser';
+import useFacility from 'kolibri-common/composables/useFacility';
 import { get } from '@vueuse/core';
 import RootVue from './views/LearnIndex';
 import routes from './routes';
@@ -8,9 +9,18 @@ import { prepareLearnApp } from './composables/useCoreLearn';
 import pluginModule from './modules/pluginModule';
 import { PageNames } from './constants';
 
+const { fetchFacilityConfig, fetchFacility } = useFacility();
+
+function initFacilityConfig() {
+  return Promise.all([
+    fetchFacilityConfig().catch(() => {}),
+    fetchFacility().catch(() => {}),
+  ]);
+}
+
 class LearnModule extends KolibriApp {
   get stateSetters() {
-    return [prepareLearnApp];
+    return [prepareLearnApp, initFacilityConfig];
   }
   get routes() {
     return routes;

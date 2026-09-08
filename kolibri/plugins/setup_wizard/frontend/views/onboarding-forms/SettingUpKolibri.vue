@@ -282,7 +282,7 @@
     },
     $trs: {
       pageTitle: {
-        message: 'Setting up Kolibri',
+        message: 'Setting up PHIEDU',
         context: 'The title of the page',
       },
       pleaseWaitMessage: {

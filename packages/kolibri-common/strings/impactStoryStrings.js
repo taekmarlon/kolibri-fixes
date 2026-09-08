@@ -2,13 +2,13 @@ import { createTranslator } from 'kolibri/utils/i18n';
 
 export const impactStoryStrings = createTranslator('ImpactStoryBanner', {
   title: {
-    message: 'How has Kolibri made an impact on your teachers or learners?',
+    message: 'How has PHIEDU made an impact on your teachers or learners?',
     context: 'Heading on the impact-story banner.',
   },
   message: {
     message:
-      "We're collecting before-and-after moments of teachers or learners using Kolibri. " +
-      "Help us inspire others by sharing the impact Kolibri has made on an individual's journey.",
+      "We're collecting before-and-after moments of teachers or learners using PHIEDU. " +
+      "Help us inspire others by sharing the impact PHIEDU has made on an individual's journey.",
     context: 'Body text on the impact-story banner.',
   },
   dismiss: {

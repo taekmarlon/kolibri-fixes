@@ -62,7 +62,11 @@ export default function useFacilities() {
    * @returns {Promise<void>}
    */
   async function fetchFacility(facilityId) {
-    const facility = await FacilityResource.fetchModel({ id: unref(facilityId), force: true });
+    const id = unref(facilityId);
+    if (!id) {
+      return;
+    }
+    const facility = await FacilityResource.fetchModel({ id, force: true });
     let replaced = false;
 
     for (let i = 0; i < _facilities.value.length; i++) {

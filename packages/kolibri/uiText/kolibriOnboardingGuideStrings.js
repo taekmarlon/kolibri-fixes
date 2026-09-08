@@ -13,7 +13,7 @@ export const kolibriOnboardingGuideStrings = createTranslator('kolibriOnboarding
       'This is a description of the icon that appears on a content card within the library page.',
   },
   sideNavigationIconDecription: {
-    message: 'Open this menu to find other ways to use Kolibri.',
+    message: 'Open this menu to find other ways to use PHIEDU.',
     context: 'This is a description of the icon menu button that opens the side navigation.',
   },
   deviceMenuOptionDescription: {

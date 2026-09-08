@@ -265,7 +265,7 @@
     },
     $trs: {
       documentTitle: {
-        message: 'Sign in to Kolibri',
+        message: 'Sign in to PHIEDU',
         context: 'User sign in page for using picture password.',
       },
     },

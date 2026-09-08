@@ -24,6 +24,7 @@
   import NotificationsRoot from 'kolibri/components/pages/NotificationsRoot';
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import { error } from 'kolibri/utils/appError';
+  import useFacilityTheme from 'kolibri-common/composables/useFacilityTheme';
   import useCoreCoach from '../composables/useCoreCoach';
 
   export default {
@@ -48,6 +49,7 @@
     components: { AppBarPage, NotificationsRoot },
     mixins: [commonCoreStrings],
     setup() {
+      useFacilityTheme();
       const { authorized, pageTitle, appBarTitle, classId } = useCoreCoach();
 
       return {
@@ -75,7 +77,7 @@
     },
     $trs: {
       kolibriTitleMessage: {
-        message: '{ title } - Kolibri',
+        message: '{ title } - PHIEDU',
         context: 'DO NOT TRANSLATE\nCopy the source string.',
       },
       errorPageTitle: {

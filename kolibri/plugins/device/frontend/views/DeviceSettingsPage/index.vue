@@ -1148,11 +1148,11 @@
       },
       aiTutorSectionDescription: {
         message:
-          'Configure AI tutoring for learners and coaching tools across Kolibri. Supports Google Gemini, DeepSeek, Groq / Llama, OpenAI, Hugging Face, and Local Ollama.',
+          'Configure AI tutoring for learners and coaching tools across PHIEDU. Supports Google Gemini, DeepSeek, Groq / Llama, OpenAI, Hugging Face, and Local Ollama.',
         context: 'Description of AI tutor configuration section',
       },
       enableAiTutorLabel: {
-        message: 'Enable AI Study Assistant & Coach Generator across Kolibri',
+        message: 'Enable AI Study Assistant & Coach Generator across PHIEDU',
         context: 'Master toggle label for AI tutor',
       },
       aiProviderLabel: {
@@ -1258,9 +1258,9 @@
           "Option on 'Device settings' page to switch to the 'Facility settings' page. Will display a list of facilities if user manages more than one facility.",
       },
       allowExternalConnectionsApp: {
-        message: 'Allow others in the network to access Kolibri on this device using a browser',
+        message: 'Allow others in the network to access PHIEDU on this device using a browser',
         context:
-          'Description of a device setting option. This option is visible only When Kolibri runs on an Android app',
+          'Description of a device setting option. This option is visible only When PHIEDU runs on an Android app',
       },
       allowExternalConnectionsAppDescription: {
         message:
@@ -1376,16 +1376,16 @@
         context: 'Label for enabled pages section',
       },
       alertDisabledOptions: {
-        message: 'Some configuration options are disabled due to the way Kolibri has been set up.',
+        message: 'Some configuration options are disabled due to the way PHIEDU has been set up.',
         context: 'Alert text that is provided if some options are disabled',
       },
       alertDisabledPaths: {
-        message: 'This Kolibri is not set up to manage its own resource files locally.',
+        message: 'This PHIEDU is not set up to manage its own resource files locally.',
         context: 'Alert text that is provided if some storage locations are disabled',
       },
       alertDisabledPlugins: {
         message:
-          'This Kolibri is not able to initiate a restart from the user interface - management of the enabled pages will have to happen from the command line, and Kolibri will have to be restarted manually.',
+          'This PHIEDU is not able to initiate a restart from the user interface - management of the enabled pages will have to happen from the command line, and PHIEDU will have to be restarted manually.',
         context: 'Alert text that is provided if some plugins are disabled',
       },
     },

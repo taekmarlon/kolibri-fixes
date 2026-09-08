@@ -35,6 +35,7 @@
   import ImmersivePage from 'kolibri/components/pages/ImmersivePage';
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import { LearnerDeviceStatus } from 'kolibri/constants';
+  import useFacilityTheme from 'kolibri-common/composables/useFacilityTheme';
   import DeviceConnectionStatus from './DeviceConnectionStatus.vue';
   import StorageNotification from './StorageNotification';
 
@@ -47,6 +48,12 @@
       StorageNotification,
     },
     mixins: [commonCoreStrings],
+    setup() {
+      const facilityTheme = useFacilityTheme();
+      return {
+        ...facilityTheme,
+      };
+    },
 
     props: {
       appBarTitle: {

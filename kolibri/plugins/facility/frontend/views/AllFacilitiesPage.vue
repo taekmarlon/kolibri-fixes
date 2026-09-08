@@ -23,6 +23,7 @@
                   :text="facility.name"
                   :to="facilityLink(facility)"
                   icon="facility"
+                  @click.native="setSelectedFacilityId(facility.id)"
                 />
               </td>
               <td>
@@ -46,6 +47,7 @@
   import cloneDeep from 'lodash/cloneDeep';
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import useFacilities from 'kolibri-common/composables/useFacilities';
+  import { useFacilitySelect } from 'kolibri-common/composables/useFacility';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
 
   export default {
@@ -62,7 +64,8 @@
     mixins: [commonCoreStrings],
     setup() {
       const { facilities, userIsMultiFacilityAdmin } = useFacilities();
-      return { pageLoading, userIsMultiFacilityAdmin, facilities };
+      const { setSelectedFacilityId } = useFacilitySelect();
+      return { pageLoading, userIsMultiFacilityAdmin, facilities, setSelectedFacilityId };
     },
     props: {
       subtopicName: {

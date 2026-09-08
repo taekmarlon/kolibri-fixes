@@ -2,6 +2,7 @@ import router from 'kolibri/router';
 import { isNavigationFailure, NavigationFailureType } from 'vue-router';
 import logger from 'kolibri-logging';
 import useFacilities from 'kolibri-common/composables/useFacilities';
+import { useFacilitySelect } from 'kolibri-common/composables/useFacility';
 import { PageNames } from './constants';
 import UserCreateSidePanel from './views/users/sidePanels/UserCreate/index.vue';
 import FilterUsersSidePanel from './views/users/sidePanels/FilterUsersSidePanel';
@@ -14,6 +15,32 @@ const logging = logger.getLogger(__filename);
 export function facilityParamRequiredGuard(toRoute, subtopicName) {
   const { userIsMultiFacilityAdmin } = useFacilities();
   if (userIsMultiFacilityAdmin.value && !toRoute.params.facility_id) {
+    const { selectedFacilityId } = useFacilitySelect();
+    const activeFacilityId =
+      selectedFacilityId.value ||
+      (typeof window !== 'undefined' && window.localStorage
+        ? window.localStorage.getItem('facilityId')
+        : null);
+
+    if (activeFacilityId) {
+      router
+        .replace({
+          name: toRoute.name,
+          params: {
+            ...toRoute.params,
+            facility_id: activeFacilityId,
+          },
+          query: toRoute.query,
+        })
+        .catch(e => {
+          if (!isNavigationFailure(e, NavigationFailureType.duplicated)) {
+            logging.debug(e);
+            throw Error(e);
+          }
+        });
+      return true;
+    }
+
     router
       .replace({
         name: 'ALL_FACILITIES_PAGE',

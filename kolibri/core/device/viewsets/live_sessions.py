@@ -56,7 +56,7 @@ class LiveClassSessionView(APIView):
             )
 
         active = request.data.get("active", True)
-        room_name = request.data.get("room_name", f"kolibri_class_{class_id}")
+        room_name = request.data.get("room_name", f"phiedu_class_{class_id}")
         teacher_name = getattr(request.user, "full_name", None) or getattr(
             request.user, "username", "Teacher"
         )

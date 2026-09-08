@@ -25,12 +25,14 @@ def exam_assignment_lookup(question_sources):
     """
     for question_source in question_sources:
         if "exercise_id" in question_source:
-            yield (question_source["exercise_id"], None)
+            if not question_source.get("is_custom"):
+                yield (question_source["exercise_id"], None)
         else:
             questions = question_source.get("questions")
             if questions is not None:
-                for question in question_source["questions"]:
-                    yield (question["exercise_id"], None)
+                for question in questions:
+                    if not question.get("is_custom") and question.get("exercise_id"):
+                        yield (question["exercise_id"], None)
 
 
 class AbstractExam(models.Model):

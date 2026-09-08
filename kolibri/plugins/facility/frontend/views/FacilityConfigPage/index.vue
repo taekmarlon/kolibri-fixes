@@ -43,6 +43,52 @@
           </p>
         </section>
 
+        <!-- Facility Branding & School Theme Section -->
+        <section class="facility-settings facility-branding">
+          <h2>{{ facilityThemeHeading$() }}</h2>
+          <p>{{ facilityThemeSubtext$() }}</p>
+
+          <div
+            class="branding-summary-card"
+            :style="{
+              backgroundColor: activeThemeBackground,
+              color: activeThemeTextColor,
+            }"
+          >
+            <div class="branding-summary-left">
+              <img
+                v-if="activeThemeLogo"
+                :src="activeThemeLogo"
+                alt="School Logo"
+                class="summary-logo"
+              >
+              <div class="summary-text">
+                <div class="summary-school-name">
+                  {{ activeThemeTitle || facilityName }}
+                </div>
+                <div class="summary-school-sub">
+                  {{ activeThemeSubtext || defaultThemeSubtext$() }}
+                </div>
+              </div>
+            </div>
+
+            <div class="branding-summary-right">
+              <KButton
+                appearance="raised-button"
+                :text="customizeThemeButton$()"
+                icon="edit"
+                :primary="false"
+                class="customize-theme-btn"
+                :style="{
+                  backgroundColor: activeThemePrimary,
+                  color: '#ffffff',
+                }"
+                @click="showCustomizeThemeModal = true"
+              />
+            </div>
+          </div>
+        </section>
+
         <!-- Users Section -->
         <section class="facility-settings users">
           <h3>{{ coreString('usersLabel') }}</h3>
@@ -276,6 +322,14 @@
         @cancel="showEditFacilityModal = false"
       />
 
+      <CustomizeFacilityThemeModal
+        v-if="showCustomizeThemeModal"
+        :facilityName="facilityName"
+        :currentTheme="activeFacilityTheme"
+        @submit="submitFacilityTheme"
+        @cancel="showCustomizeThemeModal = false"
+      />
+
       <CreateManagementPinModal
         v-if="createPinShow"
         @submit="handleCreatePinSubmit"
@@ -360,12 +414,14 @@
 
   import { OptionsForSignIn, PicturePasswordIconStyle } from 'kolibri-common/constants/Auth';
   import useFacilityEditor from '../../composables/useFacilityEditor';
+  import useFacilityTheme from 'kolibri-common/composables/useFacilityTheme';
   import FacilityAppBarPage from '../FacilityAppBarPage';
   import RemovePinModal from './RemovePinModal';
   import ChangePinModal from './ChangePinModal';
   import ViewPinModal from './ViewPinModal';
   import CreateManagementPinModal from './CreateManagementPinModal';
   import EditFacilityNameModal from './EditFacilityNameModal';
+  import CustomizeFacilityThemeModal from './CustomizeFacilityThemeModal';
   import PicturePasswordInfoModal from './PicturePasswordInfoModal';
   import ChildFriendlyIconsModal from './ChildFriendlyIconsModal';
   import PicturePasswordUnavailableModal from './PicturePasswordUnavailableModal';
@@ -381,6 +437,7 @@
     components: {
       FacilityAppBarPage,
       EditFacilityNameModal,
+      CustomizeFacilityThemeModal,
       BottomAppBar,
       CreateManagementPinModal,
       ViewPinModal,
@@ -436,6 +493,11 @@
         saveFailure$,
         pinPlaceholder$,
         changeLocation$,
+        facilityThemeHeading$,
+        facilityThemeSubtext$,
+        customizeThemeButton$,
+        defaultThemeSubtext$,
+        themeSavedSuccess$,
       } = facilityConfigPageStrings;
       const {
         howLearnersSignIn$,
@@ -454,6 +516,7 @@
 
       // state
       const showEditFacilityModal = ref(false);
+      const showCustomizeThemeModal = ref(false);
       const createPinShow = ref(false);
       const handleViewModal = ref(false);
       const handleChangePinModal = ref(false);
@@ -461,6 +524,46 @@
       const showPicturePasswordInfoModal = ref(false);
       const showChildFriendlyIconsModal = ref(false);
       const showPicturePasswordUnavailableModal = ref(false);
+
+      const { saveFacilityTheme } = useFacilityTheme();
+
+      const activeFacilityTheme = computed(() => {
+        return (
+          (settings.value &&
+            settings.value.extra_fields &&
+            settings.value.extra_fields.theme) ||
+          {}
+        );
+      });
+      const activeThemeBackground = computed(
+        () => activeFacilityTheme.value.header_background || '#0f172a',
+      );
+      const activeThemeTextColor = computed(
+        () => activeFacilityTheme.value.header_text_color || '#ffffff',
+      );
+      const activeThemePrimary = computed(
+        () => activeFacilityTheme.value.primary_color || '#2563eb',
+      );
+      const activeThemeLogo = computed(() => activeFacilityTheme.value.logo_url || null);
+      const activeThemeTitle = computed(() => activeFacilityTheme.value.header_title || '');
+      const activeThemeSubtext = computed(() => activeFacilityTheme.value.sign_in_subtext || '');
+
+      async function submitFacilityTheme(updatedTheme) {
+        try {
+          const datasetId = settings.value.id;
+          await saveFacilityTheme(datasetId, updatedTheme);
+          if (settings.value) {
+            settings.value.extra_fields = {
+              ...(settings.value.extra_fields || {}),
+              theme: updatedTheme,
+            };
+          }
+          createSnackbar(themeSavedSuccess$());
+          showCustomizeThemeModal.value = false;
+        } catch (error) {
+          createSnackbar(saveFailure$());
+        }
+      }
 
       // computed
       const facilityLearnerCount = computed(() => facility.value?.num_learners ?? 0);
@@ -614,6 +717,14 @@
         settingsHaveChanged,
         isPinSet,
         showEditFacilityModal,
+        showCustomizeThemeModal,
+        activeFacilityTheme,
+        activeThemeBackground,
+        activeThemeTextColor,
+        activeThemePrimary,
+        activeThemeLogo,
+        activeThemeTitle,
+        activeThemeSubtext,
         createPinShow,
         handleViewModal,
         handleChangePinModal,
@@ -635,6 +746,7 @@
 
         // Functions
         submitFacilityName,
+        submitFacilityTheme,
         saveConfig,
         handleCreatePinSubmit,
         handleChangePinSubmit,
@@ -647,6 +759,11 @@
         pageHeader$,
         pageDescription$,
         deviceSettings$,
+        facilityThemeHeading$,
+        facilityThemeSubtext$,
+        customizeThemeButton$,
+        defaultThemeSubtext$,
+        themeSavedSuccess$,
         learnerCanEditUsername$,
         learnerCanEditName$,
         learnerCanSignUp$,
@@ -764,6 +881,41 @@
     gap: 4px;
     align-items: center;
     margin-top: 4px;
+  }
+
+  .branding-summary-card {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    margin-top: 12px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+
+  .branding-summary-left {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .summary-logo {
+    max-width: 120px;
+    max-height: 48px;
+    border-radius: 4px;
+    object-fit: contain;
+  }
+
+  .summary-school-name {
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .summary-school-sub {
+    margin-top: 2px;
+    font-size: 13px;
+    opacity: 0.9;
   }
 
 </style>

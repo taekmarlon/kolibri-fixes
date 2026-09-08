@@ -34,6 +34,9 @@ export default [
     path: '/:subtopicName?/facilities',
     component: AllFacilitiesPage,
     props: true,
+    handler() {
+      store.dispatch('preparePage', { isAsync: false });
+    },
   },
   // In the multi-facility case, the optional facility_id needs to be provided.
   // If it's missing, then we are likely in single-facility situation and we use
@@ -84,9 +87,12 @@ export default [
   {
     name: PageNames.USER_MGMT_PAGE,
     component: UsersRootPage,
-    path: '/:facility_id?/users/',
+    path: '/:facility_id?/users',
     handler: toRoute => {
-      facilityParamRequiredGuard(toRoute, UsersRootPage.name);
+      if (facilityParamRequiredGuard(toRoute, UsersRootPage.name)) {
+        return;
+      }
+      store.dispatch('preparePage', { isAsync: false });
     },
     children: getSidePanelRoutes([
       PageNames.FILTER_USERS_SIDE_PANEL,
@@ -100,7 +106,10 @@ export default [
     component: NewUsersPage,
     path: '/:facility_id?/users/new-users',
     handler: toRoute => {
-      facilityParamRequiredGuard(toRoute, NewUsersPage.name);
+      if (facilityParamRequiredGuard(toRoute, NewUsersPage.name)) {
+        return;
+      }
+      store.dispatch('preparePage', { isAsync: false });
     },
     children: getSidePanelRoutes(
       [
@@ -118,7 +127,10 @@ export default [
     component: UsersTrashPage,
     path: '/:facility_id?/users/deleted',
     handler: toRoute => {
-      facilityParamRequiredGuard(toRoute, UsersTrashPage.name);
+      if (facilityParamRequiredGuard(toRoute, UsersTrashPage.name)) {
+        return;
+      }
+      store.dispatch('preparePage', { isAsync: false });
     },
     children: getSidePanelRoutes([PageNames.FILTER_USERS_SIDE_PANEL], 'TRASH'),
   },
@@ -154,15 +166,18 @@ export default [
     component: FacilityConfigPage,
     path: '/:facility_id?/settings',
     handler: toRoute => {
-      facilityParamRequiredGuard(toRoute, FacilityConfigPage.name);
+      if (facilityParamRequiredGuard(toRoute, FacilityConfigPage.name)) {
+        return;
+      }
+      store.dispatch('preparePage', { isAsync: false });
     },
   },
   {
     path: '/',
-    // Redirect to AllFacilitiesPage if a superuser and device has > 1 facility
+    // Redirect to AllFacilitiesPage if a superuser and device has > 1 facility and no facility selected
     beforeEnter(to, from, next) {
       const { userIsMultiFacilityAdmin } = useFacilities();
-      if (userIsMultiFacilityAdmin.value) {
+      if (userIsMultiFacilityAdmin.value && !store.getters.activeFacilityId) {
         next(store.getters.facilityPageLinks.AllFacilitiesPage);
       } else {
         next(store.getters.facilityPageLinks.ManageClassPage);

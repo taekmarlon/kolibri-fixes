@@ -46,8 +46,8 @@
       context: 'Notice that there are no superuser accounts on the device',
     },
     noSuperuserCallToAction: {
-      message: 'Please reinstall Kolibri to create a superuser account.',
-      context: 'Call to action to reinstall Kolibri to create a superuser account',
+      message: 'Please reinstall PHIEDU to create a superuser account.',
+      context: 'Call to action to reinstall PHIEDU to create a superuser account',
     },
     superusersSoftDeletedNotice: {
       message:
@@ -56,20 +56,20 @@
     },
     superusersSoftDeletedCallToAction: {
       message:
-        'Please contact your system administrator to restore your account or reinstall Kolibri to create a new superuser account.',
+        'Please contact your system administrator to restore your account or reinstall PHIEDU to create a new superuser account.',
       context:
-        'Call to action to contact system administrator or reinstall Kolibri to create a new superuser account',
+        'Call to action to contact system administrator or reinstall PHIEDU to create a new superuser account',
     },
     unknownIssueNotice: {
       message: 'This device is unusable due to an unknown reason. Please contact support.',
       context: 'Notice that the device is unusable due to an unknown reason',
     },
     reinstallKolibriAction: {
-      message: 'Reinstall Kolibri',
-      context: 'Button text to reinstall Kolibri',
+      message: 'Reinstall PHIEDU',
+      context: 'Button text to reinstall PHIEDU',
     },
     deprovisioningError: {
-      message: 'An error occurred while trying to reinstall Kolibri. Please try again.',
+      message: 'An error occurred while trying to reinstall PHIEDU. Please try again.',
       context: 'Error message when there is an error deprovisioning the device',
     },
   });

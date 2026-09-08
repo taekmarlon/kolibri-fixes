@@ -717,14 +717,14 @@ const coachStrings = createTranslator('CommonCoachStrings', {
 // Strings for the Missing Content modals, tooltips, alerts, etc.
 const MissingContentStrings = createTranslator('MissingContentStrings', {
   upgradeKolibriTitle: {
-    message: 'Upgrade Kolibri to view resources',
+    message: 'Upgrade PHIEDU to view resources',
     context: 'Title of the modal window',
   },
   upgradeKolibriP1: {
     message:
-      'Some resources are not supported by this version of Kolibri. You may need to upgrade to view them.',
+      'Some resources are not supported by this version of PHIEDU. You may need to upgrade to view them.',
 
-    context: 'First paragraph of the "Upgrade Kolibri to view resources" modal',
+    context: 'First paragraph of the "Upgrade PHIEDU to view resources" modal',
   },
   upgradeKolibriLinkText: {
     message: 'Go to download page',

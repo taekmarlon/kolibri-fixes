@@ -26,6 +26,7 @@
   import PicturePasswordAssignedModal from 'kolibri-common/components/PicturePasswordAssignedModal.vue';
   import FacilityUserResource from 'kolibri-common/apiResources/FacilityUserResource';
   import useFacility from 'kolibri-common/composables/useFacility';
+  import useFacilityTheme from 'kolibri-common/composables/useFacilityTheme';
   import { PICTURE_PASSWORD_ASSIGNED_MODAL_PENDING } from 'kolibri-common/constants/Auth';
   import plugin_data from 'kolibri-plugin-data';
   import useUser from 'kolibri/composables/useUser';
@@ -38,6 +39,7 @@
       PicturePasswordAssignedModal,
     },
     setup() {
+      const facilityTheme = useFacilityTheme();
       const { isUserLoggedIn, isAppContext, currentUserId, isLearner } = useUser();
       const { fetchFacilityConfig, facilityConfig } = useFacility();
       const picturePasswordPending = useSessionStorage(
@@ -70,6 +72,7 @@
       }
 
       return {
+        ...facilityTheme,
         isUserLoggedIn,
         isAppContext,
         showPicturePasswordModal,

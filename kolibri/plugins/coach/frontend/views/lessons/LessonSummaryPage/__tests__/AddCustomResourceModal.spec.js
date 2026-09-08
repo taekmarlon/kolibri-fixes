@@ -38,7 +38,7 @@ describe('AddCustomResourceModal', () => {
     await fireEvent.click(youtubeTabBtn);
 
     expect(
-      screen.getByText('Paste a YouTube video link. It will play safely inside Kolibri for your learners.')
+      screen.getByText('Paste a YouTube video link. It will play safely inside PHIEDU for your learners.')
     ).toBeTruthy();
     expect(screen.getByLabelText('YouTube Video URL')).toBeTruthy();
   });

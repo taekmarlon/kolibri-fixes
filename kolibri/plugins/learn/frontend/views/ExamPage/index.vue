@@ -182,8 +182,15 @@
               >
                 {{ $tr('question', { num: questionNumber + 1, total: exam.question_count }) }}
               </h2>
+              <CustomQuestionViewer
+                v-if="currentQuestion && currentQuestion.is_custom"
+                ref="customViewer"
+                :question="currentQuestion"
+                :answerState="currentAttempt ? currentAttempt.answer : null"
+                @interaction="interactionHandler"
+              />
               <ContentViewer
-                v-if="content && itemId"
+                v-else-if="content && itemId"
                 ref="contentViewer"
                 :files="content.files"
                 :extraFields="content.extra_fields"
@@ -331,6 +338,7 @@
   import { PageNames, ClassesPageNames } from '../../constants';
   import { LearnerClassroomResource } from '../../apiResources';
   import AnswerHistory from './AnswerHistory';
+  import CustomQuestionViewer from './CustomQuestionViewer';
 
   export default {
     name: 'ExamPage',
@@ -342,6 +350,7 @@
     components: {
       AnswerHistory,
       BottomAppBar,
+      CustomQuestionViewer,
       ImmersivePage,
       ResourceSyncingUiAlert,
       TimeDuration,
@@ -640,6 +649,9 @@
           });
       },
       checkAnswer() {
+        if (this.currentQuestion && this.currentQuestion.is_custom && this.$refs.customViewer) {
+          return this.$refs.customViewer.checkAnswer();
+        }
         if (this.$refs.contentViewer) {
           return this.$refs.contentViewer.checkAnswer();
         }

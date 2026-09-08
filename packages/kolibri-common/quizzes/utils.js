@@ -196,10 +196,22 @@ export async function fetchExamWithContent(exam) {
     exam.question_sources = converted.question_sources;
     const ids = uniq(
       exam.question_sources.reduce((acc, section) => {
-        acc = [...acc, ...section.questions.map(item => item.exercise_id)];
+        acc = [
+          ...acc,
+          ...section.questions
+            .filter(item => !item.is_custom && item.exercise_id)
+            .map(item => item.exercise_id),
+        ];
         return acc;
       }, []),
     );
+
+    if (ids.length === 0) {
+      return Promise.resolve({
+        exam,
+        exercises: [],
+      });
+    }
 
     return ContentNodeResource.fetchCollection({
       getParams: {

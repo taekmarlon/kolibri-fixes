@@ -136,9 +136,9 @@
         context: 'Prompt to remind users to sign in.',
       },
       signInToKolibriAction: {
-        message: 'Sign in to Kolibri',
+        message: 'Sign in to PHIEDU',
         context:
-          'This text appears as a prompt to sign in to Kolibri if you already have an account and a username.\n\nIt may appear if your session has expired.',
+          'This text appears as a prompt to sign in to PHIEDU if you already have an account and a username.\n\nIt may appear if your session has expired.',
       },
       goBackToHomeAction: {
         message: 'Go to home page',

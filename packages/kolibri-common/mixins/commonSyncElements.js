@@ -56,7 +56,7 @@ export const syncStrings = createTranslator('CommonSyncStrings', {
       'A note at the top of the page for importing a user explaining that the first user imported will be given the permissions of a superuser',
   },
   howAreYouUsingKolibri: {
-    message: 'How are you using Kolibri?',
+    message: 'How are you using PHIEDU?',
     context: 'Page title for the device setup step.',
   },
   onMyOwn: {

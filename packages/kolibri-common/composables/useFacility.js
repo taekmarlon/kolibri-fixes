@@ -12,7 +12,7 @@ import useFacilities from './useFacilities';
  * @returns {object} The reactive selected facility ID and its setter.
  */
 export function useFacilitySelect(listenToStorageChanges = false) {
-  const { userIsMultiFacilityAdmin } = useFacilities();
+  const { facilities, userIsMultiFacilityAdmin } = useFacilities();
   const { userFacilityId, isUserLoggedIn } = useUser();
 
   const defaultFacilityId = useLocalStorage('facilityId', null, {
@@ -26,7 +26,11 @@ export function useFacilitySelect(listenToStorageChanges = false) {
       return userFacilityId.value;
     }
 
-    return defaultFacilityId.value || userFacilityId.value;
+    return (
+      defaultFacilityId.value ||
+      userFacilityId.value ||
+      (facilities.value && facilities.value[0] ? facilities.value[0].id : null)
+    );
   });
 
   function setSelectedFacilityId(facilityId) {
@@ -50,6 +54,7 @@ export function useFacilitySelect(listenToStorageChanges = false) {
 export function useFacilityConfig(facilityId) {
   const _facilityId = facilityId;
   const facilityConfig = ref({});
+  const loadedFacilityId = ref(null);
 
   // computed feature flags
   const _isEnglish = () => currentLanguage === 'en';
@@ -85,16 +90,20 @@ export function useFacilityConfig(facilityId) {
    * facility ID for this fetch.
    * @returns {Promise<object|undefined>} Resolves with the loaded facility config.
    */
-  async function fetchFacilityConfig(facilityId = null) {
-    facilityId = unref(facilityId) || unref(_facilityId);
+  async function fetchFacilityConfig(targetFacilityId = null) {
+    const id = unref(targetFacilityId) || unref(facilityId) || unref(_facilityId);
 
-    if (!facilityId) {
+    if (!id) {
       return;
+    }
+
+    if (loadedFacilityId.value === id && facilityConfig.value && facilityConfig.value.id) {
+      return facilityConfig.value;
     }
 
     const _facilityConfig = await FacilityDatasetResource.fetchCollection({
       getParams: {
-        facility_id: facilityId,
+        facility_id: id,
       },
       force: true,
     });
@@ -105,6 +114,7 @@ export function useFacilityConfig(facilityId) {
     if (facility) {
       config = { ...facility };
     }
+    loadedFacilityId.value = id;
     facilityConfig.value = config;
     return config;
   }
@@ -159,10 +169,11 @@ async function setFacilityId(facilityId) {
 
 /**
  * Refetches the selected facility
+ * @param {string|null} [targetFacilityId] - Optional facility ID to fetch
  * @returns {Promise<void>}
  */
-async function fetchFacility() {
-  return await _fetchFacility(facilityId);
+async function fetchFacility(targetFacilityId = null) {
+  return await _fetchFacility(targetFacilityId || facilityId);
 }
 
 /**
@@ -176,10 +187,11 @@ async function updateFacilityConfig() {
 
 /**
  * Updates the facility config, if necessary
+ * @param {string|null} [targetFacilityId] - Optional facility ID to fetch config for
  * @returns {Promise<object>} Resolves with the facility config
  */
-async function fetchFacilityConfig() {
-  return await _fetchFacilityConfig(facilityId);
+async function fetchFacilityConfig(targetFacilityId = null) {
+  return await _fetchFacilityConfig(targetFacilityId || facilityId);
 }
 
 /**
@@ -215,6 +227,7 @@ async function fetchFacilityConfig() {
 export default function useFacility() {
   return {
     facilityId,
+    selectedFacilityId: facilityId,
     selectedFacility,
     currentFacilityName,
     facilityConfig,

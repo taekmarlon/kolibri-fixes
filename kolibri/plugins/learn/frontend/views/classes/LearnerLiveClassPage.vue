@@ -104,6 +104,7 @@
   import LearnAppBarPage from '../LearnAppBarPage';
   import useLearnerResources from '../../composables/useLearnerResources';
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
+  import { buildLiveMeetingUrl } from 'kolibri-common/utils/liveMeeting';
   import { ClassesPageNames } from '../../constants';
 
   const learnerLiveStrings = createTranslator('LearnerLiveClassStrings', {
@@ -178,7 +179,7 @@
       });
 
       const classRoomName = computed(() => {
-        return `kolibri_class_${props.classId}`;
+        return `phiedu_class_${props.classId}`;
       });
 
       const userDisplayName = computed(() => {
@@ -216,8 +217,12 @@
       });
 
       function launchWindow() {
-        const name = encodeURIComponent(userDisplayName.value);
-        const directUrl = `https://meet.jit.si/${classRoomName.value}#userInfo.displayName="${name}"&config.startWithAudioMuted=true&config.prejoinPageEnabled=false`;
+        const directUrl = buildLiveMeetingUrl({
+          roomName: classRoomName.value,
+          displayName: userDisplayName.value,
+          subject: pageTitle.value || 'PHIEDU Live Class',
+          startWithAudioMuted: true,
+        });
         window.open(directUrl, '_blank');
       }
 

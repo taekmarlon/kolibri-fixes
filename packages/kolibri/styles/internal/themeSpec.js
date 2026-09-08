@@ -60,6 +60,14 @@ export default {
         default: null,
         spec: _imageSpec,
       },
+      headerTitle: {
+        type: String,
+        default: null,
+      },
+      primaryColor: {
+        type: String,
+        default: null,
+      },
     },
   },
   brandColors: {
@@ -128,6 +136,10 @@ export default {
         default: null,
       },
       title: {
+        type: String,
+        default: null,
+      },
+      subtext: {
         type: String,
         default: null,
       },

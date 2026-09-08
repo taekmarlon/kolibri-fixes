@@ -15,6 +15,7 @@ const baseSessionState = {
   app_context: false,
   can_manage_content: false,
   facility_id: undefined,
+  facility_name: '',
   full_name: '',
   id: undefined,
   kind: [UserKinds.ANONYMOUS],
@@ -95,6 +96,7 @@ export default function useUser() {
   const hasRole = computed(() => isCoach.value || isAdmin.value);
   const userPermissions = computed(() => ({ can_manage_content: canManageContent.value }));
   const userFacilityId = computed(() => sessionState.value.facility_id);
+  const userFacilityName = computed(() => sessionState.value.facility_name || '');
   const userHasPermissions = computed(() => Object.values(userPermissions.value).some(Boolean));
 
   // Login/Logout Functions
@@ -197,6 +199,7 @@ export default function useUser() {
     isFacilityAdmin,
     userPermissions,
     userFacilityId,
+    userFacilityName,
     hasRole,
     userHasPermissions,
 

@@ -40,6 +40,14 @@
           @click="activeTab = 'html5'"
         />
         <KButton
+          :text="tabCardLabel$()"
+          icon="topic"
+          :appearance="activeTab === 'card' ? 'raised-button' : 'flat-button'"
+          :primary="activeTab === 'card'"
+          class="tab-btn"
+          @click="activeTab = 'card'"
+        />
+        <KButton
           :text="tabAiLabel$()"
           icon="hint"
           :appearance="activeTab === 'ai' ? 'raised-button' : 'flat-button'"
@@ -301,6 +309,98 @@
         </div>
       </div>
 
+      <!-- TAB 5: CONTENT CARD -->
+      <div
+        v-if="activeTab === 'card'"
+        class="tab-content"
+      >
+        <p :style="{ color: $themeTokens.annotation }">
+          {{ cardDesc$() }}
+        </p>
+
+        <KTextbox
+          v-model="cardTitle"
+          :label="titleLabel$()"
+          :invalid="Boolean(cardTitleError)"
+          :invalidText="cardTitleError"
+          class="mb-16"
+        />
+
+        <KTextbox
+          v-model="cardDescription"
+          :label="descriptionLabel$()"
+          :textArea="true"
+          class="mb-16"
+        />
+
+        <!-- Optional Banner Image -->
+        <div class="mb-16">
+          <label :style="{ color: $themeTokens.annotation, display: 'block', marginBottom: '8px' }">
+            {{ cardImagePrompt$() }}
+          </label>
+          <button
+            type="button"
+            class="drop-zone"
+            :style="{
+              borderColor: selectedCardImage ? $themeTokens.primary : $themeTokens.fineLine,
+              backgroundColor: selectedCardImage ? $themePalette.grey.v_100 : $themeTokens.surface,
+              padding: '16px',
+            }"
+            @click="triggerFileInput('cardInput')"
+          >
+            <input
+              ref="cardInput"
+              type="file"
+              class="hidden-file-input"
+              :aria-label="uploadCardImageLabel$()"
+              accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+              @change="onFileSelected($event, 'card')"
+            >
+            <div v-if="!selectedCardImage">
+              <KIcon
+                icon="image"
+                class="upload-icon"
+              />
+              <p class="drop-text">{{ selectFilePrompt$() }}</p>
+            </div>
+            <div
+              v-else
+              class="card-img-preview-container"
+            >
+              <img
+                :src="cardImagePreview"
+                alt="Card image preview"
+                class="card-preview-thumb"
+              >
+              <div class="file-info-badge">
+                <span class="file-name">{{ selectedCardImage.name }}</span>
+                <span
+                  class="file-size"
+                  :style="{ color: $themeTokens.annotation }"
+                >
+                  ({{ formatFileSize(selectedCardImage.size) }})
+                </span>
+              </div>
+              <KIconButton
+                icon="clear"
+                size="small"
+                :tooltip="removeImage$()"
+                :ariaLabel="removeImage$()"
+                @click.stop="clearCardImage"
+              />
+            </div>
+          </button>
+        </div>
+
+        <KTextbox
+          v-model="cardContent"
+          :textArea="true"
+          :label="cardContentLabel$()"
+          :placeholder="cardContentPlaceholder$()"
+          rows="8"
+        />
+      </div>
+
       <!-- Submitting Indicator -->
       <div
         v-if="isSubmitting"
@@ -362,7 +462,7 @@
       context: 'File drop area text',
     },
     youtubeDesc: {
-      message: 'Paste a YouTube video link. It will play safely inside Kolibri for your learners.',
+      message: 'Paste a YouTube video link. It will play safely inside PHIEDU for your learners.',
       context: 'YouTube tab description',
     },
     youtubeUrlLabel: {
@@ -449,6 +549,36 @@
       message: 'Upload HTML5 zip package',
       context: 'Accessibility label for HTML5 file input',
     },
+    tabCardLabel: {
+      message: 'Content Card',
+      context: 'Tab label for standalone content card',
+    },
+    cardDesc: {
+      message:
+        'Create a standalone learning card with formatted notes, key concepts, and an optional image.',
+      context: 'Content card tab description',
+    },
+    cardImagePrompt: {
+      message: 'Card Banner / Illustration (Optional)',
+      context: 'Card image field label',
+    },
+    cardContentLabel: {
+      message: 'Card Body Content (Markdown supported)',
+      context: 'Content textbox label',
+    },
+    cardContentPlaceholder: {
+      message:
+        'Write explanations, key definitions, formulas, or instructions for your students...',
+      context: 'Content textbox placeholder',
+    },
+    uploadCardImageLabel: {
+      message: 'Upload card image',
+      context: 'Accessibility label for image file input',
+    },
+    removeImage: {
+      message: 'Remove image',
+      context: 'Tooltip for removing card image',
+    },
   });
 
   export default {
@@ -493,6 +623,15 @@
       const aiTopicError = ref('');
       const isGeneratingAi = ref(false);
 
+      // Card Tab State
+      const selectedCardImage = ref(null);
+      const cardImagePreview = ref('');
+      const cardTitle = ref('');
+      const cardDescription = ref('');
+      const cardContent = ref('');
+      const cardTitleError = ref('');
+      const cardInput = ref(null);
+
       const gradeOptions = [
         { label: 'Elementary School', value: 'elementary' },
         { label: 'Middle School', value: 'middle' },
@@ -524,6 +663,9 @@
         if (activeTab.value === 'ai') {
           return !aiContent.value.trim() || !aiTitle.value.trim();
         }
+        if (activeTab.value === 'card') {
+          return !cardTitle.value.trim() || (!cardContent.value.trim() && !selectedCardImage.value);
+        }
         return true;
       });
 
@@ -540,6 +682,8 @@
           fileInput.value.click();
         } else if (refName === 'html5Input' && html5Input.value) {
           html5Input.value.click();
+        } else if (refName === 'cardInput' && cardInput.value) {
+          cardInput.value.click();
         }
       }
 
@@ -559,7 +703,18 @@
           if (!html5Title.value) {
             html5Title.value = baseName;
           }
+        } else if (type === 'card') {
+          selectedCardImage.value = file;
+          cardImagePreview.value = URL.createObjectURL(file);
+          if (!cardTitle.value) {
+            cardTitle.value = baseName;
+          }
         }
+      }
+
+      function clearCardImage() {
+        selectedCardImage.value = null;
+        cardImagePreview.value = '';
       }
 
       async function handleGenerateAiContent() {
@@ -627,6 +782,22 @@
                 content: aiContent.value,
               },
             });
+          } else if (activeTab.value === 'card') {
+            const formData = new FormData();
+            if (selectedCardImage.value) {
+              formData.append('file', selectedCardImage.value);
+            }
+            formData.append('title', cardTitle.value);
+            formData.append('description', cardDescription.value);
+            formData.append('content', cardContent.value);
+            formData.append('resource_type', 'content_card');
+
+            response = await client({
+              url: endpointUrl,
+              method: 'POST',
+              data: formData,
+              headers: { 'Content-Type': 'multipart/form-data' },
+            });
           }
 
           createSnackbar(modalStrings.successNotice$());
@@ -672,10 +843,19 @@
         isGeneratingAi,
         gradeOptions,
         formatOptions,
+        // Card tab
+        selectedCardImage,
+        cardImagePreview,
+        cardTitle,
+        cardDescription,
+        cardContent,
+        cardTitleError,
+        cardInput,
         // Methods
         formatFileSize,
         triggerFileInput,
         onFileSelected,
+        clearCardImage,
         handleGenerateAiContent,
         handleSubmit,
         // Strings
@@ -783,6 +963,21 @@
     padding: 16px;
     margin-top: 16px;
     text-align: center;
+  }
+
+  .card-img-preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card-preview-thumb {
+    max-width: 120px;
+    max-height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
   }
 
   @keyframes fade-in {

@@ -76,17 +76,17 @@
         context: 'Indicates that an important new version of Kolibri is available.',
       },
       upgradeMessageGeneric: {
-        message: 'A new version of Kolibri is available.',
-        context: 'Notification indicating a new version of Kolibri is available.',
+        message: 'A new version of PHIEDU is available.',
+        context: 'Notification indicating a new version of PHIEDU is available.',
       },
       upgradeMessageImportant: {
-        message: 'We have released an important update with fixes to this version of Kolibri.',
-        context: 'Notification indicating an important new version of Kolibri is available.',
+        message: 'We have released an important update with fixes to this version of PHIEDU.',
+        context: 'Notification indicating an important new version of PHIEDU is available.',
       },
       upgradeMessage_0_18_0: {
         message:
-          'Kolibri version 0.18.0 is available! New features include comprehensive search and filter within lesson and quiz creation, Bloom reader support, updated navigation in Coach, as well as bug fixes and improvements.',
-        context: 'Notification indicating a new version of Kolibri is available.',
+          'PHIEDU version 0.18.0 is available! New features include comprehensive search and filter within lesson and quiz creation, Bloom reader support, updated navigation in Coach, as well as bug fixes and improvements.',
+        context: 'Notification indicating a new version of PHIEDU is available.',
       },
       upgradeDownload: {
         message: 'Download it here',

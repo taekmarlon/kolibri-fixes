@@ -386,9 +386,9 @@ export const coreStrings = createTranslator('CommonCoreStrings', {
       "Indicates a task such as a sync is in progress. A lesson or class could also be in progress if the learner hasn't finished it yet.",
   },
   kolibriLabel: {
-    message: 'Kolibri',
+    message: 'PHIEDU',
     context:
-      'This proper noun is the name of the learning platform, and is pronounced ko-lee-bree (/kolibɹi/). For languages with non-latin scripts, the word should be transcribed phonetically into the target language, similar to a person\'s name. It should not be translated as "hummingbird".',
+      'The name of the learning platform.',
   },
   languageLabel: {
     message: 'Language',
@@ -1375,15 +1375,15 @@ export const coreStrings = createTranslator('CommonCoreStrings', {
 
   // Device upgrades recommended
   userDevicesUsingIE11: {
-    message: 'Some users seem to have accessed Kolibri via Internet Explorer 11',
+    message: 'Some users seem to have accessed PHIEDU via Internet Explorer 11',
     context:
       'Displayed to an admin, where devices on their network are using Internet Explorer 11, as part of a message encouraging the user to upgrade.',
   },
   browserSupportDroppedIE11: {
     message:
-      'Please note that support for this browser has been dropped.  We recommend installing other browsers, such as Mozilla Firefox or Google Chrome, in order to continue working with Kolibri.',
+      'Please note that support for this browser has been dropped.  We recommend installing other browsers, such as Mozilla Firefox or Google Chrome, in order to continue working with PHIEDU.',
     context:
-      'Displayed to users of kolibri where one or more devices on the network are using Internet Explorer 11, as part of a message encouraging the user to upgrade.',
+      'Displayed to users of PHIEDU where one or more devices on the network are using Internet Explorer 11, as part of a message encouraging the user to upgrade.',
   },
 
   // Content activity
@@ -1517,7 +1517,7 @@ export const coreStrings = createTranslator('CommonCoreStrings', {
     context: '',
   },
   neverPayDescription: {
-    message: 'Kolibri and its library will always be free of charge',
+    message: 'PHIEDU and its library will always be free of charge',
     context: '',
   },
 
@@ -1527,7 +1527,7 @@ export const coreStrings = createTranslator('CommonCoreStrings', {
     context: '',
   },
   whatLanguageDescription: {
-    message: 'Kolibri will recommend materials in the language you select.',
+    message: 'PHIEDU will recommend materials in the language you select.',
     context: '',
   },
   currentLanguageLabel: {
@@ -1541,7 +1541,7 @@ export const coreStrings = createTranslator('CommonCoreStrings', {
   },
   learningFacilityDescription: {
     message:
-      'A learning facility represents the location where you are installing Kolibri, such as a school, training center, or your home.',
+      'A learning facility represents the location where you are installing PHIEDU, such as a school, training center, or your home.',
     context: '',
   },
   joinLearningFacility: {

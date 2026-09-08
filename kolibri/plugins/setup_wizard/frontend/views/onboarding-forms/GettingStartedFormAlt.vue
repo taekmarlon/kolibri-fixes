@@ -55,12 +55,12 @@
     },
     $trs: {
       gettingStartedHeader: {
-        message: 'How do you plan to use Kolibri?',
+        message: 'How do you plan to use PHIEDU?',
         context: 'Page title',
       },
       descriptionParagraph1: {
         message:
-          'In Kolibri, you can use a facility to manage a large group of users, like a school, an educational program or any other group learning setting. You can also have multiple facilities on the same device.',
+          'In PHIEDU, you can use a facility to manage a large group of users, like a school, an educational program or any other group learning setting. You can also have multiple facilities on the same device.',
 
         context: 'First paragraph of description.',
       },

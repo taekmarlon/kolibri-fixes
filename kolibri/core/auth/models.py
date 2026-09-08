@@ -144,6 +144,7 @@ extra_fields_schema = {
         "facility": {"type": "object", "optional": True},
         "on_my_own_setup": {"type": "boolean", "optional": True},
         "pin_code": {"type": ["string", "null"], "optional": True},
+        "theme": {"type": "object", "optional": True},
         DEMOGRAPHIC_FIELDS_KEY: custom_demographics_schema,
     },
 }
@@ -677,6 +678,7 @@ class KolibriAnonymousUser(AnonymousUser, KolibriBaseUserMixin):
             "full_name": "",
             "user_id": None,
             "facility_id": getattr(Facility.get_default_facility(), "id", None),
+            "facility_name": getattr(Facility.get_default_facility(), "name", ""),
             "kind": [user_kinds.ANONYMOUS],
             "full_facility_import": self.full_facility_import,
         }
@@ -1074,6 +1076,7 @@ class FacilityUser(AbstractBaseUser, KolibriBaseUserMixin, AbstractFacilityDataM
             "kind": roles,
             "can_manage_content": self.can_manage_content,
             "facility_id": self.facility_id,
+            "facility_name": self.facility.name if self.facility else "",
             # Is this user a member of a facility that has been fully imported?
             "full_facility_import": self.full_facility_import,
         }

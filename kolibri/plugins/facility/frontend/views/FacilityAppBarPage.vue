@@ -23,6 +23,7 @@
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import useFacilities from 'kolibri-common/composables/useFacilities';
   import useFacility from 'kolibri-common/composables/useFacility';
+  import useFacilityTheme from 'kolibri-common/composables/useFacilityTheme';
   import ImpactStoryBanner from 'kolibri-common/components/ImpactStoryBanner';
 
   export default {
@@ -30,6 +31,7 @@
     components: { AppBarPage, ImpactStoryBanner },
     mixins: [commonCoreStrings],
     setup() {
+      useFacilityTheme();
       const { userIsMultiFacilityAdmin } = useFacilities();
       const { currentFacilityName } = useFacility();
       return { userIsMultiFacilityAdmin, currentFacilityName };

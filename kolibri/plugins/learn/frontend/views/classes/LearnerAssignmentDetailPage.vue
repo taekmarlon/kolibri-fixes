@@ -284,7 +284,7 @@
       context: 'Section heading for embedded video lesson',
     },
     videoLessonSubtext: {
-      message: 'Watch this instructional video directly within Kolibri before completing your homework.',
+      message: 'Watch this instructional video directly within PHIEDU before completing your homework.',
       context: 'Subtext explaining the native video embed',
     },
     scoreHeading: {

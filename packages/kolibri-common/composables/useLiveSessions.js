@@ -29,7 +29,7 @@ export default function useLiveSessions() {
       method: 'POST',
       data: {
         class_id: classId,
-        room_name: roomName || `kolibri_class_${classId}`,
+        room_name: roomName || `phiedu_class_${classId}`,
         active,
       },
     })

@@ -40,13 +40,43 @@
         </template>
 
         <template #brand>
-          <img
-            v-if="themeConfig.appBar.topLogo"
-            :src="themeConfig.appBar.topLogo.src"
-            :alt="themeConfig.appBar.topLogo.alt"
-            :style="themeConfig.appBar.topLogo.style"
-            :class="showAppNavView ? 'brand-logo-left' : 'brand-logo'"
+          <div
+            class="brand-wrapper"
+            style="display: flex; align-items: center; gap: 10px;"
           >
+            <img
+              v-if="themeConfig.appBar.topLogo"
+              :src="themeConfig.appBar.topLogo.src"
+              :alt="themeConfig.appBar.topLogo.alt"
+              :style="themeConfig.appBar.topLogo.style"
+              :class="showAppNavView ? 'brand-logo-left' : 'brand-logo'"
+            >
+            <span
+              v-if="displaySchoolTitle"
+              class="facility-school-title"
+              :style="{
+                color: themeConfig.appBar.textColor,
+                fontWeight: '700',
+                fontSize: '16px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '260px',
+                marginRight: '10px',
+              }"
+            >
+              {{ displaySchoolTitle }}
+            </span>
+            <span
+              v-if="displaySchoolTitle && truncatedTitle"
+              :style="{
+                color: themeConfig.appBar.textColor,
+                opacity: 0.5,
+                marginRight: '10px',
+                fontWeight: '300',
+              }"
+            >|</span>
+          </div>
         </template>
 
         <template
@@ -98,6 +128,60 @@
                 {{ $tr('pointsMessage', { points: totalPoints }) }}
               </div>
             </span>
+            <!-- Facility Indicator Pill (Super Admin / Admin indicator & switcher) -->
+            <button
+              v-if="isUserLoggedIn && activeFacilityName"
+              ref="facilityPill"
+              type="button"
+              class="facility-indicator-pill"
+              :class="{ clickable: canSwitchFacility }"
+              :title="facilityPillTitle"
+              :style="facilityPillStyle"
+              @click="toggleFacilityDropdown"
+            >
+              <span
+                class="facility-pill-icon"
+                aria-hidden="true"
+              >{{ '🏫' }}</span>
+              <span class="facility-pill-name">{{ activeFacilityName }}</span>
+              <span
+                v-if="canSwitchFacility"
+                class="facility-pill-caret"
+              >{{ showFacilityDropdown ? '▲' : '▼' }}</span>
+            </button>
+
+            <!-- Facility Switcher Dropdown Menu -->
+            <div
+              v-if="showFacilityDropdown && canSwitchFacility"
+              ref="facilityDropdown"
+              class="facility-dropdown-menu"
+              :style="{
+                backgroundColor: $themeTokens.surface,
+                color: $themeTokens.text,
+              }"
+            >
+              <div
+                class="facility-dropdown-header"
+                :style="{ color: $themeTokens.annotation }"
+              >
+                {{ $tr('switchFacility') }}
+              </div>
+              <button
+                v-for="fac in facilities"
+                :key="fac.id"
+                type="button"
+                class="facility-dropdown-item"
+                :class="{ active: fac.name === activeFacilityName }"
+                @click="selectFacility(fac)"
+              >
+                <span class="fac-name">{{ fac.name }}</span>
+                <span
+                  v-if="fac.name === activeFacilityName"
+                  class="fac-check"
+                >{{ '✓' }}</span>
+              </button>
+            </div>
+
             <span
               v-if="isUserLoggedIn"
               tabindex="-1"
@@ -141,8 +225,9 @@
 <script>
 
   import { get } from '@vueuse/core';
-  import { computed } from 'vue';
+  import { computed, ref, onMounted } from 'vue';
   import { useRoute } from 'vue-router/composables';
+  import client from 'kolibri/client';
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import KToolbar from 'kolibri-design-system/lib/KToolbar';
   import KIconButton from 'kolibri-design-system/lib/buttons-and-links/KIconButton';
@@ -169,7 +254,16 @@
       const $route = useRoute();
       const { windowIsSmall } = useKResponsiveWindow();
       const { topBarHeight, navItems } = useNav();
-      const { isLearner, isUserLoggedIn, username, full_name } = useUser();
+      const {
+        isLearner,
+        isUserLoggedIn,
+        isAdmin,
+        isSuperuser,
+        username,
+        full_name,
+        userFacilityName,
+        userFacilityId,
+      } = useUser();
       const { totalPoints, fetchPoints } = useTotalProgress();
       const links = computed(() => {
         const currentItem = get(navItems).find(nc => nc.url === window.location.pathname);
@@ -184,6 +278,94 @@
         }));
       });
 
+      const facilities = ref([]);
+      const showFacilityDropdown = ref(false);
+      const selectedFacilityId = ref(localStorage.getItem('facilityId') || '');
+      const selectedFacilityName = ref(
+        localStorage.getItem('facilityName') ||
+          localStorage.getItem('kolibri_active_facility_name') ||
+          ''
+      );
+
+      const activeFacilityName = computed(() => {
+        if (selectedFacilityName.value) {
+          return selectedFacilityName.value;
+        }
+        if (userFacilityName.value) {
+          return userFacilityName.value;
+        }
+        if (facilities.value.length > 0) {
+          return facilities.value[0].name;
+        }
+        return '';
+      });
+
+      const displaySchoolTitle = computed(() => {
+        return themeConfig.appBar.headerTitle || activeFacilityName.value || '';
+      });
+
+      const canSwitchFacility = computed(() => {
+        return (isSuperuser.value || isAdmin.value) && facilities.value.length > 1;
+      });
+
+      function fetchFacilities() {
+        if (!isUserLoggedIn.value) return;
+        client({ url: '/api/auth/facility/' })
+          .then(res => {
+            const data = Array.isArray(res.data) ? res.data : res.data?.results || [];
+            facilities.value = data;
+            if (!selectedFacilityName.value && data.length > 0) {
+              const matched = data.find(f => f.id === userFacilityId.value) || data[0];
+              selectedFacilityId.value = matched.id;
+              selectedFacilityName.value = matched.name;
+              localStorage.setItem('facilityId', matched.id);
+              localStorage.setItem('facilityName', matched.name);
+            }
+          })
+          .catch(() => {});
+      }
+
+      onMounted(() => {
+        fetchFacilities();
+      });
+
+      function toggleFacilityDropdown(e) {
+        if (!canSwitchFacility.value) return;
+        e.stopPropagation();
+        showFacilityDropdown.value = !showFacilityDropdown.value;
+      }
+
+      function selectFacility(fac) {
+        selectedFacilityId.value = fac.id;
+        selectedFacilityName.value = fac.name;
+        localStorage.setItem('facilityId', fac.id);
+        localStorage.setItem('facilityName', fac.name);
+        localStorage.setItem('kolibri_active_facility_id', fac.id);
+        localStorage.setItem('kolibri_active_facility_name', fac.name);
+        showFacilityDropdown.value = false;
+        window.dispatchEvent(new CustomEvent('kolibri-facility-changed', { detail: fac }));
+        window.location.reload();
+      }
+
+      const facilityPillStyle = computed(() => ({
+        color: themeConfig.appBar.textColor,
+        borderColor:
+          themeConfig.appBar.textColor === '#ffffff'
+            ? 'rgba(255, 255, 255, 0.35)'
+            : 'rgba(0, 0, 0, 0.2)',
+        backgroundColor:
+          themeConfig.appBar.textColor === '#ffffff'
+            ? 'rgba(255, 255, 255, 0.15)'
+            : 'rgba(0, 0, 0, 0.06)',
+      }));
+
+      const facilityPillTitle = computed(() => {
+        if (canSwitchFacility.value) {
+          return `Current Facility: ${activeFacilityName.value} (Click to switch)`;
+        }
+        return `Current Facility: ${activeFacilityName.value}`;
+      });
+
       return {
         themeConfig,
         windowIsSmall,
@@ -195,6 +377,15 @@
         fullName: full_name,
         totalPoints,
         fetchPoints,
+        facilities,
+        showFacilityDropdown,
+        activeFacilityName,
+        displaySchoolTitle,
+        canSwitchFacility,
+        facilityPillStyle,
+        facilityPillTitle,
+        toggleFacilityDropdown,
+        selectFacility,
       };
     },
     props: {
@@ -278,11 +469,24 @@
             this.pointsDisplayed = !this.pointsDisplayed;
           }
         }
+        if (this.showFacilityDropdown) {
+          const pill = this.$refs.facilityPill;
+          const drop = this.$refs.facilityDropdown;
+          if (
+            (!pill || !pill.contains(event.target)) &&
+            (!drop || !drop.contains(event.target))
+          ) {
+            this.showFacilityDropdown = false;
+          }
+        }
         return event;
       },
       handlePopoverByKeyboard(event) {
         if ((event.key == 'Tab' || event.key == 'Escape') && this.pointsDisplayed) {
           this.pointsDisplayed = false;
+        }
+        if ((event.key == 'Tab' || event.key == 'Escape') && this.showFacilityDropdown) {
+          this.showFacilityDropdown = false;
         }
       },
       updateAppBarWidth() {
@@ -310,6 +514,10 @@
         context:
           'Information for screen reader users about what information they will get by clicking a button',
       },
+      switchFacility: {
+        message: 'Switch Facility',
+        context: 'Dropdown header to switch active facility',
+      },
     },
   };
 
@@ -323,6 +531,118 @@
   .user-menu-button {
     text-transform: none;
     vertical-align: middle;
+  }
+
+  .facility-indicator-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    margin-right: 12px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: 0.2px;
+    cursor: default;
+    user-select: none;
+    vertical-align: middle;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    outline: none;
+    transition: all 0.2s ease;
+
+    &.clickable {
+      cursor: pointer;
+      &:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+    }
+  }
+
+  .facility-pill-icon {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .facility-pill-name {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .facility-pill-caret {
+    margin-left: 2px;
+    font-size: 8px;
+    transition: transform 0.2s ease;
+  }
+
+  .facility-dropdown-menu {
+    position: fixed;
+    top: 50px;
+    right: 130px;
+    z-index: 1000;
+    min-width: 220px;
+    max-width: 320px;
+    overflow: hidden;
+    font-size: 13px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+  }
+
+  .facility-dropdown-header {
+    padding: 10px 14px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .facility-dropdown-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    outline: none;
+    transition: background-color 0.15s;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    &.active {
+      font-weight: bold;
+      background-color: rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  .fac-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fac-check {
+    margin-left: 8px;
+    font-weight: bold;
+  }
+
+  @media (max-width: 750px) {
+    .facility-pill-name {
+      max-width: 80px;
+    }
   }
 
   .username {

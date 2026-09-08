@@ -23,6 +23,7 @@
                   :text="facility.name"
                   :to="coachClassListPageLink(facility)"
                   icon="facility"
+                  @click.native="setSelectedFacilityId(facility.id)"
                 />
               </td>
               <td>
@@ -44,6 +45,7 @@
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import useUser from 'kolibri/composables/useUser';
   import useFacilities from 'kolibri-common/composables/useFacilities';
+  import { useFacilitySelect } from 'kolibri-common/composables/useFacility';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import commonCoach from './common';
   import CoachAppBarPage from './CoachAppBarPage';
@@ -58,7 +60,14 @@
     setup() {
       const { userFacilityId } = useUser();
       const { facilities, userIsMultiFacilityAdmin } = useFacilities();
-      return { pageLoading, userFacilityId, userIsMultiFacilityAdmin, facilities };
+      const { setSelectedFacilityId } = useFacilitySelect();
+      return {
+        pageLoading,
+        userFacilityId,
+        userIsMultiFacilityAdmin,
+        facilities,
+        setSelectedFacilityId,
+      };
     },
     props: {
       subtopicName: {

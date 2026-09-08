@@ -169,8 +169,8 @@
         context: 'Title of the Device > Info page.',
       },
       kolibriVersion: {
-        message: 'Kolibri version',
-        context: 'Indicates the version of Kolibri currently running on the device.',
+        message: 'PHIEDU version',
+        context: 'Indicates the version of PHIEDU currently running on the device.',
       },
       url: {
         message: 'Server {count, plural, one {URL} other {URLs}}',

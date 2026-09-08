@@ -157,9 +157,9 @@
           'Subtitle of the Coach > Classes section which describes what the coach can see in this section.',
       },
       noAssignedClassesDetails: {
-        message: 'Please consult your Kolibri administrator to be assigned to a class',
+        message: 'Please consult your PHIEDU administrator to be assigned to a class',
         context:
-          'Coach accounts in Kolibri are created by admins. If the coach has no classes assigned to them by the admin, this message displays in the Coach > Classes section. ',
+          'Coach accounts in PHIEDU are created by admins. If the coach has no classes assigned to them by the admin, this message displays in the Coach > Classes section. ',
       },
       noClassesDetailsForAdmin: {
         message: 'Create a class and enroll learners',
@@ -167,7 +167,7 @@
           "This message displays if there are no classes in the 'Classes' section. Admins can create classes and enroll learners to them. ",
       },
       noClassesDetailsForFacilityCoach: {
-        message: 'Please consult your Kolibri administrator',
+        message: 'Please consult your PHIEDU administrator',
         context:
           'If the coach has no classes assigned to them by the admin, or if they are not themselves an admin themselves, this message displays in the Coach > Classes section.',
       },

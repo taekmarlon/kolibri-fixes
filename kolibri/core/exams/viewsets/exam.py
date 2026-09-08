@@ -1,6 +1,9 @@
 import datetime
 import logging
+import os
+import uuid
 
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
@@ -8,10 +11,14 @@ from django.http import Http404
 from django.utils.timezone import now
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters.rest_framework import FilterSet
+from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.serializers import BooleanField
 from rest_framework.serializers import CharField
+from rest_framework.serializers import DictField
 from rest_framework.serializers import IntegerField
 from rest_framework.serializers import ListField
 from rest_framework.serializers import ModelSerializer
@@ -51,8 +58,28 @@ _EXAM_ONLY_FIELDS = frozenset({"active", "archive", "date_archived", "date_activ
 class QuestionSourceSerializer(Serializer):
     exercise_id = HexUUIDField(format="hex")
     question_id = HexUUIDField(format="hex")
-    title = CharField(default="", allow_blank=True)
-    counter_in_exercise = IntegerField()
+    title = CharField(default="", allow_blank=True, required=False)
+    counter_in_exercise = IntegerField(required=False)
+    is_custom = BooleanField(default=False, required=False)
+    question_type = CharField(
+        default="multiple_choice", allow_blank=True, required=False
+    )
+    prompt = CharField(default="", allow_blank=True, required=False)
+    prompt_image = CharField(default="", allow_blank=True, required=False)
+    options = ListField(child=DictField(), default=list, required=False)
+    answer_key = ListField(
+        child=CharField(allow_blank=True), default=list, required=False
+    )
+    point_value = IntegerField(default=1, required=False)
+    explanation = CharField(default="", allow_blank=True, required=False)
+    case_sensitive = BooleanField(default=False, required=False)
+
+    def validate(self, attrs):
+        if not attrs.get("is_custom") and "counter_in_exercise" not in attrs:
+            raise ValidationError({"counter_in_exercise": ["This field is required."]})
+        if attrs.get("is_custom") and "counter_in_exercise" not in attrs:
+            attrs["counter_in_exercise"] = 1
+        return attrs
 
 
 class QuizSectionSerializer(Serializer):
@@ -426,6 +453,11 @@ class DraftExamFilter(FilterSet):
 
 
 class ExamPermissions(KolibriAuthPermissions):
+    def has_permission(self, request, view):
+        if getattr(view, "action", None) in ("upload_image", "size"):
+            return request.user.is_authenticated
+        return super().has_permission(request, view)
+
     # Overrides the default validator to sanitize the Exam POST Payload
     # before validation
     def validator(self, request, view, datum):
@@ -659,8 +691,53 @@ class ExamViewset(ValuesViewset):
         exams_sizes_set = []
         for exam in list(exams) + list(draft_exams):
             quiz_nodes = ContentNode.objects.filter(
-                id__in=[question["exercise_id"] for question in exam.get_questions()]
+                id__in=[
+                    question["exercise_id"]
+                    for question in exam.get_questions()
+                    if not question.get("is_custom") and question.get("exercise_id")
+                ]
             )
             exams_sizes_set.append({exam.id: total_file_size(quiz_nodes)})
 
         return Response(exams_sizes_set)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        parser_classes=(MultiPartParser, FormParser),
+    )
+    def upload_image(self, request, **kwargs):
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        file_obj = request.FILES.get("file") or request.FILES.get("image")
+        if not file_obj:
+            return Response(
+                {"detail": "No image file provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext not in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]:
+            return Response(
+                {"detail": f"Unsupported image file extension: {ext}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if file_obj.size > 10 * 1024 * 1024:
+            return Response(
+                {"detail": "Image file size exceeds maximum limit of 10MB."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        save_dir = os.path.join(settings.MEDIA_ROOT, "custom_quiz", "images")
+        os.makedirs(save_dir, exist_ok=True)
+        image_id = uuid.uuid4().hex
+        safe_name = f"{image_id}_{os.path.basename(file_obj.name)}"
+        full_path = os.path.join(save_dir, safe_name)
+        with open(full_path, "wb+") as destination:
+            for chunk in file_obj.chunks():
+                destination.write(chunk)
+        url = f"/media/custom_quiz/images/{safe_name}"
+        return Response(
+            {"url": url, "file_name": file_obj.name}, status=status.HTTP_200_OK
+        )

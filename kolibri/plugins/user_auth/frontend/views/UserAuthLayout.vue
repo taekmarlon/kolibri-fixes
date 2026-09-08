@@ -112,7 +112,7 @@
     },
     $trs: {
       kolibriTitleMessage: {
-        message: '{ title } - Kolibri',
+        message: '{ title } - PHIEDU',
         context: 'DO NOT TRANSLATE\nCopy the source string.',
       },
       errorPageTitle: {

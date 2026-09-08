@@ -1,5 +1,6 @@
 import uuid
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils.timezone import now
 from le_utils.constants import content_kinds
@@ -843,4 +844,74 @@ class ExamDraftAPITestCase(BaseExamTest, APITestCase):
         ]
         self.exam.save()
         response = self.patch_updated_exam(self.exam.id, {"draft": False})
+        self.assertEqual(response.status_code, 400)
+
+    def test_create_custom_google_forms_exam(self):
+        self.login_as_admin()
+        exam = self.make_basic_exam()
+        custom_question = {
+            "exercise_id": uuid.uuid4().hex,
+            "question_id": uuid.uuid4().hex,
+            "title": "Custom Question 1",
+            "counter_in_exercise": 1,
+            "is_custom": True,
+            "question_type": "multiple_choice",
+            "prompt": "What is the capital of France?",
+            "prompt_image": "/media/custom_quiz/images/france.png",
+            "options": [
+                {
+                    "id": "opt_1",
+                    "text": "Paris",
+                    "image": "/media/custom_quiz/images/paris.png",
+                },
+                {"id": "opt_2", "text": "London", "image": ""},
+            ],
+            "answer_key": ["opt_1"],
+            "point_value": 5,
+            "explanation": "Paris is the capital of France.",
+            "case_sensitive": False,
+        }
+        exam["question_sources"] = [
+            {
+                "section_title": "Custom Section",
+                "description": "Custom questions section",
+                "questions": [custom_question],
+                "learners_see_fixed_order": True,
+            }
+        ]
+        response = self.post_new_exam(exam)
+        self.assertEqual(response.status_code, 201)
+        saved_sources = response.data["question_sources"]
+        self.assertEqual(len(saved_sources), 1)
+        saved_q = saved_sources[0]["questions"][0]
+        self.assertTrue(saved_q["is_custom"])
+        self.assertEqual(saved_q["question_type"], "multiple_choice")
+        self.assertEqual(saved_q["prompt"], "What is the capital of France?")
+        self.assertEqual(
+            saved_q["prompt_image"], "/media/custom_quiz/images/france.png"
+        )
+        self.assertEqual(len(saved_q["options"]), 2)
+        self.assertEqual(saved_q["options"][0]["text"], "Paris")
+        self.assertEqual(saved_q["point_value"], 5)
+        self.assertEqual(saved_q["answer_key"], ["opt_1"])
+
+    def test_upload_image_endpoint(self):
+        self.login_as_admin()
+        image_content = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4"
+        uploaded = SimpleUploadedFile(
+            "test_question.png", image_content, content_type="image/png"
+        )
+        url = reverse("kolibri:core:exam-upload-image")
+        response = self.client.post(url, {"file": uploaded}, format="multipart")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("url", response.data)
+        self.assertTrue(response.data["url"].startswith("/media/custom_quiz/images/"))
+
+    def test_upload_image_invalid_extension(self):
+        self.login_as_admin()
+        bad_file = SimpleUploadedFile(
+            "malicious.exe", b"malicious", content_type="application/octet-stream"
+        )
+        url = reverse("kolibri:core:exam-upload-image")
+        response = self.client.post(url, {"file": bad_file}, format="multipart")
         self.assertEqual(response.status_code, 400)

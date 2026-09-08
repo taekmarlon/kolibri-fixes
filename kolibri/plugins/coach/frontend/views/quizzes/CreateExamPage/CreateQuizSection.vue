@@ -71,88 +71,33 @@
       tabsId="quizSectionTabs"
       :activeTabId="String(activeSectionIndex)"
     >
-      <KGrid
-        v-if="!activeQuestions.length"
-        class="questions-list-label-row"
-      >
-        <KGridItem
-          class="right-side-heading"
-          style="padding: 0.7em 0.75em"
-        >
+      <div v-if="activeViewMode === 'builder'">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
           <KButton
-            ref="addQuestionsButton"
-            primary
-            hasDropdown
-            :text="coreString('optionsLabel')"
+            appearance="flat-button"
+            icon="back"
+            @click="activeViewMode = 'list'"
           >
-            <template #menu>
-              <KDropdownMenu
-                :primary="false"
-                :disabled="false"
-                :hasIcons="true"
-                :options="activeSectionActions"
-                @tab="$refs.addQuestionsButton.$el.focus()"
-                @close="$refs.addQuestionsButton.$el.focus()"
-                @select="handleActiveSectionAction"
-              />
-            </template>
+            {{ viewQuestionsList$() }}
           </KButton>
-        </KGridItem>
-      </KGrid>
-      <!-- TODO This should be a separate component like "empty section container" or something -->
-      <div
-        v-if="!activeQuestions.length"
-        style="max-width: 350px; padding: 0 0 1em; margin: 0 auto; text-align: center"
-      >
-        <!-- TODO This question mark thing should probably be an SVG for improved a11y -->
-        <div
-          class="question-mark-layout"
-          :style="{ backgroundColor: $themeBrand.secondary.v_100 }"
-        >
-          <span
-            class="help-icon-style"
-            :style="{ color: $themeTokens.secondaryDark }"
-          >?</span>
         </div>
-
-        <p style="margin-top: 1em; font-weight: bold">
-          {{ noQuestionsInSection$() }}
-        </p>
-
-        <p>{{ addQuizSectionQuestionsInstructions$() }}</p>
-
-        <KButton
-          primary
-          icon="plus"
-          style="margin-top: 1em"
-          @click="openSelectResources()"
-        >
-          {{ addQuestionsLabel$() }}
-        </KButton>
+        <GoogleFormsQuizEditor />
       </div>
 
-      <div v-else>
-        <KGrid class="questions-list-label-row">
-          <KGridItem
-            class="left-side-heading"
-            :layout12="{ span: 6 }"
-            :layout8="{ span: 4 }"
-            :layout4="{ span: 2 }"
-          >
-            <h2 :style="{ color: $themeTokens.annotation }">
-              {{ questionsLabel$() }}
-            </h2>
-          </KGridItem>
+      <template v-else>
+        <KGrid
+          v-if="!activeQuestions.length"
+          class="questions-list-label-row"
+        >
           <KGridItem
             class="right-side-heading"
-            :layout12="{ span: 6 }"
-            :layout8="{ span: 4 }"
-            :layout4="{ span: 2 }"
+            style="padding: 0.7em 0.75em"
           >
             <KButton
+              ref="addQuestionsButton"
               primary
-              :text="coreString('optionsLabel')"
               hasDropdown
+              :text="coreString('optionsLabel')"
             >
               <template #menu>
                 <KDropdownMenu
@@ -160,62 +105,162 @@
                   :disabled="false"
                   :hasIcons="true"
                   :options="activeSectionActions"
+                  @tab="$refs.addQuestionsButton.$el.focus()"
+                  @close="$refs.addQuestionsButton.$el.focus()"
                   @select="handleActiveSectionAction"
                 />
               </template>
             </KButton>
           </KGridItem>
         </KGrid>
-
-        <QuestionsAccordion
-          :questions="activeQuestions"
-          :selectedQuestions="selectedActiveQuestions"
-          :getQuestionContent="question => activeResourceMap[question.exercise_id]"
-          @selectQuestions="addQuestionsToSelection"
-          @deselectQuestions="removeQuestionsFromSelection"
-          @error="err => $emit('error', err)"
-          @sort="handleQuestionOrderChange"
+        <!-- TODO This should be a separate component like "empty section container" or something -->
+        <div
+          v-if="!activeQuestions.length"
+          style="max-width: 350px; padding: 0 0 1em; margin: 0 auto; text-align: center"
         >
-          <template #header-trailing-actions>
-            <KIconButton
-              icon="autoReplace"
-              :ariaLabel="autoReplaceAction$()"
-              :tooltip="autoReplaceAction$()"
-              :disabled="!isSelectedQuestionsAutoReplaceable"
-              @click="handleBulkAutoReplaceQuestionsClick"
-            />
-            <KIconButton
-              icon="refresh"
-              :ariaLabel="replaceAction$()"
-              :tooltip="replaceAction$()"
-              :disabled="selectedActiveQuestions.length === 0"
-              @click="handleBulkReplacementQuestionsClick"
-            />
-            <KIconButton
-              icon="trash"
-              :tooltip="coreString('deleteAction')"
-              :aria-label="coreString('deleteAction')"
-              :disabled="selectedActiveQuestions.length === 0"
-              @click="deleteQuestions"
-            />
-          </template>
-          <template #question-trailing-actions="{ question }">
-            <KIconButton
-              icon="autoReplace"
-              :ariaLabel="autoReplaceAction$()"
-              :tooltip="autoReplaceAction$()"
-              :disabled="!isQuestionAutoReplaceable(question)"
-              @click="handleAutoReplaceQuestionClick(question, $event)"
-            />
-            <KIconButton
-              icon="refresh"
-              :ariaLabel="replaceAction$()"
-              :tooltip="replaceAction$()"
-              @click="handleReplaceQuestionClick(question, $event)"
-            />
-          </template>
-        </QuestionsAccordion>
-      </div>
+          <!-- TODO This question mark thing should probably be an SVG for improved a11y -->
+          <div
+            class="question-mark-layout"
+            :style="{ backgroundColor: $themeBrand.secondary.v_100 }"
+          >
+            <span
+              class="help-icon-style"
+              :style="{ color: $themeTokens.secondaryDark }"
+            >?</span>
+          </div>
+
+          <p style="margin-top: 1em; font-weight: bold">
+            {{ noQuestionsInSection$() }}
+          </p>
+
+          <p>{{ addQuizSectionQuestionsInstructions$() }}</p>
+
+          <div style="display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 1.5em;">
+            <KButton
+              primary
+              icon="plus"
+              appearance="raised-button"
+              style="min-width: 280px;"
+              @click="openCustomQuestionBuilder"
+            >
+              {{ addCustomQuestionAction$() }}
+            </KButton>
+            <KButton
+              appearance="flat-button"
+              icon="channel"
+              style="min-width: 280px;"
+              @click="openSelectResources()"
+            >
+              {{ addQuestionsLabel$() }}
+            </KButton>
+          </div>
+        </div>
+
+        <div v-else>
+          <KGrid class="questions-list-label-row">
+            <KGridItem
+              class="left-side-heading"
+              :layout12="{ span: 6 }"
+              :layout8="{ span: 4 }"
+              :layout4="{ span: 2 }"
+            >
+              <h2 :style="{ color: $themeTokens.annotation }">
+                {{ questionsLabel$() }}
+              </h2>
+            </KGridItem>
+            <KGridItem
+              class="right-side-heading"
+              :layout12="{ span: 6 }"
+              :layout8="{ span: 4 }"
+              :layout4="{ span: 2 }"
+              style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;"
+            >
+              <KButton
+                v-if="hasCustomQuestions"
+                :appearance="activeViewMode === 'builder' ? 'raised-button' : 'flat-button'"
+                :primary="activeViewMode === 'builder'"
+                icon="edit"
+                @click="toggleViewMode"
+              >
+                {{ activeViewMode === 'builder' ? viewQuestionsList$() : editCustomQuestions$() }}
+              </KButton>
+              <KButton
+                v-else
+                appearance="raised-button"
+                :primary="true"
+                icon="plus"
+                @click="openCustomQuestionBuilder"
+              >
+                {{ addCustomQuestionAction$() }}
+              </KButton>
+              <KButton
+                primary
+                :text="coreString('optionsLabel')"
+                hasDropdown
+              >
+                <template #menu>
+                  <KDropdownMenu
+                    :primary="false"
+                    :disabled="false"
+                    :hasIcons="true"
+                    :options="activeSectionActions"
+                    @select="handleActiveSectionAction"
+                  />
+                </template>
+              </KButton>
+            </KGridItem>
+          </KGrid>
+
+          <QuestionsAccordion
+            :questions="activeQuestions"
+            :selectedQuestions="selectedActiveQuestions"
+            :getQuestionContent="question => activeResourceMap[question.exercise_id]"
+            @selectQuestions="addQuestionsToSelection"
+            @deselectQuestions="removeQuestionsFromSelection"
+            @error="err => $emit('error', err)"
+            @sort="handleQuestionOrderChange"
+          >
+            <template #header-trailing-actions>
+              <KIconButton
+                icon="autoReplace"
+                :ariaLabel="autoReplaceAction$()"
+                :tooltip="autoReplaceAction$()"
+                :disabled="!isSelectedQuestionsAutoReplaceable"
+                @click="handleBulkAutoReplaceQuestionsClick"
+              />
+              <KIconButton
+                icon="refresh"
+                :ariaLabel="replaceAction$()"
+                :tooltip="replaceAction$()"
+                :disabled="selectedActiveQuestions.length === 0"
+                @click="handleBulkReplacementQuestionsClick"
+              />
+              <KIconButton
+                icon="trash"
+                :tooltip="coreString('deleteAction')"
+                :aria-label="coreString('deleteAction')"
+                :disabled="selectedActiveQuestions.length === 0"
+                @click="deleteQuestions"
+              />
+            </template>
+            <template #question-trailing-actions="{ question }">
+              <KIconButton
+                icon="autoReplace"
+                :ariaLabel="autoReplaceAction$()"
+                :tooltip="autoReplaceAction$()"
+                :disabled="!isQuestionAutoReplaceable(question)"
+                @click="handleAutoReplaceQuestionClick(question, $event)"
+              />
+              <KIconButton
+                icon="refresh"
+                :ariaLabel="replaceAction$()"
+                :tooltip="replaceAction$()"
+                @click="handleReplaceQuestionClick(question, $event)"
+              />
+            </template>
+          </QuestionsAccordion>
+        </div>
+      </template>
     </KTabsPanel>
 
     <KModal
@@ -251,8 +296,25 @@
   import { injectQuizCreation } from '../../../composables/useQuizCreation';
   import commonCoach from '../../common';
   import { PageNames } from '../../../constants';
+  import { createTranslator } from 'kolibri/utils/i18n';
   import QuestionsAccordion from '../../common/QuestionsAccordion.vue';
   import TabsWithOverflow from './TabsWithOverflow';
+  import GoogleFormsQuizEditor from './GoogleFormsQuizEditor';
+
+  const customSectionStrings = createTranslator('CreateQuizSectionCustomStrings', {
+    addCustomQuestionAction: {
+      message: 'Create Custom Question (Google Forms)',
+      context: 'Button label to open custom question builder',
+    },
+    editCustomQuestions: {
+      message: 'Google Forms Editor',
+      context: 'Button to switch to Google Forms builder',
+    },
+    viewQuestionsList: {
+      message: 'View Questions List',
+      context: 'Button to switch to list view',
+    },
+  });
 
   const logger = logging.getLogger(__filename);
 
@@ -261,9 +323,15 @@
     components: {
       TabsWithOverflow,
       QuestionsAccordion,
+      GoogleFormsQuizEditor,
     },
     mixins: [commonCoreStrings, commonCoach],
     setup() {
+      const {
+        addCustomQuestionAction$,
+        editCustomQuestions$,
+        viewQuestionsList$,
+      } = customSectionStrings;
       const {
         addSectionLabel$,
         quizSectionsLabel$,
@@ -321,6 +389,9 @@
         sectionDeletedNotification$,
         deleteConfirmation$,
         questionsDeletedNotification$,
+        addCustomQuestionAction$,
+        editCustomQuestions$,
+        viewQuestionsList$,
 
         addQuestionsToSelection,
         removeQuestionsFromSelection,
@@ -347,9 +418,13 @@
     data() {
       return {
         showDeleteConfirmation: false,
+        activeViewMode: 'list',
       };
     },
     computed: {
+      hasCustomQuestions() {
+        return (this.activeQuestions || []).some(q => q.is_custom);
+      },
       tabsWrapperStyles() {
         return {
           paddingTop: '1rem',
@@ -390,8 +465,14 @@
             id: 'delete',
           },
           {
-            label: addQuestionsLabel,
+            label: this.addCustomQuestionAction$(),
             icon: 'plus',
+            id: 'custom_question',
+            disabled: this.activeQuestions.length >= MAX_QUESTIONS_PER_QUIZ_SECTION,
+          },
+          {
+            label: addQuestionsLabel,
+            icon: 'channel',
             id: 'plus',
             disabled: this.activeQuestions.length >= MAX_QUESTIONS_PER_QUIZ_SECTION,
           },
@@ -515,6 +596,9 @@
           case 'delete':
             this.showDeleteConfirmation = true;
             break;
+          case 'custom_question':
+            this.openCustomQuestionBuilder();
+            break;
           case 'plus':
             this.$router.push({
               name: PageNames.QUIZ_SELECT_RESOURCES,
@@ -589,6 +673,12 @@
           question.exercise_id &&
           this.activeExercisesUnusedQuestionsMap[question.exercise_id].length > 0
         );
+      },
+      openCustomQuestionBuilder() {
+        this.activeViewMode = 'builder';
+      },
+      toggleViewMode() {
+        this.activeViewMode = this.activeViewMode === 'builder' ? 'list' : 'builder';
       },
     },
   };

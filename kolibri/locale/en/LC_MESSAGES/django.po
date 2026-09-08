@@ -299,15 +299,15 @@ msgid "Waiting"
 msgstr ""
 
 #: core/templates/kolibri/loading_page.html:8
-msgid "Kolibri is starting"
+msgid "PHIEDU is starting"
 msgstr ""
 
 #: core/templates/kolibri/loading_page.html:87
-msgid "Starting Kolibri"
+msgid "Starting PHIEDU"
 msgstr ""
 
 #: core/templates/kolibri/loading_page.html:89
-msgid "You should be automatically redirected when Kolibri is ready"
+msgid "You should be automatically redirected when PHIEDU is ready"
 msgstr ""
 
 #: core/templates/kolibri/loading_page.html:90
@@ -327,7 +327,7 @@ msgid "Sorry, your browser version is not supported."
 msgstr ""
 
 #: core/templates/kolibri/unsupported_browser.html:44
-msgid "To use Kolibri, we recommend using Firefox or Chrome."
+msgid "To use PHIEDU, we recommend using Firefox or Chrome."
 msgstr ""
 
 #: core/templates/kolibri/unsupported_browser.html:45
@@ -335,7 +335,7 @@ msgid "You can also try updating your current browser."
 msgstr ""
 
 #: core/templatetags/core_tags.py:69
-msgid "Kolibri"
+msgid "PHIEDU"
 msgstr ""
 
 #: core/views.py:196

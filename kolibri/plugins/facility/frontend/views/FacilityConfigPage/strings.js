@@ -74,4 +74,26 @@ export default createTranslator('FacilityConfigPage', {
     message: 'PIN',
     context: 'Placeholder label for a PIN input',
   },
+  facilityThemeHeading: {
+    message: 'School & Facility Theme Branding',
+    context: 'Section heading for customizing facility theme and school branding',
+  },
+  facilityThemeSubtext: {
+    message:
+      'Customize the school header, emblem or logo, color scheme, and sign-in portal greeting for learners and teachers in this facility.',
+    context: 'Description for facility theme section',
+  },
+  customizeThemeButton: {
+    message: 'Customize School Theme & Branding',
+    context: 'Button label to open theme customization modal',
+  },
+  defaultThemeSubtext: {
+    message:
+      'Default theme applied. Click customize to set your school logo, custom header, and colors.',
+    context: 'Helper text when default theme is active',
+  },
+  themeSavedSuccess: {
+    message: 'School theme and branding updated successfully',
+    context: 'Snackbar message when theme is saved',
+  },
 });

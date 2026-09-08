@@ -100,6 +100,7 @@ INSTALLED_APPS = [
     "kolibri.core.attendance",
     "kolibri.core.coursework",
     "kolibri.core.ai.apps.KolibriAiConfig",
+    "kolibri.core.chat",
     "rest_framework",
     "django_js_reverse",
     "jsonfield",

@@ -26,6 +26,7 @@
     </div>
 
     <GlobalSnackbar />
+    <FloatingChatWidget v-if="isUserLoggedIn" />
     <UpdateNotification
       v-if="!loading && showNotification && mostRecentNotification"
       :title="mostRecentNotification.title"
@@ -48,6 +49,7 @@
   import AppBarPage from 'kolibri/components/pages/AppBarPage';
   import AppError from 'kolibri/components/error/AppError';
   import GlobalSnackbar from 'kolibri/components/GlobalSnackbar';
+  import FloatingChatWidget from '../../chat/FloatingChatWidget';
   import useUser from 'kolibri/composables/useUser';
   import { error, handleApiError } from 'kolibri/utils/appError';
   import PingbackNotificationDismissedResource from './internal/PingbackNotificationDismissedResource';
@@ -62,13 +64,15 @@
       AuthMessage,
       GlobalSnackbar,
       UpdateNotification,
+      FloatingChatWidget,
     },
     setup() {
-      const { isAdmin, currentUserId } = useUser();
+      const { isAdmin, currentUserId, isUserLoggedIn } = useUser();
 
       return {
         isAdmin,
         currentUserId,
+        isUserLoggedIn,
         error,
         handleApiError,
       };

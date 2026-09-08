@@ -39,6 +39,18 @@
                 >
                   {{ logoText }}
                 </h1>
+                <p
+                  v-if="themeConfig.signIn.subtext"
+                  class="facility-sign-in-subtext"
+                  :style="{
+                    color: $themeTokens.annotation,
+                    margin: '4px 0 16px',
+                    fontSize: '14px',
+                    textAlign: 'center',
+                  }"
+                >
+                  {{ themeConfig.signIn.subtext }}
+                </p>
               </div>
             </div>
 
@@ -234,6 +246,7 @@
   import urls from 'kolibri/urls';
   import plugin_data from 'kolibri-plugin-data';
   import useUser from 'kolibri/composables/useUser';
+  import useFacilityTheme from 'kolibri-common/composables/useFacilityTheme';
   import useAuthFlow from '../composables/useAuthFlow';
   import useAuthRouter from '../composables/useAuthRouter';
   import LanguageSwitcherFooter from './LanguageSwitcherFooter';
@@ -245,6 +258,7 @@
     components: { CoreLogo, LanguageSwitcherFooter, PrivacyInfoModal, DeviceUnusableMessage },
     mixins: [commonCoreStrings, commonUserStrings],
     setup(props) {
+      useFacilityTheme();
       const route = useRoute();
       const { nextParam, pictureSignInRoute, usernameSignInRoute, signUpRoute } =
         useAuthRouter(route);
@@ -391,31 +405,30 @@
       },
       oidcGenericExplanation: {
         message:
-          'Kolibri is an e-learning platform. You can also use your Kolibri account to log in to some third-party applications.',
-        context: 'Generic explanation about Kolibri.',
+          'PHIEDU is an e-learning platform. You can also use your PHIEDU account to log in to some third-party applications.',
+        context: 'Generic explanation about PHIEDU.',
       },
       // eslint-disable-next-line kolibri/vue-no-unused-translations
       oidcSpecificExplanation: {
         message:
-          "You were sent here from the application '{app_name}'. Kolibri is an e-learning platform, and you can also use your Kolibri account to access '{app_name}'.",
+          "You were sent here from the application '{app_name}'. PHIEDU is an e-learning platform, and you can also use your PHIEDU account to access '{app_name}'.",
         context:
-          'Explanation of Kolibri that a user sees if they are sent to Kolibri from a different application.',
+          'Explanation of PHIEDU that a user sees if they are sent to PHIEDU from a different application.',
       },
       poweredBy: {
-        message: 'Kolibri {version}',
-        context:
-          'Indicates the current version of Kolibri.\n\nFor languages with non-latin scripts, Kolibri should be transcribed phonetically into the target language, similar to a person\'s name. It should not be translated as "hummingbird".',
+        message: 'PHIEDU {version}',
+        context: 'Indicates the current version of PHIEDU.',
       },
       poweredByKolibri: {
-        message: 'Powered by Kolibri',
-        context: 'Indicates that Kolibri is the technology behind this application.',
+        message: 'Powered by PHIEDU',
+        context: 'Indicates that PHIEDU is the technology behind this application.',
       },
       whatsThis: {
         message: "What's this?",
         context: 'Link with explanation of the authentication process.',
       },
       restrictedAccess: {
-        message: 'Access to Kolibri has been restricted for external devices',
+        message: 'Access to PHIEDU has been restricted for external devices',
         context: 'Error message description.',
       },
       restrictedAccessDescription: {

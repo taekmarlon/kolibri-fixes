@@ -1,17 +1,32 @@
 import useFacilities from 'kolibri-common/composables/useFacilities';
+import { useFacilitySelect } from 'kolibri-common/composables/useFacility';
 import { pageLoading } from 'kolibri-common/composables/usePageLoading';
 
 export function classIdParamRequiredGuard(toRoute, subtopicName, next) {
   if (!toRoute.params.classId) {
     const { userIsMultiFacilityAdmin } = useFacilities();
-    const redirectPage = userIsMultiFacilityAdmin.value
-      ? 'AllFacilitiesPage'
-      : 'CoachClassListPage';
+    const { selectedFacilityId } = useFacilitySelect();
+    const activeFacilityId =
+      toRoute.params.facility_id ||
+      selectedFacilityId.value ||
+      (typeof window !== 'undefined' && window.localStorage
+        ? window.localStorage.getItem('facilityId')
+        : null);
 
-    next({
-      name: redirectPage,
-      params: { subtopicName },
-    });
+    if (userIsMultiFacilityAdmin.value && !activeFacilityId) {
+      next({
+        name: 'AllFacilitiesPage',
+        params: { subtopicName },
+      });
+    } else {
+      next({
+        name: 'CoachClassListPage',
+        params: {
+          subtopicName,
+          ...(activeFacilityId ? { facility_id: activeFacilityId } : {}),
+        },
+      });
+    }
     pageLoading.value = false;
     return true;
   }

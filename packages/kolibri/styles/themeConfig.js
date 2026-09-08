@@ -4,6 +4,8 @@ const themeConfig = Vue.observable({
   appBar: {
     background: null,
     textColor: null,
+    headerTitle: null,
+    primaryColor: null,
     topLogo: {
       src: null,
       alt: null,
@@ -17,6 +19,7 @@ const themeConfig = Vue.observable({
       style: null,
     },
     title: null,
+    subtext: null,
     showTitle: null,
     titleStyle: null,
     showPoweredBy: null,

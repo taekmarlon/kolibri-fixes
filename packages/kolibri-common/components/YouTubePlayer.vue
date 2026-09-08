@@ -72,7 +72,7 @@ import { createTranslator } from 'kolibri/utils/i18n';
 
 const strings = createTranslator('YouTubePlayerStrings', {
   videoTitleText: { message: 'Video Resource', context: 'Fallback title for video' },
-  nativePlayerLabel: { message: 'Native In-Kolibri Player', context: 'Badge label' },
+  nativePlayerLabel: { message: 'Native In-PHIEDU Player', context: 'Badge label' },
   fullscreenLabel: { message: 'Fullscreen', context: 'Button label' },
   exitFullscreenLabel: { message: 'Exit Fullscreen', context: 'Tooltip' },
   enterFullscreenLabel: { message: 'Enter Fullscreen', context: 'Tooltip' },

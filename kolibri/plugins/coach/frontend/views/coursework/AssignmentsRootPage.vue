@@ -342,7 +342,7 @@ const strings = createTranslator('CoachAssignmentsStrings', {
   assignmentInstructionsLabel: { message: 'Instructions & Notes', context: 'Input label' },
   youtubeUrlLabel: { message: 'YouTube Video Link (Optional)', context: 'Input label' },
   youtubeUrlPlaceholder: { message: 'e.g. https://www.youtube.com/watch?v=...', context: 'Placeholder' },
-  youtubeHelpText: { message: 'Learners can watch this video natively inside Kolibri without leaving the platform.', context: 'Helper note' },
+  youtubeHelpText: { message: 'Learners can watch this video natively inside PHIEDU without leaving the platform.', context: 'Helper note' },
   maxPointsLabel: { message: 'Max Points', context: 'Input label' },
   dueDateLabel: { message: 'Due Date', context: 'Input label' },
   allowTextLabel: { message: 'Allow written text submission', context: 'Checkbox' },

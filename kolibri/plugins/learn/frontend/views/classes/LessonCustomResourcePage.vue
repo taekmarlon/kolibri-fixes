@@ -143,7 +143,27 @@
           ></iframe>
         </div>
 
-        <!-- 5. AI Generated Study Guide / Markdown Notes -->
+        <!-- 5. Standalone Content Card (Banner Image + Formatted Content) -->
+        <div
+          v-else-if="resource.resource_type === 'content_card'"
+          class="content-card-box viewer-wrapper"
+        >
+          <div
+            v-if="resource.file_url"
+            class="card-banner-box"
+          >
+            <img
+              :src="resource.file_url"
+              :alt="resource.title"
+              class="card-banner-image"
+            >
+          </div>
+          <div class="card-text-body">
+            <AiMessageRenderer :content="resource.content" />
+          </div>
+        </div>
+
+        <!-- 6. AI Generated Study Guide / Markdown Notes -->
         <div
           v-else-if="resource.resource_type === 'ai_text' || resource.content"
           class="ai-box viewer-wrapper"
@@ -304,6 +324,7 @@
         if (type === 'youtube') return 'video';
         if (type === 'image') return 'image';
         if (type === 'html5') return 'html5';
+        if (type === 'content_card') return 'topic';
         if (type === 'ai_text') return 'hint';
         return 'document';
       });
@@ -315,6 +336,7 @@
         if (type === 'pdf') return 'PDF DOCUMENT';
         if (type === 'image') return 'PICTURE / DIAGRAM';
         if (type === 'html5') return 'HTML5 SIMULATION';
+        if (type === 'content_card') return 'CONTENT CARD';
         if (type === 'ai_text') return 'AI STUDY GUIDE';
         return 'DOCUMENT';
       });
@@ -560,6 +582,28 @@
       width: 100%;
       height: 720px;
       border: 0;
+    }
+  }
+
+  .content-card-box {
+    padding: 28px;
+
+    .card-banner-box {
+      margin-bottom: 24px;
+      text-align: center;
+
+      .card-banner-image {
+        max-width: 100%;
+        max-height: 480px;
+        object-fit: cover;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+    }
+
+    .card-text-body {
+      font-size: 1.05rem;
+      line-height: 1.7;
     }
   }
 

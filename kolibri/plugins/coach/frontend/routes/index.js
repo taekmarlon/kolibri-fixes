@@ -4,7 +4,7 @@ import { handleApiError } from 'kolibri/utils/appError';
 import useUser from 'kolibri/composables/useUser';
 import { get } from '@vueuse/core';
 import useFacilities from 'kolibri-common/composables/useFacilities';
-import useFacility from 'kolibri-common/composables/useFacility';
+import useFacility, { useFacilitySelect } from 'kolibri-common/composables/useFacility';
 import plugin_data from 'kolibri-plugin-data';
 import { pageLoading } from 'kolibri-common/composables/usePageLoading';
 import AllFacilitiesPage from '../views/AllFacilitiesPage';
@@ -67,6 +67,7 @@ export default [
     },
   },
   {
+    name: 'CoachClassListPage',
     path: '/:facility_id?/classes/:subtopicName?',
     component: CoachClassListPage,
     props: true,
@@ -77,18 +78,38 @@ export default [
       // but always defaulting to userFacilityId would cause problems for multi-facility admins
       const { userFacilityId } = useUser();
       const { facilities, fetchFacilities, userIsMultiFacilityAdmin } = useFacilities();
+      const { selectedFacilityId, setSelectedFacilityId } = useFacilitySelect();
       const { setFacilityId } = useFacility();
-      const facilityId = toRoute.params.facility_id || get(userFacilityId);
+      const facilityId =
+        toRoute.params.facility_id ||
+        selectedFacilityId.value ||
+        (typeof window !== 'undefined' && window.localStorage
+          ? window.localStorage.getItem('facilityId')
+          : null) ||
+        get(userFacilityId);
 
       if (facilities.value.length === 0) {
         await fetchFacilities();
       }
 
-      if (userIsMultiFacilityAdmin.value && !toRoute.params.facility_id) {
+      if (userIsMultiFacilityAdmin.value && !facilityId) {
         return router.replace({
           name: 'AllFacilitiesPage',
           params: { subtopicName: toRoute.params.subtopicName },
         });
+      }
+
+      if (facilityId) {
+        setSelectedFacilityId(facilityId);
+        if (!toRoute.params.facility_id && userIsMultiFacilityAdmin.value) {
+          return router.replace({
+            name: 'CoachClassListPage',
+            params: {
+              ...toRoute.params,
+              facility_id: facilityId,
+            },
+          });
+        }
       }
 
       await setFacilityId(facilityId);
@@ -162,13 +183,24 @@ export default [
   },
   {
     path: '/',
-    // Redirect to AllFacilitiesPage if a superuser and device has > 1 facility
+    // Redirect to AllFacilitiesPage if a superuser and device has > 1 facility and no active facility
     beforeEnter(to, from, next) {
       const { userIsMultiFacilityAdmin } = useFacilities();
-      if (userIsMultiFacilityAdmin.value) {
+      const { selectedFacilityId } = useFacilitySelect();
+      const facilityId =
+        selectedFacilityId.value ||
+        (typeof window !== 'undefined' && window.localStorage
+          ? window.localStorage.getItem('facilityId')
+          : null);
+
+      if (userIsMultiFacilityAdmin.value && !facilityId) {
         next({ name: 'AllFacilitiesPage', replace: true });
       } else {
-        next({ name: 'CoachClassListPage', replace: true });
+        next({
+          name: 'CoachClassListPage',
+          params: facilityId ? { facility_id: facilityId } : {},
+          replace: true,
+        });
       }
     },
   },

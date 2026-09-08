@@ -57,7 +57,16 @@ def theme_favicon():
         favicon_urls[0] if favicon_urls else static("assets/favicons/logo.ico")
     )
 
-    return format_html('<link rel="shortcut icon" href="{}">', favicon_url)
+    svg_url = static("assets/favicons/logo.svg")
+
+    return format_html(
+        '<link rel="icon" type="image/svg+xml" href="{}">\n'
+        '  <link rel="alternate icon" type="image/x-icon" href="{}">\n'
+        '  <link rel="shortcut icon" href="{}">',
+        svg_url,
+        favicon_url,
+        favicon_url,
+    )
 
 
 @register.simple_tag()
@@ -67,4 +76,4 @@ def site_title():
     default will be returned. The site title may be translated, to allow for
     transliteration into other alphabets where needed.
     """
-    return ThemeHook.get_theme().get("siteTitle", _("Kolibri"))
+    return ThemeHook.get_theme().get("siteTitle", _("PHIEDU"))

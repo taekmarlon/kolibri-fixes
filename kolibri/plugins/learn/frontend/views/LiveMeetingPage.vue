@@ -89,7 +89,7 @@
                     :style="{ color: isClassLive(classroom.id) ? '#166534' : '#64748b' }"
                     style="font-size: 12px; margin-top: 2px;"
                   >
-                    {{ isClassLive(classroom.id) ? 'Your teacher is in this room right now. Click to join!' : `Room ID: kolibri_class_${classroom.id}` }}
+                    {{ isClassLive(classroom.id) ? 'Your teacher is in this room right now. Click to join!' : `Room ID: phiedu_class_${classroom.id}` }}
                   </div>
                 </div>
               </div>
@@ -99,7 +99,7 @@
                 appearance="raised-button"
                 icon="openNewTab"
                 :style="isClassLive(classroom.id) ? { backgroundColor: '#16a34a', color: '#ffffff', fontWeight: 'bold' } : {}"
-                @click="joinSpecificRoom(`kolibri_class_${classroom.id}`, `${classroom.name} — Live Class`)"
+                @click="joinSpecificRoom(`phiedu_class_${classroom.id}`, `${classroom.name} — Live Class`)"
               />
             </div>
           </div>
@@ -224,6 +224,7 @@
   import useLiveMeeting from 'kolibri-common/composables/useLiveMeeting';
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
   import useUser from 'kolibri/composables/useUser';
+  import { buildLiveMeetingUrl } from 'kolibri-common/utils/liveMeeting';
   import { LearnerClassroomResource } from '../apiResources';
   import commonLearnStrings from './commonLearnStrings';
   import LearnAppBarPage from './LearnAppBarPage';
@@ -348,19 +349,19 @@
         if (!roomInput.value.trim()) {
           if (enrolledClassrooms.value && enrolledClassrooms.value.length > 0) {
             const firstClass = enrolledClassrooms.value[0];
-            joinSpecificRoom(`kolibri_class_${firstClass.id}`, `${firstClass.name} — Live Class`);
+            joinSpecificRoom(`phiedu_class_${firstClass.id}`, `${firstClass.name} — Live Class`);
             return;
           }
           generateRandomRoom();
         }
         roomError.value = '';
-        const cleanName = `kolibri_${roomInput.value.trim().replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+        const cleanName = `phiedu_${roomInput.value.trim().replace(/[^a-zA-Z0-9-_]/g, '_')}`;
         joinSpecificRoom(cleanName, roomInput.value.trim());
       }
 
       function generateRandomRoom() {
-        const randomId = generateRoomId('kolibri_room');
-        roomInput.value = randomId.replace('kolibri_', '');
+        const randomId = generateRoomId('phiedu_room');
+        roomInput.value = randomId.replace('phiedu_', '');
         roomError.value = '';
       }
 
@@ -370,8 +371,12 @@
           title: title || roomId,
         });
         const cleanName = roomId.replace(/[^a-zA-Z0-9-_]/g, '_');
-        const displayName = encodeURIComponent(userDisplayName.value);
-        const directUrl = `https://meet.jit.si/${cleanName}#userInfo.displayName="${displayName}"&config.prejoinPageEnabled=false&config.startWithAudioMuted=false`;
+        const directUrl = buildLiveMeetingUrl({
+          roomName: cleanName,
+          displayName: userDisplayName.value,
+          subject: title || 'PHIEDU Live Class',
+          startWithAudioMuted: false,
+        });
         window.open(directUrl, '_blank');
       }
 

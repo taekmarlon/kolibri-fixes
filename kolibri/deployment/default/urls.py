@@ -17,9 +17,11 @@ Including another URLconf
 
 """
 
+from django.templatetags.static import static
 from django.urls import include
 from django.urls import path
 from django.urls import re_path
+from django.views.generic.base import RedirectView
 from morango import urls as morango_urls
 
 from kolibri.plugins.utils.urls import get_root_urls
@@ -36,4 +38,10 @@ url_patterns_prefixed = [
     re_path(r"", include(get_root_urls())),
 ]
 
-urlpatterns = [path(path_prefix, include(url_patterns_prefixed))]
+urlpatterns = [
+    re_path(
+        r"^favicon\.ico$",
+        RedirectView.as_view(url=static("assets/favicons/logo.ico"), permanent=False),
+    ),
+    path(path_prefix, include(url_patterns_prefixed)),
+]

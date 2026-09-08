@@ -101,6 +101,42 @@ export const QuizQuestion = {
     type: Number,
     default: 0,
   },
+  is_custom: {
+    type: Boolean,
+    default: false,
+  },
+  question_type: {
+    type: String,
+    default: 'multiple_choice',
+  },
+  prompt: {
+    type: String,
+    default: '',
+  },
+  prompt_image: {
+    type: String,
+    default: '',
+  },
+  options: {
+    type: Array,
+    default: () => [],
+  },
+  answer_key: {
+    type: Array,
+    default: () => [],
+  },
+  point_value: {
+    type: Number,
+    default: 1,
+  },
+  explanation: {
+    type: String,
+    default: '',
+  },
+  case_sensitive: {
+    type: Boolean,
+    default: false,
+  },
 };
 
 /**

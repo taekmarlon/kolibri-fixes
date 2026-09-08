@@ -72,7 +72,7 @@
           <router-link
             v-if="linkActive"
             v-slot="{ href, navigate, isActive }"
-            :to="{ name: subRoute.name, params: $route.params, query: $route.query }"
+            :to="subRouteTo(subRoute)"
           >
             <a
               class="link"
@@ -225,6 +225,19 @@
           this.$emit('toggleMenu');
         }
         return true;
+      },
+      subRouteTo(subRoute) {
+        if (subRoute.href && subRoute.href.includes('#')) {
+          const hashPath = subRoute.href.slice(subRoute.href.indexOf('#') + 1);
+          if (hashPath) {
+            return hashPath;
+          }
+        }
+        return {
+          name: subRoute.name,
+          params: this.$route ? this.$route.params : {},
+          query: this.$route ? this.$route.query : {},
+        };
       },
       conditionalEmit() {
         if (this.disabled || this.link) {

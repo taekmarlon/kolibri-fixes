@@ -142,6 +142,7 @@
     setResumableContentNodes,
   } from '../../composables/useLearnerResources';
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
+  import { buildLiveMeetingUrl } from 'kolibri-common/utils/liveMeeting';
   import { setContentNodeProgress } from '../../composables/useContentNodeProgress';
   import { inClasses } from '../../composables/useCoreLearn';
   import { PageNames, ClassesPageNames } from '../../constants';
@@ -217,9 +218,16 @@
       function joinLiveMeeting(classId) {
         const studentName =
           (full_name && full_name.value) || (username && username.value) || 'Student';
-        const name = encodeURIComponent(studentName);
-        const roomName = `kolibri_class_${classId}`;
-        const directUrl = `https://meet.jit.si/${roomName}#userInfo.displayName="${name}"&config.startWithAudioMuted=true&config.prejoinPageEnabled=false`;
+        const roomName = `phiedu_class_${classId}`;
+        const targetClass = (get(classes) || []).find(c => c.id === classId);
+        const subject =
+          targetClass && targetClass.name ? `${targetClass.name} — Live Class` : 'PHIEDU Live Class';
+        const directUrl = buildLiveMeetingUrl({
+          roomName,
+          displayName: studentName,
+          subject,
+          startWithAudioMuted: true,
+        });
         window.open(directUrl, '_blank');
       }
 

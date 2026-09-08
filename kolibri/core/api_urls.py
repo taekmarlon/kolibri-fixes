@@ -28,5 +28,6 @@ urlpatterns = [
     re_path(r"^attendance/", include("kolibri.core.attendance.api_urls")),
     re_path(r"^coursework/", include("kolibri.core.coursework.api_urls")),
     re_path(r"^ai/", include("kolibri.core.ai.api_urls")),
+    re_path(r"^chat/", include("kolibri.core.chat.api_urls")),
     re_path(r"^public/", include("kolibri.core.public.api_urls")),
 ]
