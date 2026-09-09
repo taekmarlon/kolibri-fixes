@@ -104,6 +104,15 @@ OPTEOF
 echo "==> options.ini configured:"
 cat /root/.kolibri/options.ini
 
+echo "==> Running migrations..."
+kolibri manage migrate --noinput || true
+
+echo "==> Collecting static assets..."
+kolibri manage collectstatic --noinput || true
+
+echo "==> Syncing AI tutor configuration and facility theme..."
+python /app/build_tools/sync_render_init.py || true
+
 echo "==> Starting nginx..."
 nginx
 
@@ -117,6 +126,11 @@ RUN chmod +x /start.sh
 ENV KOLIBRI_RUN_MODE=prod
 ENV KOLIBRI_LISTEN_ADDRESS=0.0.0.0
 ENV KOLIBRI_ZIP_CONTENT_ORIGIN=https://lms-online-qvbg.onrender.com
+
+# AI Tutor Configuration for Render
+ENV KOLIBRI_AI_PROVIDER=gemini
+ENV KOLIBRI_AI_MODEL=gemini-3.5-flash-lite
+ENV KOLIBRI_AI_ENABLED=true
 
 # Render exposes only one port (8080) — nginx listens here and proxies internally
 EXPOSE 8080

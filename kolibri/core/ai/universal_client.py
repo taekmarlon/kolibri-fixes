@@ -92,20 +92,47 @@ def get_ai_config():
 
     extra_settings = get_device_setting("extra_settings") or {}
 
-    provider = extra_settings.get("ai_provider", "gemini") or "gemini"
+    provider = (
+        os.environ.get("KOLIBRI_AI_PROVIDER")
+        or extra_settings.get("ai_provider", "gemini")
+        or "gemini"
+    )
     preset = PROVIDER_PRESETS.get(provider, PROVIDER_PRESETS["gemini"])
-
-    enabled = bool(extra_settings.get("ai_tutor_enabled", False))
 
     # Check key: database override first, then environment variable
     api_key = extra_settings.get("ai_api_key", "")
-    if not api_key and preset.get("env_var"):
-        api_key = os.environ.get(preset["env_var"], "") or os.environ.get(
-            "GEMINI_API_KEY", ""
+    if not api_key:
+        api_key = (
+            os.environ.get(preset.get("env_var", ""), "")
+            or os.environ.get("GEMINI_API_KEY", "")
+            or os.environ.get("AI_API_KEY", "")
         )
 
-    api_url = extra_settings.get("ai_api_url", "") or preset["default_url"]
-    model_name = extra_settings.get("ai_model_name", "") or preset["default_model"]
+    # Enable if explicitly set in extra_settings, or if KOLIBRI_AI_ENABLED env var is true,
+    # or if an API key is available and ai_tutor_enabled is not explicitly False
+    env_ai_enabled = os.environ.get("KOLIBRI_AI_ENABLED", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    db_ai_enabled = extra_settings.get("ai_tutor_enabled", None)
+    if db_ai_enabled is True:
+        enabled = True
+    elif db_ai_enabled is False:
+        enabled = env_ai_enabled
+    else:
+        enabled = env_ai_enabled or bool(api_key)
+
+    api_url = (
+        extra_settings.get("ai_api_url", "")
+        or os.environ.get("KOLIBRI_AI_API_URL", "")
+        or preset["default_url"]
+    )
+    model_name = (
+        extra_settings.get("ai_model_name", "")
+        or os.environ.get("KOLIBRI_AI_MODEL", "")
+        or preset["default_model"]
+    )
     system_prompt = extra_settings.get("ai_system_prompt", "") or DEFAULT_SYSTEM_PROMPT
 
     return {
