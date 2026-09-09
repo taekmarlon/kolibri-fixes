@@ -129,8 +129,10 @@
               </div>
             </span>
             <!-- Facility Indicator Pill (Super Admin / Admin indicator & switcher) -->
+            <!-- Only shown to admins/superusers — coaches & learners see their
+                 facility name in the left header via displaySchoolTitle already. -->
             <button
-              v-if="isUserLoggedIn && activeFacilityName"
+              v-if="isUserLoggedIn && activeFacilityName && (isSuperuser || isAdmin)"
               ref="facilityPill"
               type="button"
               class="facility-indicator-pill"
@@ -288,6 +290,13 @@
       );
 
       const activeFacilityName = computed(() => {
+        // Non-switchers (coaches, learners, single-facility admins) must always
+        // display their own facility — never a stale value left in localStorage
+        // by a previous super-admin session.
+        if (!isSuperuser.value && !isAdmin.value) {
+          return userFacilityName.value || (facilities.value.length > 0 ? facilities.value[0].name : '');
+        }
+        // Super-admins / multi-facility admins may have a persisted selection.
         if (selectedFacilityName.value) {
           return selectedFacilityName.value;
         }
@@ -373,6 +382,8 @@
         links,
         isUserLoggedIn,
         isLearner,
+        isSuperuser,
+        isAdmin,
         username,
         fullName: full_name,
         totalPoints,
