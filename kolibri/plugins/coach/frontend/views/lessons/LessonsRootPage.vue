@@ -36,6 +36,13 @@
         <ReportsControls @export="exportCSV">
           <div :style="windowIsSmall ? { display: 'grid' } : {}">
             <KSelect
+              v-model="termSelection"
+              class="select"
+              label="DepEd Term (DO 009, s. 2026)"
+              :options="termOptions"
+              :inline="true"
+            />
+            <KSelect
               v-model="filterSelection"
               class="select"
               :label="coachString('filterLessonStatus')"
@@ -59,6 +66,7 @@
         >
           <template #headers>
             <th>{{ coachString('titleLabel') }}</th>
+            <th>Term</th>
             <th>{{ coreString('progressLabel') }}</th>
             <th>{{ $tr('size') }}</th>
             <th>{{ coachString('recipientsLabel') }}</th>
@@ -80,6 +88,14 @@
                     :text="lesson.title"
                     icon="lesson"
                   />
+                </td>
+                <td>
+                  <span
+                    class="deped-term-badge"
+                    :class="getLessonTermInfo(lesson).badgeClass"
+                  >
+                    {{ getLessonTermInfo(lesson).shortLabel }}
+                  </span>
                 </td>
                 <td>
                   <StatusSummary
@@ -223,6 +239,7 @@
   import CoachHeader from '../common/CoachHeader.vue';
   import AiLessonGeneratorModal from '../common/AiLessonGeneratorModal.vue';
   import { PageNames } from '../../constants';
+  import { getItemTerm, DEPED_TERM_CONFIG } from '../../utils/depEdTerms';
 
   const aiLessonStrings = createTranslator('AiLessonStrings', {
     generateLessonWithAi: {
@@ -270,6 +287,7 @@
         showLessonIsVisibleModal: false,
         showLessonIsNotVisibleModal: false,
         activeLesson: null,
+        termSelection: { label: 'All Terms (DO 009, s. 2026)', value: 'all' },
         filterSelection: {},
         filterRecipents: {
           label: this.coreString('allLabel'),
@@ -286,6 +304,14 @@
     computed: {
       ...mapState('classSummary', { classId: 'id' }),
       ...mapState('lessonsRoot', ['lessons', 'learnerGroups']),
+      termOptions() {
+        return [
+          { label: 'All Terms (DO 009, s. 2026)', value: 'all' },
+          { label: 'Term 1 (Jun 8 – Sep 15)', value: 'term_1' },
+          { label: 'Term 2 (Sep 16 – Dec 18)', value: 'term_2' },
+          { label: 'Term 3 (Jan 4 – Apr 8)', value: 'term_3' },
+        ];
+      },
       sortedLessons() {
         return this.getFilteredLessons();
       },
@@ -344,6 +370,11 @@
     methods: {
       ...mapActions('lessonsRoot', ['createLesson']),
       showLesson(lesson) {
+        if (this.termSelection && this.termSelection.value && this.termSelection.value !== 'all') {
+          if (getItemTerm(lesson) !== this.termSelection.value) {
+            return false;
+          }
+        }
         switch (this.filterSelection.value) {
           case 'filterLessonVisible':
             return lesson.active;
@@ -479,6 +510,12 @@
           }
         }
 
+        if (this.termSelection && this.termSelection.value && this.termSelection.value !== 'all') {
+          lessonToReturn = lessonToReturn.filter(
+            lesson => getItemTerm(lesson) === this.termSelection.value,
+          );
+        }
+
         return lessonToReturn;
       },
       exportCSV() {
@@ -486,12 +523,24 @@
 
         const columns = [
           ...csvFields.title(),
+          {
+            name: 'DepEd Term',
+            column: 'termLabel',
+          },
           ...csvFields.recipients(this.className),
           ...csvFields.tally(),
           ...csvFields.allLearners('totalLearners'),
         ];
+        const dataWithTerms = filteredLessons.map(lesson => ({
+          ...lesson,
+          termLabel: this.getLessonTermInfo(lesson).shortLabel,
+        }));
         const fileName = this.$tr('printLabel', { className: this.className });
-        new CSVExporter(columns, fileName).export(filteredLessons);
+        new CSVExporter(columns, fileName).export(dataWithTerms);
+      },
+      getLessonTermInfo(lesson) {
+        const termKey = getItemTerm(lesson);
+        return DEPED_TERM_CONFIG.find(t => t.key === termKey) || DEPED_TERM_CONFIG[0];
       },
       bytesForHumans,
     },
@@ -536,6 +585,35 @@
   .total-size {
     padding: 0;
     margin-bottom: 16px;
+  }
+
+  .deped-term-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 12px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .deped-term-1 {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+    border: 1px solid #90caf9;
+  }
+
+  .deped-term-2 {
+    background-color: #f3e5f5;
+    color: #4a148c;
+    border: 1px solid #ce93d8;
+  }
+
+  .deped-term-3 {
+    background-color: #e8f5e9;
+    color: #1b5e20;
+    border: 1px solid #a5d6a7;
   }
 
   @media print {

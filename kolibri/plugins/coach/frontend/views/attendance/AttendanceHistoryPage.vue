@@ -177,6 +177,9 @@
         { label: pastDays$({ count: 30 }), value: DateRangeFilters.LAST_30_DAYS },
         { label: pastDays$({ count: 365 }), value: DateRangeFilters.LAST_365_DAYS },
         { label: allTime$(), value: DateRangeFilters.ALL_TIME },
+        { label: '🗓️ DepEd Term 1 (Jun 8 – Sep 15, 2026)', value: 'deped_term_1' },
+        { label: '🗓️ DepEd Term 2 (Sep 16 – Dec 18, 2026)', value: 'deped_term_2' },
+        { label: '🗓️ DepEd Term 3 (Jan 4 – Apr 8, 2027)', value: 'deped_term_3' },
         { label: customLabel$(), value: DateRangeFilters.CUSTOM },
       ];
 
@@ -208,6 +211,24 @@
       });
 
       function getDateRange(filterValue) {
+        if (filterValue === 'deped_term_1') {
+          return {
+            start_date: new Date('2026-06-08T00:00:00.000Z').toISOString(),
+            end_date: new Date('2026-09-16T00:00:00.000Z').toISOString(),
+          };
+        }
+        if (filterValue === 'deped_term_2') {
+          return {
+            start_date: new Date('2026-09-16T00:00:00.000Z').toISOString(),
+            end_date: new Date('2026-12-19T00:00:00.000Z').toISOString(),
+          };
+        }
+        if (filterValue === 'deped_term_3') {
+          return {
+            start_date: new Date('2027-01-04T00:00:00.000Z').toISOString(),
+            end_date: new Date('2027-04-09T00:00:00.000Z').toISOString(),
+          };
+        }
         if (filterValue === DateRangeFilters.CUSTOM_APPLIED) {
           // KDateRange returns dates at midnight (start of day). The backend
           // end_date filter uses exclusive lt, so we send midnight of the NEXT

@@ -3,6 +3,8 @@ import { Resource } from 'kolibri/apiResource';
 export default new Resource({
   name: 'assignment',
   fetchGradebook(classId) {
-    return this.getListEndpoint('gradebook', { collection: classId });
+    return this.getListEndpoint('gradebook', { collection: classId }).then(
+      response => response.data,
+    );
   },
 });

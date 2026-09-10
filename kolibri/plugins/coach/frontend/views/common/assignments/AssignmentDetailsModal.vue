@@ -75,6 +75,27 @@
               />
             </KGridItem>
           </template>
+          <!-- DepEd Term Selector -->
+          <KGridItem
+            :layout4="{ span: 1 }"
+            :layout8="{ span: 1 }"
+            :layout12="{ span: 1 }"
+          >
+            <div></div>
+          </KGridItem>
+          <KGridItem
+            :layout4="{ span: 3 }"
+            :layout8="{ span: 7 }"
+            :layout12="{ span: 5 }"
+          >
+            <KSelect
+              label="DepEd Term (DO 009, s. 2026)"
+              :options="termOptions"
+              :value="selectedTermOption"
+              :class="['term-select', windowIsSmall ? 'select-sm' : 'select-lg']"
+              @change="handleTermChange"
+            />
+          </KGridItem>
           <!--Align with the title input-->
           <KGridItem
             :layout4="{ span: 1 }"
@@ -268,9 +289,23 @@
         showDeletedUsersError: false,
         showTitleError: false,
         instantReportVisibility: this.assignment.instant_report_visibility,
+        selectedTerm: this.detectInitialTerm(this.assignment.title),
       };
     },
     computed: {
+      termOptions() {
+        return [
+          { label: 'None / Untagged', value: 'none' },
+          { label: 'Term 1 (Jun 8 – Sep 15, 2026)', value: 'term_1' },
+          { label: 'Term 2 (Sep 16 – Dec 18, 2026)', value: 'term_2' },
+          { label: 'Term 3 (Jan 4 – Apr 8, 2027)', value: 'term_3' },
+        ];
+      },
+      selectedTermOption() {
+        return (
+          this.termOptions.find(o => o.value === this.selectedTerm) || this.termOptions[0]
+        );
+      },
       titleIsInvalidText() {
         // submission is handled because "blur" event happens on submit
         if (!this.disabled && !this.formIsSubmitted) {
@@ -382,6 +417,26 @@
       },
     },
     methods: {
+      detectInitialTerm(title = '') {
+        const lower = (title || '').toLowerCase();
+        if (lower.includes('[term 1]') || lower.includes('[t1]')) return 'term_1';
+        if (lower.includes('[term 2]') || lower.includes('[t2]')) return 'term_2';
+        if (lower.includes('[term 3]') || lower.includes('[t3]')) return 'term_3';
+        return 'none';
+      },
+      handleTermChange(option) {
+        this.selectedTerm = option.value;
+        const cleanTitle = (this.title || '').replace(/^\[(Term [1-3]|T[1-3])\]\s*/i, '').trim();
+        if (option.value === 'term_1') {
+          this.title = `[Term 1] ${cleanTitle}`;
+        } else if (option.value === 'term_2') {
+          this.title = `[Term 2] ${cleanTitle}`;
+        } else if (option.value === 'term_3') {
+          this.title = `[Term 3] ${cleanTitle}`;
+        } else {
+          this.title = cleanTitle;
+        }
+      },
       submitData() {
         this.showServerError = false;
         this.showTitleError = false;

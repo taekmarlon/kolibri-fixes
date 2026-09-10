@@ -65,31 +65,63 @@
         />
       </div>
 
-      <div v-else class="assignments-grid">
-        <div
-          v-for="assignment in assignments"
-          :key="assignment.id"
-          class="assignment-card"
-          :style="{
-            backgroundColor: $themeTokens.surface,
-            border: `1px solid ${$themeTokens.fineLine}`,
-          }"
-        >
-          <div class="card-top">
-            <div class="card-meta">
-              <span
-                class="status-pill"
-                :class="{ 'is-active': assignment.is_active }"
-              >
-                {{ assignment.is_active ? activeLabel$() : inactiveLabel$() }}
-              </span>
-              <span v-if="assignment.due_date" class="due-date">
-                📅 {{ formatDate(assignment.due_date) }}
-              </span>
-              <span class="max-pts">
-                🎯 {{ assignment.max_points }} {{ pointsLabel$() }}
-              </span>
-            </div>
+      <div v-else>
+        <!-- DepEd 3-Term Filter Bar (DO 009, s. 2026) -->
+        <div class="term-filter-bar" :style="{ borderBottom: `1px solid ${$themeTokens.fineLine}` }">
+          <span class="term-filter-title">DepEd Term (DO 009, s. 2026):</span>
+          <div class="term-pill-buttons">
+            <button
+              type="button"
+              class="term-pill-btn"
+              :class="{ active: selectedTerm === 'all' }"
+              @click="selectedTerm = 'all'"
+            >
+              All Terms ({{ assignments.length }})
+            </button>
+            <button
+              v-for="term in depEdTermConfig"
+              :key="term.key"
+              type="button"
+              class="term-pill-btn"
+              :class="[term.badgeClass, { active: selectedTerm === term.key }]"
+              @click="selectedTerm = term.key"
+            >
+              {{ term.shortLabel }} ({{ countAssignmentsByTerm(term.key) }})
+            </button>
+          </div>
+        </div>
+
+        <div class="assignments-grid">
+          <div
+            v-for="assignment in filteredAssignments"
+            :key="assignment.id"
+            class="assignment-card"
+            :style="{
+              backgroundColor: $themeTokens.surface,
+              border: `1px solid ${$themeTokens.fineLine}`,
+            }"
+          >
+            <div class="card-top">
+              <div class="card-meta">
+                <span
+                  class="status-pill"
+                  :class="{ 'is-active': assignment.is_active }"
+                >
+                  {{ assignment.is_active ? activeLabel$() : inactiveLabel$() }}
+                </span>
+                <span
+                  class="deped-term-badge"
+                  :class="getAssignmentTermInfo(assignment).badgeClass"
+                >
+                  {{ getAssignmentTermInfo(assignment).shortLabel }}
+                </span>
+                <span v-if="assignment.due_date" class="due-date">
+                  📅 {{ formatDate(assignment.due_date) }}
+                </span>
+                <span class="max-pts">
+                  🎯 {{ assignment.max_points }} {{ pointsLabel$() }}
+                </span>
+              </div>
             <h2 class="assignment-title" :style="{ color: $themeTokens.text }">
               {{ assignment.title }}
             </h2>
@@ -140,6 +172,7 @@
           </div>
         </div>
       </div>
+    </div>
 
       <!-- Create Assignment Modal -->
       <KModal
@@ -164,6 +197,14 @@
             :textArea="true"
             :rows="3"
           />
+
+          <div class="form-section">
+            <KSelect
+              v-model="newFormTerm"
+              label="DepEd Term (DO 009, s. 2026)"
+              :options="createTermOptions"
+            />
+          </div>
 
           <div class="form-section">
             <KTextbox
@@ -308,7 +349,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { createTranslator } from 'kolibri/utils/i18n';
 import YouTubePlayer from 'kolibri-common/components/YouTubePlayer.vue';
 import AssignmentResource from 'kolibri-common/apiResources/AssignmentResource';
@@ -316,6 +357,7 @@ import AssignmentSubmissionResource from 'kolibri-common/apiResources/Assignment
 import useCoreCoach from '../../composables/useCoreCoach';
 import CoachAppBarPage from '../CoachAppBarPage';
 import { PageNames } from '../../constants';
+import { getItemTerm, DEPED_TERM_CONFIG } from '../../utils/depEdTerms';
 
 const strings = createTranslator('CoachAssignmentsStrings', {
   backToClassHome: { message: 'Class Home', context: 'Navigation link' },
@@ -369,6 +411,31 @@ export default {
     const { classId } = useCoreCoach();
     const loading = ref(false);
     const assignments = ref([]);
+
+    const selectedTerm = ref('all');
+    const newFormTerm = ref({ label: 'Term 1 (Jun 8 – Sep 15, 2026)', value: 'term_1' });
+    const createTermOptions = [
+      { label: 'None / Untagged', value: 'none' },
+      { label: 'Term 1 (Jun 8 – Sep 15, 2026)', value: 'term_1' },
+      { label: 'Term 2 (Sep 16 – Dec 18, 2026)', value: 'term_2' },
+      { label: 'Term 3 (Jan 4 – Apr 8, 2027)', value: 'term_3' },
+    ];
+
+    const filteredAssignments = computed(() => {
+      if (selectedTerm.value === 'all') {
+        return assignments.value;
+      }
+      return assignments.value.filter(a => getItemTerm(a) === selectedTerm.value);
+    });
+
+    function countAssignmentsByTerm(termKey) {
+      return assignments.value.filter(a => getItemTerm(a) === termKey).length;
+    }
+
+    function getAssignmentTermInfo(assignment) {
+      const termKey = getItemTerm(assignment);
+      return DEPED_TERM_CONFIG.find(t => t.key === termKey) || DEPED_TERM_CONFIG[0];
+    }
 
     const showCreateModal = ref(false);
     const newForm = reactive({
@@ -455,6 +522,7 @@ export default {
       newForm.due_date = '';
       newForm.allow_text_submission = true;
       newForm.allow_file_upload = true;
+      newFormTerm.value = createTermOptions[1];
       showCreateModal.value = true;
     }
 
@@ -467,8 +535,20 @@ export default {
         return;
       }
       try {
+        let finalTitle = newForm.title.trim();
+        if (newFormTerm.value && newFormTerm.value.value && newFormTerm.value.value !== 'none') {
+          const tagMap = {
+            term_1: '[Term 1]',
+            term_2: '[Term 2]',
+            term_3: '[Term 3]',
+          };
+          const tag = tagMap[newFormTerm.value.value];
+          if (tag && !finalTitle.toLowerCase().includes(tag.toLowerCase())) {
+            finalTitle = `${tag} ${finalTitle}`;
+          }
+        }
         const payload = {
-          title: newForm.title.trim(),
+          title: finalTitle,
           description: newForm.description.trim(),
           video_url: newForm.video_url.trim(),
           max_points: newForm.max_points || 100,
@@ -558,6 +638,13 @@ export default {
       PageNames,
       loading,
       assignments,
+      selectedTerm,
+      newFormTerm,
+      createTermOptions,
+      depEdTermConfig: DEPED_TERM_CONFIG,
+      filteredAssignments,
+      countAssignmentsByTerm,
+      getAssignmentTermInfo,
       showCreateModal,
       newForm,
       activeSubmissionsAssignment,
@@ -650,6 +737,81 @@ export default {
 .page-subtitle {
   margin: 0;
   font-size: 15px;
+}
+
+.term-filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+}
+
+.term-filter-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #4b5563;
+}
+
+.term-pill-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.term-pill-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 20px;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #f3f4f6;
+  }
+
+  &.active {
+    background-color: #0d47a1;
+    color: #ffffff;
+    border-color: #0d47a1;
+    box-shadow: 0 2px 4px rgba(13, 71, 161, 0.25);
+  }
+}
+
+.deped-term-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 12px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.deped-term-1 {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  border: 1px solid #90caf9;
+}
+
+.deped-term-2 {
+  background-color: #f3e5f5;
+  color: #4a148c;
+  border: 1px solid #ce93d8;
+}
+
+.deped-term-3 {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #a5d6a7;
 }
 
 .header-buttons {

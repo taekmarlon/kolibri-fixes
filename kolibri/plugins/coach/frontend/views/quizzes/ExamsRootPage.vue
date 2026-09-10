@@ -49,6 +49,12 @@
           @export="exportCSV"
         >
           <KSelect
+            v-model="termSelected"
+            label="DepEd Term (DO 009, s. 2026)"
+            :options="termOptions"
+            :inline="true"
+          />
+          <KSelect
             v-model="statusSelected"
             :label="filterQuizStatus$()"
             :options="statusOptions"
@@ -66,6 +72,7 @@
         >
           <template #headers>
             <th>{{ titleLabel$() }}</th>
+            <th>Term</th>
             <th style="position: relative">
               {{ avgScoreLabel$() }}
               <AverageScoreTooltip v-show="!$isPrint" />
@@ -93,6 +100,14 @@
                     :text="exam.title"
                     icon="quiz"
                   />
+                </td>
+                <td>
+                  <span
+                    class="deped-term-badge"
+                    :class="getExamTermInfo(exam).badgeClass"
+                  >
+                    {{ getExamTermInfo(exam).shortLabel }}
+                  </span>
                 </td>
                 <td>
                   <Score :value="exam.avgScore" />
@@ -221,6 +236,7 @@
   import StatusSummary from '../common/status/StatusSummary';
   import CoachHeader from '../common/CoachHeader.vue';
   import AiQuizGeneratorModal from '../common/AiQuizGeneratorModal.vue';
+  import { getItemTerm, DEPED_TERM_CONFIG } from '../../utils/depEdTerms';
 
   const aiCoachStrings = createTranslator('AiCoachStrings', {
     generateWithAi: {
@@ -297,6 +313,11 @@
         quizzesLabel$,
       } = coachStrings;
 
+      const termSelected = ref({
+        label: 'All Terms (DO 009, s. 2026)',
+        value: 'all',
+      });
+
       const statusSelected = ref({
         label: filterQuizAll$(),
         value: filterQuizAll$(),
@@ -315,6 +336,7 @@
         showOpenConfirmationModal,
         showCloseConfirmationModal,
         activeQuiz,
+        termSelected,
         statusSelected,
         filterQuizAll$,
         filterQuizStarted$,
@@ -370,6 +392,14 @@
       }),
       practiceQuizzesExist() {
         return plugin_data.practice_quizzes_exist;
+      },
+      termOptions() {
+        return [
+          { label: 'All Terms (DO 009, s. 2026)', value: 'all' },
+          { label: 'Term 1 (Jun 8 – Sep 15)', value: 'term_1' },
+          { label: 'Term 2 (Sep 16 – Dec 18)', value: 'term_2' },
+          { label: 'Term 3 (Jan 4 – Apr 8)', value: 'term_3' },
+        ];
       },
       statusOptions() {
         return [
@@ -429,6 +459,12 @@
           selectedExams = this.endedExams;
         } else {
           selectedExams = this.quizzes;
+        }
+
+        if (this.termSelected && this.termSelected.value && this.termSelected.value !== 'all') {
+          selectedExams = selectedExams.filter(
+            exam => getItemTerm(exam) === this.termSelected.value,
+          );
         }
 
         const recipientsFilter = this.recipientSelected.value;
@@ -525,14 +561,27 @@
       exportCSV() {
         const columns = [
           ...csvFields.title(),
+          {
+            name: 'DepEd Term',
+            column: 'termLabel',
+          },
           ...csvFields.recipients(this.className),
           ...csvFields.avgScore(),
           ...csvFields.allLearners('totalLearners'),
           ...csvFields.tally(),
         ];
 
+        const dataWithTerms = this.filteredExams.map(exam => ({
+          ...exam,
+          termLabel: this.getExamTermInfo(exam).shortLabel,
+        }));
+
         const fileName = this.$tr('printLabel', { className: this.className });
-        new CSVExporter(columns, fileName).export(this.filteredExams);
+        new CSVExporter(columns, fileName).export(dataWithTerms);
+      },
+      getExamTermInfo(exam) {
+        const termKey = getItemTerm(exam);
+        return DEPED_TERM_CONFIG.find(t => t.key === termKey) || DEPED_TERM_CONFIG[0];
       },
       handleCloseQuiz(quizId) {
         const promise = ExamResource.saveModel({
@@ -613,6 +662,35 @@
 
   .button-col {
     vertical-align: middle;
+  }
+
+  .deped-term-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 12px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .deped-term-1 {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+    border: 1px solid #90caf9;
+  }
+
+  .deped-term-2 {
+    background-color: #f3e5f5;
+    color: #4a148c;
+    border: 1px solid #ce93d8;
+  }
+
+  .deped-term-3 {
+    background-color: #e8f5e9;
+    color: #1b5e20;
+    border: 1px solid #a5d6a7;
   }
 
   @media print {
