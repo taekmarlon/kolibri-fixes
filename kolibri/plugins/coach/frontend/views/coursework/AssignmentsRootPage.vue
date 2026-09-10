@@ -66,28 +66,53 @@
       </div>
 
       <div v-else>
-        <!-- DepEd 3-Term Filter Bar (DO 009, s. 2026) -->
+        <!-- DepEd Filters: Term (DO 009) & Component (DO 8) -->
         <div class="term-filter-bar" :style="{ borderBottom: `1px solid ${$themeTokens.fineLine}` }">
-          <span class="term-filter-title">DepEd Term (DO 009, s. 2026):</span>
-          <div class="term-pill-buttons">
-            <button
-              type="button"
-              class="term-pill-btn"
-              :class="{ active: selectedTerm === 'all' }"
-              @click="selectedTerm = 'all'"
-            >
-              All Terms ({{ assignments.length }})
-            </button>
-            <button
-              v-for="term in depEdTermConfig"
-              :key="term.key"
-              type="button"
-              class="term-pill-btn"
-              :class="[term.badgeClass, { active: selectedTerm === term.key }]"
-              @click="selectedTerm = term.key"
-            >
-              {{ term.shortLabel }} ({{ countAssignmentsByTerm(term.key) }})
-            </button>
+          <div class="filter-sub-row">
+            <span class="term-filter-title">DepEd Term (DO 009):</span>
+            <div class="term-pill-buttons">
+              <button
+                type="button"
+                class="term-pill-btn"
+                :class="{ active: selectedTerm === 'all' }"
+                @click="selectedTerm = 'all'"
+              >
+                All Terms ({{ assignments.length }})
+              </button>
+              <button
+                v-for="term in depEdTermConfig"
+                :key="term.key"
+                type="button"
+                class="term-pill-btn"
+                :class="[term.badgeClass, { active: selectedTerm === term.key }]"
+                @click="selectedTerm = term.key"
+              >
+                {{ term.shortLabel }} ({{ countAssignmentsByTerm(term.key) }})
+              </button>
+            </div>
+          </div>
+          <div class="filter-sub-row">
+            <span class="term-filter-title">Assessment Component (DO 8):</span>
+            <div class="term-pill-buttons">
+              <button
+                type="button"
+                class="term-pill-btn"
+                :class="{ active: selectedComponent === 'all' }"
+                @click="selectedComponent = 'all'"
+              >
+                All Components
+              </button>
+              <button
+                v-for="comp in depEdComponentConfig"
+                :key="comp.key"
+                type="button"
+                class="term-pill-btn"
+                :class="[comp.badgeClass, { active: selectedComponent === comp.key }]"
+                @click="selectedComponent = comp.key"
+              >
+                {{ comp.shortLabel }} ({{ countAssignmentsByComponent(comp.key) }})
+              </button>
+            </div>
           </div>
         </div>
 
@@ -114,6 +139,12 @@
                   :class="getAssignmentTermInfo(assignment).badgeClass"
                 >
                   {{ getAssignmentTermInfo(assignment).shortLabel }}
+                </span>
+                <span
+                  class="deped-comp-badge"
+                  :class="getAssignmentCompInfo(assignment).badgeClass"
+                >
+                  {{ getAssignmentCompInfo(assignment).code }}
                 </span>
                 <span v-if="assignment.due_date" class="due-date">
                   📅 {{ formatDate(assignment.due_date) }}
@@ -203,6 +234,14 @@
               v-model="newFormTerm"
               label="DepEd Term (DO 009, s. 2026)"
               :options="createTermOptions"
+            />
+          </div>
+
+          <div class="form-section">
+            <KSelect
+              v-model="newFormComponent"
+              label="DepEd Assessment Component (DO 8, s. 2015)"
+              :options="createComponentOptions"
             />
           </div>
 
@@ -357,7 +396,13 @@ import AssignmentSubmissionResource from 'kolibri-common/apiResources/Assignment
 import useCoreCoach from '../../composables/useCoreCoach';
 import CoachAppBarPage from '../CoachAppBarPage';
 import { PageNames } from '../../constants';
-import { getItemTerm, DEPED_TERM_CONFIG } from '../../utils/depEdTerms';
+import {
+  getItemTerm,
+  DEPED_TERM_CONFIG,
+  DEPED_COMPONENT_CONFIG,
+  getItemComponent,
+  getComponentInfo,
+} from '../../utils/depEdTerms';
 
 const strings = createTranslator('CoachAssignmentsStrings', {
   backToClassHome: { message: 'Class Home', context: 'Navigation link' },
@@ -413,6 +458,7 @@ export default {
     const assignments = ref([]);
 
     const selectedTerm = ref('all');
+    const selectedComponent = ref('all');
     const newFormTerm = ref({ label: 'Term 1 (Jun 8 – Sep 15, 2026)', value: 'term_1' });
     const createTermOptions = [
       { label: 'None / Untagged', value: 'none' },
@@ -421,20 +467,38 @@ export default {
       { label: 'Term 3 (Jan 4 – Apr 8, 2027)', value: 'term_3' },
     ];
 
+    const newFormComponent = ref({ label: 'Written Work (WW)', value: 'WW' });
+    const createComponentOptions = [
+      { label: 'Written Work (WW)', value: 'WW' },
+      { label: 'Performance Task (PT)', value: 'PT' },
+      { label: 'Quarterly / Term Assessment (QA/TA)', value: 'TA' },
+    ];
+
     const filteredAssignments = computed(() => {
-      if (selectedTerm.value === 'all') {
-        return assignments.value;
-      }
-      return assignments.value.filter(a => getItemTerm(a) === selectedTerm.value);
+      return assignments.value.filter(a => {
+        const matchesTerm = selectedTerm.value === 'all' || getItemTerm(a) === selectedTerm.value;
+        const matchesComp =
+          selectedComponent.value === 'all' || getItemComponent(a) === selectedComponent.value;
+        return matchesTerm && matchesComp;
+      });
     });
 
     function countAssignmentsByTerm(termKey) {
       return assignments.value.filter(a => getItemTerm(a) === termKey).length;
     }
 
+    function countAssignmentsByComponent(compKey) {
+      return assignments.value.filter(a => getItemComponent(a) === compKey).length;
+    }
+
     function getAssignmentTermInfo(assignment) {
       const termKey = getItemTerm(assignment);
       return DEPED_TERM_CONFIG.find(t => t.key === termKey) || DEPED_TERM_CONFIG[0];
+    }
+
+    function getAssignmentCompInfo(assignment) {
+      const compKey = getItemComponent(assignment);
+      return getComponentInfo(compKey);
     }
 
     const showCreateModal = ref(false);
@@ -523,6 +587,7 @@ export default {
       newForm.allow_text_submission = true;
       newForm.allow_file_upload = true;
       newFormTerm.value = createTermOptions[1];
+      newFormComponent.value = createComponentOptions[0];
       showCreateModal.value = true;
     }
 
@@ -545,6 +610,12 @@ export default {
           const tag = tagMap[newFormTerm.value.value];
           if (tag && !finalTitle.toLowerCase().includes(tag.toLowerCase())) {
             finalTitle = `${tag} ${finalTitle}`;
+          }
+        }
+        if (newFormComponent.value && newFormComponent.value.value) {
+          const compTag = `[${newFormComponent.value.value}]`;
+          if (!finalTitle.toUpperCase().includes(compTag)) {
+            finalTitle = `${compTag} ${finalTitle}`;
           }
         }
         const payload = {
@@ -639,12 +710,18 @@ export default {
       loading,
       assignments,
       selectedTerm,
+      selectedComponent,
       newFormTerm,
       createTermOptions,
+      newFormComponent,
+      createComponentOptions,
       depEdTermConfig: DEPED_TERM_CONFIG,
+      depEdComponentConfig: DEPED_COMPONENT_CONFIG,
       filteredAssignments,
       countAssignmentsByTerm,
+      countAssignmentsByComponent,
       getAssignmentTermInfo,
+      getAssignmentCompInfo,
       showCreateModal,
       newForm,
       activeSubmissionsAssignment,
@@ -741,11 +818,17 @@ export default {
 
 .term-filter-bar {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 12px;
+}
+
+.filter-sub-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .term-filter-title {
@@ -754,6 +837,7 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #4b5563;
+  min-width: 220px;
 }
 
 .term-pill-buttons {
@@ -812,6 +896,34 @@ export default {
   background-color: #e8f5e9;
   color: #1b5e20;
   border: 1px solid #a5d6a7;
+}
+
+.deped-comp-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 12px;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.deped-comp-ww {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+}
+
+.deped-comp-pt {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+}
+
+.deped-comp-ta {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
 }
 
 .header-buttons {

@@ -237,11 +237,267 @@ export function getDepEdRemarks(transmutedGrade) {
   };
 }
 
+/**
+ * DepEd Order No. 8, s. 2015 Assessment Components
+ * K to 12 Summative Assessment categories
+ */
+export const DEPED_COMPONENTS = {
+  ALL: 'all',
+  WW: 'ww',
+  PT: 'pt',
+  TA: 'ta',
+};
+
+export const DEPED_COMPONENT_CONFIG = [
+  {
+    key: DEPED_COMPONENTS.WW,
+    code: 'WW',
+    label: 'Written Work (WW)',
+    shortLabel: 'Written Work',
+    tag: '[WW]',
+    badgeClass: 'deped-comp-ww',
+    description: 'Unit quizzes, short tests, essays, written exercises, and chapter reviews',
+  },
+  {
+    key: DEPED_COMPONENTS.PT,
+    code: 'PT',
+    label: 'Performance Task (PT)',
+    shortLabel: 'Performance Task',
+    tag: '[PT]',
+    badgeClass: 'deped-comp-pt',
+    description: 'Hands-on projects, experiments, oral presentations, and practical outputs',
+  },
+  {
+    key: DEPED_COMPONENTS.TA,
+    code: 'TA',
+    label: 'Quarterly / Term Assessment (QA/TA)',
+    shortLabel: 'Term Exam',
+    tag: '[TA]',
+    badgeClass: 'deped-comp-ta',
+    description: 'Periodic examinations, end-of-term assessments, and comprehensive evaluations',
+  },
+];
+
+/**
+ * DepEd Order No. 8, s. 2015 Subject Group Weighting Schemes
+ */
+export const DEPED_GRADING_SCHEMES = {
+  math_science: {
+    key: 'math_science',
+    label: 'Science & Mathematics (WW: 40%, PT: 40%, QA: 20%)',
+    shortLabel: 'Math & Science',
+    weights: { ww: 0.4, pt: 0.4, ta: 0.2 },
+  },
+  languages_ap_esp: {
+    key: 'languages_ap_esp',
+    label: 'Languages, AP & EsP (WW: 30%, PT: 50%, QA: 20%)',
+    shortLabel: 'Languages & Social Studies',
+    weights: { ww: 0.3, pt: 0.5, ta: 0.2 },
+  },
+  mapeh_epp_tle: {
+    key: 'mapeh_epp_tle',
+    label: 'MAPEH, EPP & TLE (WW: 20%, PT: 60%, QA: 20%)',
+    shortLabel: 'MAPEH, EPP & TLE',
+    weights: { ww: 0.2, pt: 0.6, ta: 0.2 },
+  },
+  shs_core: {
+    key: 'shs_core',
+    label: 'Senior High School - Core Subjects (WW: 25%, PT: 50%, QA: 25%)',
+    shortLabel: 'SHS Core',
+    weights: { ww: 0.25, pt: 0.5, ta: 0.25 },
+  },
+  shs_acad: {
+    key: 'shs_acad',
+    label: 'Senior High School - Academic Track (WW: 35%, PT: 40%, QA: 25%)',
+    shortLabel: 'SHS Academic',
+    weights: { ww: 0.35, pt: 0.4, ta: 0.25 },
+  },
+  shs_tvl: {
+    key: 'shs_tvl',
+    label: 'Senior High School - TVL / Arts / Sports (WW: 20%, PT: 60%, QA: 20%)',
+    shortLabel: 'SHS TVL & Arts',
+    weights: { ww: 0.2, pt: 0.6, ta: 0.2 },
+  },
+};
+
+/**
+ * Detects or extracts the DepEd Assessment Component for an item.
+ * Checks explicit tags [WW], [PT], [TA], [QA] or applies intelligent fallbacks.
+ *
+ * @param {Object} item
+ * @returns {string} One of DEPED_COMPONENTS (ww, pt, ta)
+ */
+export function getItemComponent(item) {
+  if (!item) return DEPED_COMPONENTS.WW;
+
+  const title = (item.title || item.name || '').toLowerCase();
+  const desc = (item.description || '').toLowerCase();
+  const text = `${title} ${desc}`;
+
+  // Explicit component tags
+  if (
+    text.includes('[ww]') ||
+    text.includes('written work') ||
+    text.includes('[written-work]')
+  ) {
+    return DEPED_COMPONENTS.WW;
+  }
+  if (
+    text.includes('[pt]') ||
+    text.includes('performance task') ||
+    text.includes('[performance-task]') ||
+    text.includes('[project]')
+  ) {
+    return DEPED_COMPONENTS.PT;
+  }
+  if (
+    text.includes('[ta]') ||
+    text.includes('[qa]') ||
+    text.includes('term assessment') ||
+    text.includes('quarterly assessment') ||
+    text.includes('periodical') ||
+    text.includes('periodic exam')
+  ) {
+    return DEPED_COMPONENTS.TA;
+  }
+
+  // Type and naming based detection
+  if (
+    text.includes('exam') ||
+    text.includes('capstone') ||
+    text.includes('end-of-school-year') ||
+    text.includes('eosy')
+  ) {
+    return DEPED_COMPONENTS.TA;
+  }
+
+  // Quizzes default to Written Work (WW)
+  if (item.question_sources || item.quiz_id || (item.kind && item.kind === 'exam')) {
+    return DEPED_COMPONENTS.WW;
+  }
+
+  // Default coursework assignments default to Performance Task (PT)
+  return DEPED_COMPONENTS.PT;
+}
+
+/**
+ * Returns user-friendly component info object.
+ * @param {string} compKey
+ * @returns {Object}
+ */
+export function getComponentInfo(compKey) {
+  return (
+    DEPED_COMPONENT_CONFIG.find(c => c.key === compKey) || DEPED_COMPONENT_CONFIG[0]
+  );
+}
+
+/**
+ * Calculates DepEd E-Class Record (DO 8, s. 2015) for a single term and learner.
+ * Computes:
+ * - Highest Possible Score (HPS) and Raw Score per component (WW, PT, TA)
+ * - Percentage Score (PS = Raw / HPS * 100)
+ * - Weighted Score (WS = PS * Component Weight)
+ * - Initial Grade = Sum of Weighted Scores
+ * - Transmuted Grade = Table Lookup of Initial Grade
+ *
+ * @param {Object} learnerSubmissions - Dict of { [assignmentId]: { grade, status } }
+ * @param {Array} termAssignments - List of assignments for the term
+ * @param {Object} scheme - Object from DEPED_GRADING_SCHEMES
+ * @returns {Object} ECR calculation details
+ */
+export function calculateTermECR(learnerSubmissions, termAssignments, scheme) {
+  const activeScheme = scheme || DEPED_GRADING_SCHEMES.math_science;
+  const weights = activeScheme.weights;
+
+  const components = {
+    ww: { hps: 0, rawScore: 0, items: 0, gradedItems: 0 },
+    pt: { hps: 0, rawScore: 0, items: 0, gradedItems: 0 },
+    ta: { hps: 0, rawScore: 0, items: 0, gradedItems: 0 },
+  };
+
+  (termAssignments || []).forEach(item => {
+    const compKey = getItemComponent(item);
+    if (components[compKey]) {
+      components[compKey].items += 1;
+      components[compKey].hps += item.max_points || 0;
+      const sub = learnerSubmissions && learnerSubmissions[item.id];
+      if (sub && sub.grade !== null && sub.grade !== undefined) {
+        components[compKey].rawScore += sub.grade;
+        components[compKey].gradedItems += 1;
+      }
+    }
+  });
+
+  const result = {
+    ww: null,
+    pt: null,
+    ta: null,
+    initialGrade: null,
+    transmutedGrade: null,
+    remarks: null,
+    hasSubmissions: false,
+  };
+
+  let activeWeightSum = 0;
+  let weightedScoreSum = 0;
+
+  ['ww', 'pt', 'ta'].forEach(compKey => {
+    const c = components[compKey];
+    const weight = weights[compKey];
+    if (c.hps > 0) {
+      const ps = Number(((c.rawScore / c.hps) * 100).toFixed(1));
+      const ws = Number((ps * weight).toFixed(2));
+      result[compKey] = {
+        hps: c.hps,
+        rawScore: c.rawScore,
+        ps,
+        ws,
+        weight: Math.round(weight * 100),
+        items: c.items,
+        gradedItems: c.gradedItems,
+      };
+      if (c.gradedItems > 0) {
+        result.hasSubmissions = true;
+      }
+      activeWeightSum += weight;
+      weightedScoreSum += ws;
+    } else {
+      result[compKey] = {
+        hps: 0,
+        rawScore: 0,
+        ps: null,
+        ws: null,
+        weight: Math.round(weight * 100),
+        items: 0,
+        gradedItems: 0,
+      };
+    }
+  });
+
+  if (result.hasSubmissions && activeWeightSum > 0) {
+    // If not all components are populated in this term, normalize weighted score
+    const normalizedInitial = weightedScoreSum / activeWeightSum;
+    result.initialGrade = Number(normalizedInitial.toFixed(1));
+    result.transmutedGrade = transmuteDepEdScore(result.initialGrade);
+    result.remarks = getDepEdRemarks(result.transmutedGrade);
+  } else {
+    result.remarks = getDepEdRemarks(null);
+  }
+
+  return result;
+}
+
 export default {
   DEPED_TERMS,
   DEPED_TERM_CONFIG,
+  DEPED_COMPONENTS,
+  DEPED_COMPONENT_CONFIG,
+  DEPED_GRADING_SCHEMES,
   getItemTerm,
   getTermLabel,
+  getItemComponent,
+  getComponentInfo,
+  calculateTermECR,
   transmuteDepEdScore,
   getDepEdRemarks,
 };

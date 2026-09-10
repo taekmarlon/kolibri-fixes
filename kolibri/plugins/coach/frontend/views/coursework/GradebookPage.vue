@@ -31,7 +31,15 @@
               :class="{ active: viewMode === 'deped_summary' }"
               @click="viewMode = 'deped_summary'"
             >
-              🇵🇭 DepEd 3-Term Summary (DO 009, s. 2026)
+              🇵🇭 DepEd 3-Term Summary (DO 009)
+            </button>
+            <button
+              type="button"
+              class="mode-btn"
+              :class="{ active: viewMode === 'deped_ecr' }"
+              @click="viewMode = 'deped_ecr'"
+            >
+              📋 DepEd E-Class Record (DO 8)
             </button>
             <button
               type="button"
@@ -51,6 +59,15 @@
             icon="download"
             :disabled="!depEdLearnerSummaries || depEdLearnerSummaries.length === 0"
             @click="exportDepEdSummaryCSV"
+          />
+          <KButton
+            v-else-if="viewMode === 'deped_ecr'"
+            text="Export DepEd E-Class Record (ECR) CSV"
+            :primary="true"
+            appearance="raised-button"
+            icon="download"
+            :disabled="!depEdEcrData || depEdEcrData.length === 0"
+            @click="exportDepEdEcrCSV"
           />
           <KButton
             v-else
@@ -250,7 +267,215 @@
         </div>
 
         <!-- ============================================================ -->
-        <!-- VIEW 2: Standard Assignments Grid Mode (with Term Filter)    -->
+        <!-- VIEW 2: DepEd E-Class Record (ECR) Breakdown (DO 8, s. 2015) -->
+        <!-- ============================================================ -->
+        <div v-else-if="viewMode === 'deped_ecr'" class="deped-ecr-section">
+          <!-- Official DepEd ECR Banner -->
+          <div class="deped-banner ecr-banner">
+            <div class="banner-title">
+              📋 Cedarhall Academy Inc. — DepEd Electronic Class Record (ECR) • DO No. 8, s. 2015
+            </div>
+            <div class="banner-desc">
+              Policy Guidelines on Classroom Assessment for K to 12 Basic Education Program.
+              Calculates Percentage Score (PS) & Weighted Score (WS) across Written Work, Performance Tasks, and Term Assessment.
+            </div>
+          </div>
+
+          <!-- Controls Card: Subject Scheme & Term Selection -->
+          <div
+            class="ecr-controls-card"
+            :style="{
+              backgroundColor: $themeTokens.surface,
+              border: `1px solid ${$themeTokens.fineLine}`,
+            }"
+          >
+            <div class="ecr-controls-top">
+              <div class="ecr-control-item">
+                <label class="control-label" :style="{ color: $themeTokens.text }">
+                  <strong>Subject / Learning Area Group:</strong>
+                </label>
+                <select
+                  v-model="selectedSchemeKey"
+                  class="scheme-dropdown"
+                  :style="{
+                    backgroundColor: $themeTokens.surface,
+                    color: $themeTokens.text,
+                    borderColor: $themeTokens.fineLine,
+                  }"
+                >
+                  <option
+                    v-for="(scheme, key) in depEdGradingSchemes"
+                    :key="key"
+                    :value="key"
+                  >
+                    {{ scheme.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="ecr-control-item">
+                <label class="control-label" :style="{ color: $themeTokens.text }">
+                  <strong>Grading Term (DO 009, s. 2026):</strong>
+                </label>
+                <div class="ecr-term-buttons">
+                  <button
+                    v-for="term in depEdTermConfig"
+                    :key="term.key"
+                    type="button"
+                    class="ecr-term-btn"
+                    :class="[term.badgeClass, { active: selectedEcrTerm === term.key }]"
+                    @click="selectedEcrTerm = term.key"
+                  >
+                    {{ term.shortLabel }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Weight Distribution Badges -->
+            <div class="weights-bar">
+              <span class="weight-chip chip-ww">
+                Written Work (WW): {{ Math.round(activeScheme.weights.ww * 100) }}%
+              </span>
+              <span class="weight-chip chip-pt">
+                Performance Tasks (PT): {{ Math.round(activeScheme.weights.pt * 100) }}%
+              </span>
+              <span class="weight-chip chip-ta">
+                Quarterly / Term Exam (QA/TA): {{ Math.round(activeScheme.weights.ta * 100) }}%
+              </span>
+            </div>
+          </div>
+
+          <!-- DepEd ECR Table -->
+          <div
+            class="table-scroll-container"
+            :style="{
+              backgroundColor: $themeTokens.surface,
+              border: `1px solid ${$themeTokens.fineLine}`,
+            }"
+          >
+            <table class="gradebook-table ecr-table">
+              <thead>
+                <tr :style="{ backgroundColor: $themePalette.grey.v_100 }">
+                  <th rowspan="2" class="sticky-col header-student">
+                    Learner (Name & LRN)
+                  </th>
+                  <th colspan="3" class="header-comp-group ww-group">
+                    Written Work (WW - {{ Math.round(activeScheme.weights.ww * 100) }}%)
+                  </th>
+                  <th colspan="3" class="header-comp-group pt-group">
+                    Performance Tasks (PT - {{ Math.round(activeScheme.weights.pt * 100) }}%)
+                  </th>
+                  <th colspan="3" class="header-comp-group ta-group">
+                    Term Assessment (QA/TA - {{ Math.round(activeScheme.weights.ta * 100) }}%)
+                  </th>
+                  <th rowspan="2" class="header-summary">
+                    Initial Grade
+                  </th>
+                  <th rowspan="2" class="header-summary">
+                    Transmuted Grade (DO 8)
+                  </th>
+                  <th rowspan="2" class="header-summary">
+                    Action Taken / Remarks
+                  </th>
+                </tr>
+                <tr :style="{ backgroundColor: $themePalette.grey.v_100 }">
+                  <th class="sub-col">Raw / HPS</th>
+                  <th class="sub-col">PS (%)</th>
+                  <th class="sub-col">WS</th>
+                  <th class="sub-col">Raw / HPS</th>
+                  <th class="sub-col">PS (%)</th>
+                  <th class="sub-col">WS</th>
+                  <th class="sub-col">Raw / HPS</th>
+                  <th class="sub-col">PS (%)</th>
+                  <th class="sub-col">WS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="row in depEdEcrData"
+                  :key="row.learnerId"
+                  :style="{ borderTop: `1px solid ${$themeTokens.fineLine}` }"
+                >
+                  <td class="sticky-col cell-student" :style="{ backgroundColor: $themeTokens.surface }">
+                    <div class="student-name">{{ row.fullName }}</div>
+                    <div class="student-user" :style="{ color: $themeTokens.annotation }">
+                      @{{ row.username }}
+                    </div>
+                  </td>
+
+                  <!-- WW Details -->
+                  <td class="cell-num">
+                    {{ row.ww.rawScore }} / {{ row.ww.hps }}
+                  </td>
+                  <td class="cell-num">
+                    {{ row.ww.ps !== null ? `${row.ww.ps}%` : '-' }}
+                  </td>
+                  <td class="cell-num font-weight-bold">
+                    {{ row.ww.ws !== null ? row.ww.ws : '-' }}
+                  </td>
+
+                  <!-- PT Details -->
+                  <td class="cell-num">
+                    {{ row.pt.rawScore }} / {{ row.pt.hps }}
+                  </td>
+                  <td class="cell-num">
+                    {{ row.pt.ps !== null ? `${row.pt.ps}%` : '-' }}
+                  </td>
+                  <td class="cell-num font-weight-bold">
+                    {{ row.pt.ws !== null ? row.pt.ws : '-' }}
+                  </td>
+
+                  <!-- TA Details -->
+                  <td class="cell-num">
+                    {{ row.ta.rawScore }} / {{ row.ta.hps }}
+                  </td>
+                  <td class="cell-num">
+                    {{ row.ta.ps !== null ? `${row.ta.ps}%` : '-' }}
+                  </td>
+                  <td class="cell-num font-weight-bold">
+                    {{ row.ta.ws !== null ? row.ta.ws : '-' }}
+                  </td>
+
+                  <!-- Initial Grade -->
+                  <td class="cell-summary">
+                    <span v-if="row.initialGrade !== null" class="initial-grade-text">
+                      {{ row.initialGrade }}
+                    </span>
+                    <span v-else class="empty-score">-</span>
+                  </td>
+
+                  <!-- Transmuted Grade -->
+                  <td class="cell-summary">
+                    <span
+                      v-if="row.transmutedGrade !== null"
+                      class="final-rating-pill"
+                      :class="getScoreBadgeClass(row.transmutedGrade)"
+                    >
+                      {{ row.transmutedGrade }}
+                    </span>
+                    <span v-else class="empty-score">-</span>
+                  </td>
+
+                  <!-- Remarks -->
+                  <td class="cell-summary">
+                    <span
+                      v-if="row.transmutedGrade !== null"
+                      class="deped-status-badge"
+                      :class="row.remarks.badgeClass"
+                    >
+                      {{ row.remarks.status }}
+                    </span>
+                    <span v-else class="empty-score">Pending</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- VIEW 3: Standard Assignments Grid Mode (with Term Filter)    -->
         <!-- ============================================================ -->
         <div v-else class="assignments-grid-section">
           <!-- Term Filter Controls -->
@@ -390,6 +615,13 @@ import {
   getItemTerm,
   DEPED_TERM_CONFIG,
   DEPED_TERMS,
+  DEPED_COMPONENTS,
+  DEPED_COMPONENT_CONFIG,
+  DEPED_GRADING_SCHEMES,
+  getItemComponent,
+  getComponentInfo,
+  calculateTermECR,
+  getTermLabel,
   transmuteDepEdScore,
   getDepEdRemarks,
 } from '../../utils/depEdTerms';
@@ -421,8 +653,17 @@ export default {
     const { classId } = useCoreCoach();
     const loading = ref(false);
     const gradebookData = ref(null);
-    const viewMode = ref('deped_summary'); // 'deped_summary' | 'assignments_grid'
+    const viewMode = ref('deped_summary'); // 'deped_summary' | 'deped_ecr' | 'assignments_grid'
     const selectedTermFilter = ref('all');
+    const selectedSchemeKey = ref('math_science');
+    const selectedEcrTerm = ref('term_1');
+
+    const activeScheme = computed(() => {
+      return (
+        DEPED_GRADING_SCHEMES[selectedSchemeKey.value] ||
+        DEPED_GRADING_SCHEMES.math_science
+      );
+    });
 
     const {
       backToAssignments$,
@@ -504,11 +745,32 @@ export default {
       });
     });
 
-    // DepEd 3-Term Composite Transmuted Summary per learner
+    // DepEd E-Class Record (DO 8, s. 2015) computed data for the selected ECR term
+    const depEdEcrData = computed(() => {
+      if (!gradebookData.value || !gradebookData.value.learners) return [];
+      const assignments = (gradebookData.value.assignments || []).filter(
+        a => getItemTerm(a) === selectedEcrTerm.value,
+      );
+      const learners = gradebookData.value.learners || [];
+      const scheme = activeScheme.value;
+
+      return learners.map(learner => {
+        const ecr = calculateTermECR(learner.submissions || {}, assignments, scheme);
+        return {
+          learnerId: learner.id,
+          username: learner.username,
+          fullName: learner.full_name || learner.username,
+          ...ecr,
+        };
+      });
+    });
+
+    // DepEd 3-Term Composite Transmuted Summary per learner (DO 8, s. 2015 + DO 009, s. 2026)
     const depEdLearnerSummaries = computed(() => {
       if (!gradebookData.value || !gradebookData.value.learners) return [];
       const assignments = gradebookData.value.assignments || [];
       const learners = gradebookData.value.learners || [];
+      const scheme = activeScheme.value;
 
       const assignmentsByTerm = {
         term_1: assignments.filter(a => getItemTerm(a) === DEPED_TERMS.TERM_1),
@@ -537,8 +799,15 @@ export default {
 
           const rawPercentage =
             possible > 0 ? Number(((earned / possible) * 100).toFixed(1)) : null;
+
+          // DO 8, s. 2015 weighted calculation
+          const ecr = calculateTermECR(learner.submissions || {}, termAssigns, scheme);
           const transmuted =
-            hasAnyGraded && rawPercentage !== null ? transmuteDepEdScore(rawPercentage) : null;
+            ecr.transmutedGrade !== null
+              ? ecr.transmutedGrade
+              : hasAnyGraded && rawPercentage !== null
+              ? transmuteDepEdScore(rawPercentage)
+              : null;
           const remarks = getDepEdRemarks(transmuted);
 
           if (transmuted !== null) {
@@ -549,9 +818,11 @@ export default {
             earned,
             possible,
             rawPercentage,
+            initialGrade: ecr.initialGrade,
             transmuted,
             remarks,
             assignmentCount: termAssigns.length,
+            ecr,
           };
         });
 
@@ -670,6 +941,64 @@ export default {
       document.body.removeChild(link);
     }
 
+    function exportDepEdEcrCSV() {
+      if (!depEdEcrData.value || depEdEcrData.value.length === 0) return;
+      const className = (gradebookData.value && gradebookData.value.classroom_name) || 'Class';
+      const termLabel = getTermLabel(selectedEcrTerm.value, true);
+
+      const headers = [
+        'Learner Name',
+        'LRN / Username',
+        `WW Total / HPS (${Math.round(activeScheme.value.weights.ww * 100)}%)`,
+        'WW Percentage Score (PS %)',
+        'WW Weighted Score (WS)',
+        `PT Total / HPS (${Math.round(activeScheme.value.weights.pt * 100)}%)`,
+        'PT Percentage Score (PS %)',
+        'PT Weighted Score (WS)',
+        `QA/TA Total / HPS (${Math.round(activeScheme.value.weights.ta * 100)}%)`,
+        'QA/TA Percentage Score (PS %)',
+        'QA/TA Weighted Score (WS)',
+        'Initial Grade',
+        'Transmuted Grade (DO 8, s. 2015)',
+        'Action Taken / Status',
+        'Descriptor',
+      ];
+
+      const rows = [headers.join(',')];
+
+      depEdEcrData.value.forEach(row => {
+        const line = [
+          `"${row.fullName}"`,
+          `"${row.username}"`,
+          `"${row.ww.rawScore} / ${row.ww.hps}"`,
+          row.ww.ps !== null ? `"${row.ww.ps}%"` : '""',
+          row.ww.ws !== null ? row.ww.ws : '""',
+          `"${row.pt.rawScore} / ${row.pt.hps}"`,
+          row.pt.ps !== null ? `"${row.pt.ps}%"` : '""',
+          row.pt.ws !== null ? row.pt.ws : '""',
+          `"${row.ta.rawScore} / ${row.ta.hps}"`,
+          row.ta.ps !== null ? `"${row.ta.ps}%"` : '""',
+          row.ta.ws !== null ? row.ta.ws : '""',
+          row.initialGrade !== null ? row.initialGrade : '""',
+          row.transmutedGrade !== null ? row.transmutedGrade : '""',
+          `"${row.remarks.status}"`,
+          `"${row.remarks.descriptor}"`,
+        ];
+        rows.push(line.join(','));
+      });
+
+      const csvContent =
+        'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(rows.join('\n'));
+      const link = document.createElement('a');
+      link.setAttribute('href', csvContent);
+      const safeName = className.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const safeTerm = termLabel.replace(/[^a-zA-Z0-9_-]/g, '_');
+      link.setAttribute('download', `deped_ecr_${safeTerm}_${safeName}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
     function exportAssignmentsCSV() {
       if (!gradebookData.value) return;
       const { classroom_name } = gradebookData.value;
@@ -720,7 +1049,12 @@ export default {
       gradebookData,
       viewMode,
       selectedTermFilter,
+      selectedSchemeKey,
+      selectedEcrTerm,
       depEdTermConfig: DEPED_TERM_CONFIG,
+      depEdGradingSchemes: DEPED_GRADING_SCHEMES,
+      activeScheme,
+      depEdEcrData,
       visibleAssignments,
       filteredLearnersData,
       depEdLearnerSummaries,
@@ -730,6 +1064,7 @@ export default {
       getScoreClass,
       getPercentClass,
       exportDepEdSummaryCSV,
+      exportDepEdEcrCSV,
       exportAssignmentsCSV,
       backToAssignments$,
       pageTitle$,
@@ -752,7 +1087,7 @@ export default {
 <style lang="scss" scoped>
 .gradebook-container {
   padding: 24px;
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
 }
 
@@ -1187,5 +1522,170 @@ export default {
 
 .empty-score {
   color: #9ca3af;
+}
+
+/* ECR Specific Styles (DO 8, s. 2015) */
+.ecr-banner {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+}
+
+.ecr-controls-card {
+  padding: 16px 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ecr-controls-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+}
+
+.ecr-control-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .control-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .scheme-dropdown {
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    min-width: 320px;
+    cursor: pointer;
+  }
+}
+
+.ecr-term-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.ecr-term-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 16px;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  background: #ffffff;
+  transition: all 0.2s;
+
+  &.active {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+    font-weight: 800;
+  }
+}
+
+.weights-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.weight-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &.chip-ww {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+  }
+
+  &.chip-pt {
+    background-color: #f3e8ff;
+    color: #6b21a8;
+    border: 1px solid #e9d5ff;
+  }
+
+  &.chip-ta {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+  }
+}
+
+.ecr-table {
+  width: 100%;
+
+  th,
+  td {
+    padding: 8px 6px;
+  }
+
+  .header-student {
+    min-width: 140px;
+  }
+
+  .header-summary {
+    min-width: 80px;
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+
+  .header-comp-group {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 6px 4px;
+    border-right: 1px solid #e5e7eb;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+
+    &.ww-group {
+      background-color: #eff6ff;
+      color: #1e40af;
+    }
+
+    &.pt-group {
+      background-color: #faf5ff;
+      color: #6b21a8;
+    }
+
+    &.ta-group {
+      background-color: #fffbeb;
+      color: #92400e;
+    }
+  }
+
+  .sub-col {
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    padding: 4px 4px;
+    color: #6b7280;
+    border-right: 1px solid #f3f4f6;
+  }
+
+  .cell-num {
+    text-align: center;
+    font-size: 12px;
+    padding: 8px 4px;
+    border-right: 1px solid #f3f4f6;
+  }
+
+  .initial-grade-text {
+    font-size: 14px;
+    font-weight: 800;
+    color: #1f2937;
+  }
 }
 </style>

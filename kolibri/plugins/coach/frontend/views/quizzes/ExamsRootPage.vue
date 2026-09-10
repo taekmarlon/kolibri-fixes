@@ -55,6 +55,12 @@
             :inline="true"
           />
           <KSelect
+            v-model="componentSelected"
+            label="DepEd Component (DO 8)"
+            :options="componentOptions"
+            :inline="true"
+          />
+          <KSelect
             v-model="statusSelected"
             :label="filterQuizStatus$()"
             :options="statusOptions"
@@ -73,6 +79,7 @@
           <template #headers>
             <th>{{ titleLabel$() }}</th>
             <th>Term</th>
+            <th>Component</th>
             <th style="position: relative">
               {{ avgScoreLabel$() }}
               <AverageScoreTooltip v-show="!$isPrint" />
@@ -107,6 +114,14 @@
                     :class="getExamTermInfo(exam).badgeClass"
                   >
                     {{ getExamTermInfo(exam).shortLabel }}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    class="deped-comp-badge"
+                    :class="getExamCompInfo(exam).badgeClass"
+                  >
+                    {{ getExamCompInfo(exam).code }}
                   </span>
                 </td>
                 <td>
@@ -236,7 +251,13 @@
   import StatusSummary from '../common/status/StatusSummary';
   import CoachHeader from '../common/CoachHeader.vue';
   import AiQuizGeneratorModal from '../common/AiQuizGeneratorModal.vue';
-  import { getItemTerm, DEPED_TERM_CONFIG } from '../../utils/depEdTerms';
+  import {
+    getItemTerm,
+    DEPED_TERM_CONFIG,
+    getItemComponent,
+    getComponentInfo,
+    DEPED_COMPONENT_CONFIG,
+  } from '../../utils/depEdTerms';
 
   const aiCoachStrings = createTranslator('AiCoachStrings', {
     generateWithAi: {
@@ -318,6 +339,11 @@
         value: 'all',
       });
 
+      const componentSelected = ref({
+        label: 'All Components (DO 8)',
+        value: 'all',
+      });
+
       const statusSelected = ref({
         label: filterQuizAll$(),
         value: filterQuizAll$(),
@@ -337,6 +363,7 @@
         showCloseConfirmationModal,
         activeQuiz,
         termSelected,
+        componentSelected,
         statusSelected,
         filterQuizAll$,
         filterQuizStarted$,
@@ -399,6 +426,14 @@
           { label: 'Term 1 (Jun 8 – Sep 15)', value: 'term_1' },
           { label: 'Term 2 (Sep 16 – Dec 18)', value: 'term_2' },
           { label: 'Term 3 (Jan 4 – Apr 8)', value: 'term_3' },
+        ];
+      },
+      componentOptions() {
+        return [
+          { label: 'All Components (DO 8)', value: 'all' },
+          { label: 'Written Work (WW)', value: 'WW' },
+          { label: 'Performance Task (PT)', value: 'PT' },
+          { label: 'Term Assessment (QA/TA)', value: 'TA' },
         ];
       },
       statusOptions() {
@@ -464,6 +499,16 @@
         if (this.termSelected && this.termSelected.value && this.termSelected.value !== 'all') {
           selectedExams = selectedExams.filter(
             exam => getItemTerm(exam) === this.termSelected.value,
+          );
+        }
+
+        if (
+          this.componentSelected &&
+          this.componentSelected.value &&
+          this.componentSelected.value !== 'all'
+        ) {
+          selectedExams = selectedExams.filter(
+            exam => getItemComponent(exam) === this.componentSelected.value,
           );
         }
 
@@ -565,6 +610,10 @@
             name: 'DepEd Term',
             column: 'termLabel',
           },
+          {
+            name: 'DepEd Component',
+            column: 'componentLabel',
+          },
           ...csvFields.recipients(this.className),
           ...csvFields.avgScore(),
           ...csvFields.allLearners('totalLearners'),
@@ -574,6 +623,7 @@
         const dataWithTerms = this.filteredExams.map(exam => ({
           ...exam,
           termLabel: this.getExamTermInfo(exam).shortLabel,
+          componentLabel: this.getExamCompInfo(exam).code,
         }));
 
         const fileName = this.$tr('printLabel', { className: this.className });
@@ -582,6 +632,10 @@
       getExamTermInfo(exam) {
         const termKey = getItemTerm(exam);
         return DEPED_TERM_CONFIG.find(t => t.key === termKey) || DEPED_TERM_CONFIG[0];
+      },
+      getExamCompInfo(exam) {
+        const compKey = getItemComponent(exam);
+        return getComponentInfo(compKey);
       },
       handleCloseQuiz(quizId) {
         const promise = ExamResource.saveModel({
@@ -691,6 +745,34 @@
     background-color: #e8f5e9;
     color: #1b5e20;
     border: 1px solid #a5d6a7;
+  }
+
+  .deped-comp-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 12px;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+  }
+
+  .deped-comp-ww {
+    background-color: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #7dd3fc;
+  }
+
+  .deped-comp-pt {
+    background-color: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+  }
+
+  .deped-comp-ta {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
   }
 
   @media print {

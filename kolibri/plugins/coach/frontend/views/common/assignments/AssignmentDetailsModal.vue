@@ -96,6 +96,27 @@
               @change="handleTermChange"
             />
           </KGridItem>
+          <!-- DepEd Assessment Component Selector (DO 8, s. 2015) -->
+          <KGridItem
+            :layout4="{ span: 1 }"
+            :layout8="{ span: 1 }"
+            :layout12="{ span: 1 }"
+          >
+            <div></div>
+          </KGridItem>
+          <KGridItem
+            :layout4="{ span: 3 }"
+            :layout8="{ span: 7 }"
+            :layout12="{ span: 5 }"
+          >
+            <KSelect
+              label="DepEd Component (DO 8, s. 2015)"
+              :options="componentOptions"
+              :value="selectedComponentOption"
+              :class="['comp-select', windowIsSmall ? 'select-sm' : 'select-lg']"
+              @change="handleComponentChange"
+            />
+          </KGridItem>
           <!--Align with the title input-->
           <KGridItem
             :layout4="{ span: 1 }"
@@ -290,6 +311,7 @@
         showTitleError: false,
         instantReportVisibility: this.assignment.instant_report_visibility,
         selectedTerm: this.detectInitialTerm(this.assignment.title),
+        selectedComponent: this.detectInitialComponent(this.assignment.title),
       };
     },
     computed: {
@@ -304,6 +326,20 @@
       selectedTermOption() {
         return (
           this.termOptions.find(o => o.value === this.selectedTerm) || this.termOptions[0]
+        );
+      },
+      componentOptions() {
+        return [
+          { label: 'None / Untagged', value: 'none' },
+          { label: 'Written Work (WW) - Quizzes, Tests, Essays', value: 'ww' },
+          { label: 'Performance Task (PT) - Projects, Activities', value: 'pt' },
+          { label: 'Quarterly / Term Exam (QA/TA) - Periodical Exams', value: 'ta' },
+        ];
+      },
+      selectedComponentOption() {
+        return (
+          this.componentOptions.find(o => o.value === this.selectedComponent) ||
+          this.componentOptions[0]
         );
       },
       titleIsInvalidText() {
@@ -424,18 +460,44 @@
         if (lower.includes('[term 3]') || lower.includes('[t3]')) return 'term_3';
         return 'none';
       },
+      detectInitialComponent(title = '') {
+        const lower = (title || '').toLowerCase();
+        if (lower.includes('[ww]') || lower.includes('written work')) return 'ww';
+        if (lower.includes('[pt]') || lower.includes('performance task')) return 'pt';
+        if (
+          lower.includes('[ta]') ||
+          lower.includes('[qa]') ||
+          lower.includes('term exam') ||
+          lower.includes('quarterly assessment')
+        ) {
+          return 'ta';
+        }
+        return 'none';
+      },
+      syncTitleTags() {
+        let base = (this.title || '')
+          .replace(/\[(Term [1-3]|T[1-3])\]\s*/gi, '')
+          .replace(/\[(WW|PT|TA|QA)\]\s*/gi, '')
+          .trim();
+
+        let prefix = '';
+        if (this.selectedTerm === 'term_1') prefix += '[Term 1] ';
+        else if (this.selectedTerm === 'term_2') prefix += '[Term 2] ';
+        else if (this.selectedTerm === 'term_3') prefix += '[Term 3] ';
+
+        if (this.selectedComponent === 'ww') prefix += '[WW] ';
+        else if (this.selectedComponent === 'pt') prefix += '[PT] ';
+        else if (this.selectedComponent === 'ta') prefix += '[TA] ';
+
+        this.title = `${prefix}${base}`.trim();
+      },
       handleTermChange(option) {
         this.selectedTerm = option.value;
-        const cleanTitle = (this.title || '').replace(/^\[(Term [1-3]|T[1-3])\]\s*/i, '').trim();
-        if (option.value === 'term_1') {
-          this.title = `[Term 1] ${cleanTitle}`;
-        } else if (option.value === 'term_2') {
-          this.title = `[Term 2] ${cleanTitle}`;
-        } else if (option.value === 'term_3') {
-          this.title = `[Term 3] ${cleanTitle}`;
-        } else {
-          this.title = cleanTitle;
-        }
+        this.syncTitleTags();
+      },
+      handleComponentChange(option) {
+        this.selectedComponent = option.value;
+        this.syncTitleTags();
       },
       submitData() {
         this.showServerError = false;
