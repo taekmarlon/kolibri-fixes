@@ -6,6 +6,9 @@
         <OverviewBlock />
       </KGridItem>
       <KGridItem>
+        <AtRiskLearnersBlock />
+      </KGridItem>
+      <KGridItem>
         <AiAssistantBlock />
       </KGridItem>
       <KGridItem :layout12="{ span: 6 }">
@@ -41,6 +44,7 @@
   import CoachAppBarPage from '../../CoachAppBarPage';
   import commonCoach from '../../common';
   import AttendanceBlock from './AttendanceBlock';
+  import AtRiskLearnersBlock from './AtRiskLearnersBlock';
   import CourseworkBlock from './CourseworkBlock';
   import OverviewBlock from './OverviewBlock';
   import ActivityBlock from './ActivityBlock';
@@ -52,6 +56,7 @@
     name: 'HomePage',
     components: {
       CoachAppBarPage,
+      AtRiskLearnersBlock,
       AttendanceBlock,
       CourseworkBlock,
       OverviewBlock,

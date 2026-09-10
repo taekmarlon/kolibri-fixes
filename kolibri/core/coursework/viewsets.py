@@ -1,9 +1,12 @@
 import logging
 
 from django.db.models import Count
+from django.db.models import Max
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import permissions
 from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser
 from rest_framework.parsers import JSONParser
@@ -12,11 +15,14 @@ from rest_framework.response import Response
 from rest_framework.serializers import CharField
 from rest_framework.serializers import FileField
 from rest_framework.serializers import IntegerField
+from rest_framework.serializers import JSONField
 from rest_framework.serializers import ModelSerializer
 from rest_framework.serializers import PrimaryKeyRelatedField
 from rest_framework.serializers import ValidationError
 
 from kolibri.core.api import ValuesViewset
+from kolibri.core.attendance.models import AttendanceRecord
+from kolibri.core.attendance.models import AttendanceSession
 from kolibri.core.auth.constants import role_kinds
 from kolibri.core.auth.models import Collection
 from kolibri.core.auth.models import FacilityUser
@@ -27,6 +33,10 @@ from kolibri.core.coursework.models import Assignment
 from kolibri.core.coursework.models import AssignmentSubmission
 from kolibri.core.coursework.models import DiscussionReply
 from kolibri.core.coursework.models import DiscussionThread
+from kolibri.core.coursework.models import LearnerIntervention
+from kolibri.core.exams.models import Exam
+from kolibri.core.logger.models import AttemptLog
+from kolibri.core.logger.models import ContentSummaryLog
 from kolibri.core.serializers import DateTimeTzField
 from kolibri.core.utils.pagination import OptionalPageNumberPagination
 from kolibri.utils.time_utils import local_now
@@ -531,3 +541,366 @@ class DiscussionThreadViewSet(ValuesViewset):
         thread.is_closed = not thread.is_closed
         thread.save()
         return Response({"is_closed": thread.is_closed})
+
+
+# -------------------------------------------------------------------------
+# Learner Interventions (Early Warning System)
+# -------------------------------------------------------------------------
+
+
+class LearnerInterventionPermissions(CourseworkAuthPermissions):
+    def validator(self, request, view, datum):
+        model = view.get_serializer_class().Meta.model
+        datum = _ensure_raw_dict(datum)
+        validated_data = view.get_serializer().to_internal_value(datum)
+        validated_data["coach"] = request.user
+        return request.user.can_create(model, validated_data)
+
+
+class LearnerInterventionSerializer(ModelSerializer):
+    collection = PrimaryKeyRelatedField(queryset=Collection.objects.all())
+    collection_name = CharField(source="collection__name", read_only=True)
+    learner = PrimaryKeyRelatedField(queryset=FacilityUser.objects.all())
+    learner_name = CharField(source="learner__full_name", read_only=True)
+    learner_username = CharField(source="learner__username", read_only=True)
+    coach = PrimaryKeyRelatedField(read_only=True)
+    coach_name = CharField(source="coach__full_name", read_only=True)
+    coach_username = CharField(source="coach__username", read_only=True)
+    reasons = JSONField(default=list, required=False)
+
+    class Meta:
+        model = LearnerIntervention
+        fields = (
+            "id",
+            "collection",
+            "collection_name",
+            "learner",
+            "learner_name",
+            "learner_username",
+            "coach",
+            "coach_name",
+            "coach_username",
+            "risk_level",
+            "reasons",
+            "intervention_type",
+            "notes",
+            "status",
+            "target_date",
+            "date_created",
+            "date_modified",
+        )
+        read_only_fields = ("id", "coach", "date_created", "date_modified")
+
+    def validate(self, attrs):
+        if not self.instance and "request" in self.context:
+            attrs["coach"] = self.context["request"].user
+        return attrs
+
+
+class LearnerInterventionViewSet(ValuesViewset):
+    serializer_class = LearnerInterventionSerializer
+    permission_classes = (LearnerInterventionPermissions,)
+    filter_backends = (KolibriAuthPermissionsFilter, DjangoFilterBackend)
+    filterset_fields = (
+        "collection",
+        "learner",
+        "risk_level",
+        "status",
+        "intervention_type",
+    )
+    pagination_class = OptionalPageNumberPagination
+
+    def get_queryset(self):
+        return LearnerIntervention.objects.order_by("-date_created")
+
+    def perform_create(self, serializer):
+        serializer.save(coach=self.request.user)
+
+
+# -------------------------------------------------------------------------
+# At-Risk Analytics (Early Warning System)
+# -------------------------------------------------------------------------
+
+
+class AtRiskAnalyticsViewSet(viewsets.ViewSet):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def _get_user_attendance(self, collection, learners, total_sessions):
+        attendance_records = AttendanceRecord.objects.filter(
+            attendance_session__collection=collection,
+            user__in=learners,
+        ).values("user_id", "present")
+
+        user_attendance = {
+            l.id: {"present": 0, "absent": 0, "rate": 100.0} for l in learners
+        }
+        for rec in attendance_records:
+            uid = rec["user_id"]
+            if uid in user_attendance:
+                if rec["present"]:
+                    user_attendance[uid]["present"] += 1
+                else:
+                    user_attendance[uid]["absent"] += 1
+
+        for uid, att in user_attendance.items():
+            if total_sessions > 0:
+                att["rate"] = round((att["present"] / total_sessions) * 100, 1)
+        return user_attendance
+
+    def _get_user_quiz_stats(self, collection, learners):
+        exams = Exam.objects.filter(collection=collection)
+        user_quiz_stats = {l.id: {"total_quizzes": 0, "scores": []} for l in learners}
+        for exam in exams:
+            for l in learners:
+                user_logs = AttemptLog.objects.filter(
+                    masterylog__summarylog__content_id=exam.id,
+                    user=l,
+                )
+                if user_logs.exists():
+                    total_q = user_logs.values("item").distinct().count()
+                    correct_q = (
+                        user_logs.filter(correct=1).values("item").distinct().count()
+                    )
+                    if total_q > 0:
+                        pct = round((correct_q / total_q) * 100, 1)
+                        user_quiz_stats[l.id]["scores"].append(pct)
+                        user_quiz_stats[l.id]["total_quizzes"] += 1
+        return user_quiz_stats
+
+    def _get_user_cw_stats(self, collection, learners):
+        submissions = AssignmentSubmission.objects.filter(
+            assignment__collection=collection,
+            learner__in=learners,
+        ).values(
+            "learner_id", "assignment_id", "status", "grade", "assignment__max_points"
+        )
+
+        user_cw_stats = {l.id: {"submitted_ids": set(), "grades": []} for l in learners}
+        for sub in submissions:
+            lid = sub["learner_id"]
+            if lid in user_cw_stats:
+                user_cw_stats[lid]["submitted_ids"].add(sub["assignment_id"])
+                if sub["status"] == "graded" and sub["grade"] is not None:
+                    max_pts = sub["assignment__max_points"] or 100
+                    pct = round((sub["grade"] / max_pts) * 100, 1)
+                    user_cw_stats[lid]["grades"].append(pct)
+        return user_cw_stats
+
+    def _get_user_last_activity(self, collection, learners):
+        user_last_activity = {}
+        for l in learners:
+            latest_cw = AssignmentSubmission.objects.filter(
+                assignment__collection=collection, learner=l
+            ).aggregate(Max("submitted_at"))["submitted_at__max"]
+            latest_content = ContentSummaryLog.objects.filter(user=l).aggregate(
+                Max("end_timestamp")
+            )["end_timestamp__max"]
+            dates = [d for d in [latest_cw, latest_content] if d is not None]
+            user_last_activity[l.id] = max(dates) if dates else None
+        return user_last_activity
+
+    def _get_user_interventions(self, collection, learners):
+        interventions = LearnerIntervention.objects.filter(
+            collection=collection, learner__in=learners
+        ).order_by("-date_created")
+        user_interventions = {l.id: [] for l in learners}
+        for itv in interventions:
+            user_interventions[itv.learner_id].append(
+                {
+                    "id": str(itv.id),
+                    "risk_level": itv.risk_level,
+                    "reasons": itv.reasons,
+                    "intervention_type": itv.intervention_type,
+                    "notes": itv.notes,
+                    "status": itv.status,
+                    "target_date": itv.target_date,
+                    "coach_name": itv.coach.full_name or itv.coach.username,
+                    "date_created": itv.date_created,
+                }
+            )
+        return user_interventions
+
+    def _analyze_factors(
+        self, att, total_sessions, q_stats, cw, total_assignments, last_act, now
+    ):
+        factors = []
+        if total_sessions >= 2 and att["rate"] < 80.0:
+            factors.append(
+                {
+                    "category": "attendance",
+                    "severity": "high" if att["rate"] < 60.0 else "moderate",
+                    "label": f"Low Attendance ({att['rate']}%)",
+                    "detail": f"Attended {att['present']} of {total_sessions} sessions (Below 80% threshold)",
+                }
+            )
+
+        avg_quiz = None
+        if q_stats["scores"]:
+            avg_quiz = round(sum(q_stats["scores"]) / len(q_stats["scores"]), 1)
+            if avg_quiz < 75.0:
+                factors.append(
+                    {
+                        "category": "academic",
+                        "severity": "high" if avg_quiz < 60.0 else "moderate",
+                        "label": f"Failing Quiz Average ({avg_quiz}%)",
+                        "detail": f"Average score across {len(q_stats['scores'])} quizzes is {avg_quiz}% (Below 75% DepEd passing standard)",
+                    }
+                )
+
+        missing_count = total_assignments - len(cw["submitted_ids"])
+        if total_assignments > 0 and missing_count >= 2:
+            factors.append(
+                {
+                    "category": "missing_work",
+                    "severity": "high" if missing_count >= 3 else "moderate",
+                    "label": f"{missing_count} Missing Assignments",
+                    "detail": f"Has not submitted {missing_count} of {total_assignments} active assignments",
+                }
+            )
+        elif cw["grades"]:
+            avg_hw = round(sum(cw["grades"]) / len(cw["grades"]), 1)
+            if avg_hw < 75.0:
+                factors.append(
+                    {
+                        "category": "academic_hw",
+                        "severity": "moderate",
+                        "label": f"Low Homework Score ({avg_hw}%)",
+                        "detail": f"Average coursework grade is {avg_hw}% (Below 75% threshold)",
+                    }
+                )
+
+        days_inactive = (now - last_act).days if last_act else None
+        if days_inactive is not None and days_inactive >= 7:
+            factors.append(
+                {
+                    "category": "inactivity",
+                    "severity": "high" if days_inactive >= 14 else "moderate",
+                    "label": f"Inactive for {days_inactive} days",
+                    "detail": f"Last activity was {days_inactive} days ago",
+                }
+            )
+        elif last_act is None and (total_sessions > 0 or total_assignments > 0):
+            factors.append(
+                {
+                    "category": "inactivity",
+                    "severity": "high",
+                    "label": "No Recorded Activity",
+                    "detail": "Learner has not logged in or interacted with class content",
+                }
+            )
+        return factors, avg_quiz, missing_count
+
+    def list(self, request):
+        collection_id = request.query_params.get("collection")
+        if not collection_id:
+            return Response(
+                {"error": "collection query parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            collection = Collection.objects.get(id=collection_id)
+        except (Collection.DoesNotExist, ValueError):
+            return Response(
+                {"error": "Collection not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        has_perm = request.user.is_superuser or request.user.has_role_for_collection(
+            (role_kinds.ADMIN, role_kinds.COACH), collection
+        )
+        if not has_perm:
+            return Response(
+                {"error": "Forbidden"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        learners = (
+            FacilityUser.objects.filter(memberships__collection=collection)
+            .distinct()
+            .order_by("full_name", "username")
+        )
+
+        total_sessions = AttendanceSession.objects.filter(collection=collection).count()
+        user_attendance = self._get_user_attendance(
+            collection, learners, total_sessions
+        )
+        user_quiz_stats = self._get_user_quiz_stats(collection, learners)
+        user_cw_stats = self._get_user_cw_stats(collection, learners)
+        user_last_activity = self._get_user_last_activity(collection, learners)
+        user_interventions = self._get_user_interventions(collection, learners)
+
+        active_assignments = Assignment.objects.filter(
+            collection=collection, is_active=True
+        )
+        total_assignments = active_assignments.count()
+
+        now = local_now()
+        learner_results = []
+        high_count = 0
+        moderate_count = 0
+        on_track_count = 0
+
+        for l in learners:
+            att = user_attendance.get(l.id, {"present": 0, "absent": 0, "rate": 100.0})
+            q_stats = user_quiz_stats.get(l.id, {"total_quizzes": 0, "scores": []})
+            cw = user_cw_stats.get(l.id, {"submitted_ids": set(), "grades": []})
+            last_act = user_last_activity.get(l.id)
+
+            factors, avg_quiz, missing_count = self._analyze_factors(
+                att, total_sessions, q_stats, cw, total_assignments, last_act, now
+            )
+
+            risk_score = min(100, len(factors) * 35)
+            if len(factors) >= 2:
+                risk_level = "high"
+                high_count += 1
+            elif len(factors) == 1:
+                risk_level = "moderate"
+                moderate_count += 1
+            else:
+                risk_level = "low"
+                on_track_count += 1
+
+            itvs = user_interventions.get(l.id, [])
+            active_itvs = [i for i in itvs if i["status"] in ("pending", "in_progress")]
+
+            learner_results.append(
+                {
+                    "id": str(l.id),
+                    "name": l.full_name or l.username,
+                    "username": l.username,
+                    "risk_level": risk_level,
+                    "risk_score": risk_score,
+                    "risk_factors": factors,
+                    "attendance_rate": att["rate"] if total_sessions > 0 else None,
+                    "attendance_present": att["present"],
+                    "attendance_total": total_sessions,
+                    "quiz_average": avg_quiz,
+                    "missing_assignments": (
+                        missing_count if total_assignments > 0 else 0
+                    ),
+                    "total_assignments": total_assignments,
+                    "last_active": last_act,
+                    "interventions": itvs,
+                    "active_intervention_count": len(active_itvs),
+                    "latest_intervention": itvs[0] if itvs else None,
+                }
+            )
+
+        risk_priority = {"high": 0, "moderate": 1, "low": 2}
+        learner_results.sort(
+            key=lambda x: (risk_priority[x["risk_level"]], x["name"].lower())
+        )
+
+        return Response(
+            {
+                "total_learners": len(learners),
+                "high_risk_count": high_count,
+                "moderate_risk_count": moderate_count,
+                "on_track_count": on_track_count,
+                "total_sessions": total_sessions,
+                "total_assignments": total_assignments,
+                "learners": learner_results,
+            }
+        )

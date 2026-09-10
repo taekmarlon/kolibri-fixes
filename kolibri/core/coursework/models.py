@@ -13,6 +13,7 @@ from kolibri.core.coursework.permissions import DiscussionReplyPermissions
 from kolibri.core.coursework.permissions import DiscussionThreadPermissions
 from kolibri.core.coursework.permissions import UserCanReadAssignment
 from kolibri.core.fields import DateTimeTzField
+from kolibri.core.fields import JSONField
 from kolibri.utils.time_utils import local_now
 
 
@@ -236,6 +237,90 @@ class DiscussionReply(AbstractFacilityDataModel):
 
     def infer_dataset(self, *args, **kwargs):
         return self.cached_related_dataset_lookup("thread")
+
+    def calculate_partition(self):
+        return self.dataset_id
+
+
+class LearnerIntervention(AbstractFacilityDataModel):
+    """
+    Tracks faculty interventions, remedial actions, consultations, and notes
+    for at-risk learners.
+    """
+
+    morango_model_name = "learnerintervention"
+
+    permissions = RoleBasedPermissions(
+        target_field="collection",
+        can_be_created_by=(role_kinds.ADMIN, role_kinds.COACH),
+        can_be_read_by=(role_kinds.ADMIN, role_kinds.COACH),
+        can_be_updated_by=(role_kinds.ADMIN, role_kinds.COACH),
+        can_be_deleted_by=(role_kinds.ADMIN, role_kinds.COACH),
+    )
+
+    collection = models.ForeignKey(
+        Collection,
+        related_name="learner_interventions",
+        on_delete=models.CASCADE,
+    )
+    learner = models.ForeignKey(
+        FacilityUser,
+        related_name="interventions_received",
+        on_delete=models.CASCADE,
+    )
+    coach = models.ForeignKey(
+        FacilityUser,
+        related_name="interventions_logged",
+        on_delete=models.CASCADE,
+    )
+    risk_level = models.CharField(
+        max_length=20,
+        choices=(
+            ("high", "High Risk"),
+            ("moderate", "Moderate Risk"),
+            ("low", "Low Risk"),
+        ),
+        default="moderate",
+    )
+    reasons = JSONField(default=list, blank=True)
+    intervention_type = models.CharField(
+        max_length=50,
+        choices=(
+            ("remedial_instruction", "Remedial Instruction"),
+            ("peer_tutoring", "Peer Tutoring & Study Buddy"),
+            ("parent_contact", "Parent / Guardian Conference"),
+            ("counseling", "Guidance Counseling Consultation"),
+            ("assignment_extension", "Assignment Deadline Extension"),
+            ("learning_materials", "Supplemental Modules & Reviewers"),
+        ),
+        default="remedial_instruction",
+    )
+    notes = models.TextField(blank=True, default="")
+    status = models.CharField(
+        max_length=20,
+        choices=(
+            ("pending", "Pending"),
+            ("in_progress", "In Progress"),
+            ("resolved", "Resolved"),
+        ),
+        default="pending",
+    )
+    target_date = DateTimeTzField(null=True, blank=True)
+    date_created = DateTimeTzField(default=local_now, editable=False)
+    date_modified = DateTimeTzField(default=local_now)
+
+    class Meta:
+        ordering = ["-date_created"]
+
+    def __str__(self):
+        return f"Intervention for {self.learner.username} ({self.intervention_type}) - {self.status}"
+
+    def pre_save(self, **kwargs):
+        super().pre_save(**kwargs)
+        self.enforce_authoring_user_field("coach", **kwargs)
+
+    def infer_dataset(self, *args, **kwargs):
+        return self.cached_related_dataset_lookup("collection")
 
     def calculate_partition(self):
         return self.dataset_id
