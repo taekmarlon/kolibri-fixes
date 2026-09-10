@@ -36,7 +36,7 @@
                 v-if="submission && submission.status === 'graded'"
                 class="badge graded-badge"
               >
-                ✓ {{ gradedLabel$() }}: {{ submission.points_awarded }}/{{ assignment.points_possible }} {{ pointsLabel$() }}
+                ✓ {{ gradedLabel$() }}: {{ submission.grade }}/{{ assignment.max_points }} {{ pointsLabel$() }}
               </span>
               <span
                 v-else-if="submission"
@@ -55,7 +55,7 @@
 
           <div class="assignment-metadata" :style="{ color: $themeTokens.annotation }">
             <span class="meta-item">
-              <strong>{{ pointsLabel$() }}:</strong> {{ assignment.points_possible }}
+              <strong>{{ pointsLabel$() }}:</strong> {{ assignment.max_points }}
             </span>
             <span class="meta-item">
               <strong>{{ dueLabel$() }}:</strong>
@@ -121,9 +121,9 @@
       >
         <div class="feedback-header">
           <div class="grade-score" style="color: #15803d;">
-            ★ {{ scoreHeading$() }}: {{ submission.points_awarded }} / {{ assignment.points_possible }}
+            ★ {{ scoreHeading$() }}: {{ submission.grade }} / {{ assignment.max_points }}
             <span class="score-percent">
-              ({{ Math.round((submission.points_awarded / (assignment.points_possible || 1)) * 100) }}%)
+              ({{ Math.round(((submission.grade || 0) / (assignment.max_points || 1)) * 100) }}%)
             </span>
           </div>
           <div v-if="submission.graded_at" class="graded-at" style="color: #166534;">
@@ -155,7 +155,7 @@
 
         <!-- Current File Attachment if already submitted -->
         <div
-          v-if="submission && submission.file"
+          v-if="submission && (submission.file_attachment || submission.file_name)"
           class="existing-file-box"
           :style="{
             backgroundColor: $themePalette.grey.v_100,
@@ -163,9 +163,13 @@
           }"
         >
           <KIcon icon="attachment" />
-          <span class="file-name">{{ existingFileName }}</span>
+          <span class="file-name">{{ submission.file_name || existingFileName }}</span>
+          <span v-if="submission.file_size" class="file-size-badge" :style="{ color: $themeTokens.annotation }">
+            ({{ formatFileSize(submission.file_size) }})
+          </span>
           <a
-            :href="submission.file"
+            v-if="submission.file_attachment"
+            :href="submission.file_attachment"
             target="_blank"
             rel="noopener noreferrer"
             class="download-link"
@@ -190,21 +194,57 @@
               color: $themeTokens.text,
             }"
           ></textarea>
+          <div class="textarea-counters">
+            <span>{{ wordCount }} words</span>
+            <span>{{ submissionText.length }} characters</span>
+          </div>
         </div>
 
-        <!-- File Upload Field -->
+        <!-- File Upload Field (5 MB Max) -->
         <div class="form-group">
           <label class="form-label" :style="{ color: $themeTokens.text }">
             {{ attachFileLabel$() }}
+            <span class="max-size-tag" style="color: #b91c1c; font-size: 11px; font-weight: 700; margin-left: 6px;">(MAX 5 MB)</span>
           </label>
           <input
             type="file"
             class="file-input"
+            accept=".pdf,.docx,.doc,.pptx,.ppt,.xlsx,.xls,.txt,.zip,.png,.jpg,.jpeg"
             @change="handleFileUpload"
           />
           <p class="file-hint" :style="{ color: $themeTokens.annotation }">
             {{ fileHint$() }}
           </p>
+
+          <!-- 5 MB Exceeded Warning Alert -->
+          <div
+            v-if="fileError"
+            class="file-error-alert"
+            style="background: #fef2f2; color: #991b1b; border: 1.5px solid #f87171; padding: 12px 16px; border-radius: 6px; margin-top: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px;"
+          >
+            <span style="font-size: 18px;">⚠️</span>
+            <span>{{ fileError }}</span>
+          </div>
+
+          <!-- Selected Valid File Preview Card -->
+          <div
+            v-if="selectedFile"
+            class="selected-file-card"
+            style="display: flex; align-items: center; justify-content: space-between; background: #f0fdf4; border: 1px solid #86efac; padding: 10px 14px; border-radius: 6px; margin-top: 8px;"
+          >
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">📎</span>
+              <span style="font-weight: 700; color: #166534;">{{ selectedFile.name }}</span>
+              <span style="color: #15803d; font-size: 12px; font-weight: 600;">({{ formatFileSize(selectedFile.size) }})</span>
+            </div>
+            <button
+              type="button"
+              style="background: transparent; border: none; color: #dc2626; cursor: pointer; font-weight: 700; font-size: 13px;"
+              @click="clearSelectedFile"
+            >
+              ✕ Remove
+            </button>
+          </div>
         </div>
 
         <!-- Success notification -->
@@ -247,6 +287,10 @@
   import { ClassesPageNames } from '../../constants';
 
   const strings = createTranslator('LearnerAssignmentDetailPageStrings', {
+    classesLabel: {
+      message: 'Classes',
+      context: 'Breadcrumb label for classes page link',
+    },
     gradedLabel: {
       message: 'Graded',
       context: 'Status label for graded submission',
@@ -324,8 +368,12 @@
       context: 'Label for file upload',
     },
     fileHint: {
-      message: 'Accepted formats: documents, archives, images. Max 100MB.',
+      message: 'Accepted formats: PDF, Word, PowerPoint, images, ZIP. Maximum size: 5 MB.',
       context: 'File upload hint',
+    },
+    fileSizeError: {
+      message: 'File exceeds maximum allowed size of 5 MB ({size} MB selected). Please choose a smaller file or compress your document.',
+      context: 'File size exceeded warning',
     },
     submitAssignmentButton: {
       message: 'Submit Assignment',
@@ -367,6 +415,21 @@
       const submission = ref(null);
       const submissionText = ref('');
       const selectedFile = ref(null);
+      const fileError = ref('');
+
+      const wordCount = computed(() => {
+        const text = submissionText.value.trim();
+        if (!text) return 0;
+        return text.split(/\s+/).length;
+      });
+
+      function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+      }
 
       const { getClass, fetchClass } = useLearnerResources();
 
@@ -381,11 +444,11 @@
       const breadcrumbs = computed(() => {
         return [
           {
-            text: commonLearnStrings.methods.learnString('classesLabel') || 'Classes',
+            text: strings.classesLabel$(),
             link: { name: ClassesPageNames.ALL_CLASSES },
           },
           {
-            text: className.value || 'Class',
+            text: className.value || strings.classesLabel$(),
             link: {
               name: ClassesPageNames.CLASS_ASSIGNMENTS,
               params: { classId: props.classId },
@@ -398,9 +461,13 @@
       });
 
       const existingFileName = computed(() => {
-        if (!submission.value || !submission.value.file) return '';
-        const parts = submission.value.file.split('/');
-        return parts[parts.length - 1];
+        if (!submission.value) return '';
+        if (submission.value.file_name) return submission.value.file_name;
+        if (submission.value.file_attachment) {
+          const parts = submission.value.file_attachment.split('/');
+          return parts[parts.length - 1];
+        }
+        return '';
       });
 
       function loadData() {
@@ -417,7 +484,7 @@
             const userSub = submissionsData && submissionsData.length > 0 ? submissionsData[0] : null;
             submission.value = userSub;
             if (userSub) {
-              submissionText.value = userSub.submission_text || '';
+              submissionText.value = userSub.text_content || userSub.submission_text || '';
             }
             loading.value = false;
           })
@@ -427,21 +494,39 @@
       }
 
       function handleFileUpload(event) {
-        if (event.target.files && event.target.files.length > 0) {
-          selectedFile.value = event.target.files[0];
+        const file = event.target.files && event.target.files[0];
+        fileError.value = '';
+        if (!file) {
+          selectedFile.value = null;
+          return;
         }
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB maximum limit
+        if (file.size > MAX_FILE_SIZE) {
+          const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+          fileError.value = strings.fileSizeError$({ size: sizeMb });
+          event.target.value = '';
+          selectedFile.value = null;
+          return;
+        }
+        selectedFile.value = file;
+      }
+
+      function clearSelectedFile() {
+        selectedFile.value = null;
+        fileError.value = '';
       }
 
       function submitHomework() {
         submitting.value = true;
         saveSuccess.value = false;
+        fileError.value = '';
 
         let promise;
         if (selectedFile.value) {
           const formData = new FormData();
           formData.append('assignment', props.assignmentId);
-          formData.append('submission_text', submissionText.value);
-          formData.append('file', selectedFile.value);
+          formData.append('text_content', submissionText.value);
+          formData.append('file_attachment', selectedFile.value);
 
           if (submission.value && submission.value.id) {
             promise = AssignmentSubmissionResource.saveModel({
@@ -456,7 +541,7 @@
         } else {
           const payload = {
             assignment: props.assignmentId,
-            submission_text: submissionText.value,
+            text_content: submissionText.value,
           };
           if (submission.value && submission.value.id) {
             promise = AssignmentSubmissionResource.saveModel({
@@ -475,12 +560,20 @@
             submission.value = updatedSub;
             submitting.value = false;
             saveSuccess.value = true;
+            selectedFile.value = null;
             setTimeout(() => {
               saveSuccess.value = false;
             }, 5000);
           })
-          .catch(() => {
+          .catch(err => {
             submitting.value = false;
+            if (err && err.response && err.response.data && err.response.data.file_attachment) {
+              fileError.value = Array.isArray(err.response.data.file_attachment)
+                ? err.response.data.file_attachment[0]
+                : err.response.data.file_attachment;
+            } else {
+              fileError.value = 'Failed to submit homework. Please try again.';
+            }
           });
       }
 
@@ -508,6 +601,10 @@
         submission,
         submissionText,
         selectedFile,
+        fileError,
+        wordCount,
+        formatFileSize,
+        clearSelectedFile,
         breadcrumbs,
         existingFileName,
         handleFileUpload,

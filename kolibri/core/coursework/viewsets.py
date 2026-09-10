@@ -281,6 +281,14 @@ class AssignmentSubmissionSerializer(ModelSerializer):
                     raise ValidationError("Assignment is not active.")
                 if not request.user.is_member_of(assignment.collection):
                     raise ValidationError("You are not enrolled in this classroom.")
+
+        file_obj = attrs.get("file_attachment")
+        if file_obj and hasattr(file_obj, "size"):
+            # DepEd / System constraint: 5 MB maximum file size allowed
+            if file_obj.size > 5 * 1024 * 1024:
+                raise ValidationError(
+                    {"file_attachment": "File size exceeds the 5 MB maximum limit."}
+                )
         return attrs
 
     def create(self, validated_data):

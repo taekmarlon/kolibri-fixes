@@ -304,80 +304,163 @@
             <p>{{ noSubmissionsYet$() }}</p>
           </div>
 
-          <div v-else class="submissions-list">
-            <div
-              v-for="sub in submissionsList"
-              :key="sub.id"
-              class="submission-item"
-              :style="{
-                backgroundColor: $themeTokens.surface,
-                border: `1px solid ${$themeTokens.fineLine}`,
-              }"
-            >
-              <div class="sub-header">
-                <div>
-                  <strong class="student-name">{{ sub.learner_full_name || sub.learner_username }}</strong>
-                  <span class="sub-date" :style="{ color: $themeTokens.annotation }">
-                    • {{ formatDate(sub.submitted_at) }}
-                  </span>
-                </div>
-                <span
-                  class="sub-status-badge"
-                  :class="sub.status"
-                >
-                  {{ sub.status === 'graded' ? gradedStatus$() : submittedStatus$() }}
-                </span>
-              </div>
+          <div v-else>
+            <!-- Submissions Filter Bar -->
+            <div class="sub-filter-bar">
+              <button
+                type="button"
+                class="sub-filter-pill"
+                :class="{ active: activeSubFilter === 'all' }"
+                @click="activeSubFilter = 'all'"
+              >
+                All Submissions ({{ submissionsList.length }})
+              </button>
+              <button
+                type="button"
+                class="sub-filter-pill"
+                :class="{ active: activeSubFilter === 'needs_grading' }"
+                @click="activeSubFilter = 'needs_grading'"
+              >
+                Needs Grading ({{ needsGradingCount }})
+              </button>
+              <button
+                type="button"
+                class="sub-filter-pill"
+                :class="{ active: activeSubFilter === 'graded' }"
+                @click="activeSubFilter = 'graded'"
+              >
+                Graded ({{ gradedCount }})
+              </button>
+            </div>
 
-              <div v-if="sub.text_content" class="sub-body">
-                <span class="section-tag">{{ studentAnswerLabel$() }}:</span>
-                <p class="sub-text">{{ sub.text_content }}</p>
-              </div>
-
-              <div v-if="sub.file_attachment" class="sub-attachment">
-                <span class="section-tag">📎 {{ attachedFileLabel$() }}:</span>
-                <a
-                  :href="sub.file_attachment"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="attachment-link"
-                >
-                  {{ sub.file_name || downloadAttachmentLabel$() }}
-                </a>
-              </div>
-
+            <div class="submissions-list">
               <div
-                class="grading-form"
+                v-for="sub in filteredSubmissionsList"
+                :key="sub.id"
+                class="submission-item"
                 :style="{
-                  backgroundColor: $themePalette.grey.v_100,
-                  borderTop: `1px solid ${$themeTokens.fineLine}`,
+                  backgroundColor: $themeTokens.surface,
+                  border: `1px solid ${$themeTokens.fineLine}`,
                 }"
               >
-                <div class="grading-row">
-                  <div class="score-input">
-                    <label class="field-lbl">{{ scoreLabel$() }} (max {{ activeSubmissionsAssignment.max_points }}):</label>
-                    <input
-                      v-model.number="gradingForms[sub.id].grade"
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      :max="activeSubmissionsAssignment.max_points"
-                      class="grade-input"
-                    />
+                <div class="sub-header">
+                  <div>
+                    <strong class="student-name">{{ sub.learner_full_name || sub.learner_username }}</strong>
+                    <span class="sub-date" :style="{ color: $themeTokens.annotation }">
+                      • {{ formatDate(sub.submitted_at) }}
+                    </span>
                   </div>
-                  <KButton
-                    :text="saveGradeAction$()"
-                    :primary="true"
-                    appearance="raised-button"
-                    @click="submitGrade(sub)"
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span
+                      v-if="gradingSaved[sub.id]"
+                      class="saved-indicator"
+                      style="color: #15803d; font-size: 12px; font-weight: 700;"
+                    >
+                      ✓ Saved!
+                    </span>
+                    <span
+                      class="sub-status-badge"
+                      :class="sub.status"
+                    >
+                      {{ sub.status === 'graded' ? gradedStatus$() : submittedStatus$() }}
+                    </span>
+                  </div>
+                </div>
+
+                <div v-if="sub.text_content" class="sub-body">
+                  <span class="section-tag">{{ studentAnswerLabel$() }}:</span>
+                  <p class="sub-text">{{ sub.text_content }}</p>
+                </div>
+
+                <div v-if="sub.file_attachment" class="sub-attachment">
+                  <span class="section-tag">📎 {{ attachedFileLabel$() }}:</span>
+                  <a
+                    :href="sub.file_attachment"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="attachment-link"
+                  >
+                    {{ sub.file_name || downloadAttachmentLabel$() }}
+                  </a>
+                  <span v-if="sub.file_size" class="sub-file-size" :style="{ color: $themeTokens.annotation, marginLeft: '6px' }">
+                    ({{ formatFileSize(sub.file_size) }})
+                  </span>
+                </div>
+
+                <div
+                  class="grading-form"
+                  :style="{
+                    backgroundColor: $themePalette.grey.v_100,
+                    borderTop: `1px solid ${$themeTokens.fineLine}`,
+                  }"
+                >
+                  <div class="grading-row">
+                    <div class="score-input">
+                      <label class="field-lbl">{{ scoreLabel$() }} (max {{ activeSubmissionsAssignment.max_points }}):</label>
+                      <input
+                        v-model.number="gradingForms[sub.id].grade"
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        :max="activeSubmissionsAssignment.max_points"
+                        class="grade-input"
+                      />
+                    </div>
+                    <KButton
+                      :text="saveGradeAction$()"
+                      :primary="true"
+                      appearance="raised-button"
+                      @click="submitGrade(sub)"
+                    />
+                    <span
+                      v-if="gradingSaved[sub.id]"
+                      class="grade-saved-indicator"
+                      style="color: #16a34a; font-weight: bold; margin-left: 8px; font-size: 13px;"
+                    >
+                      ✓ Saved!
+                    </span>
+                  </div>
+
+                  <!-- Quick Feedback Preset Chips -->
+                  <div class="quick-feedback-row">
+                    <span class="quick-lbl">Quick Feedback:</span>
+                    <button
+                      type="button"
+                      class="quick-chip"
+                      @click="insertQuickFeedback(sub.id, '🌟 Outstanding work! Excellent analysis and depth.')"
+                    >
+                      🌟 Outstanding
+                    </button>
+                    <button
+                      type="button"
+                      class="quick-chip"
+                      @click="insertQuickFeedback(sub.id, '👍 Well done! Good effort and clear explanations.')"
+                    >
+                      👍 Good Effort
+                    </button>
+                    <button
+                      type="button"
+                      class="quick-chip"
+                      @click="insertQuickFeedback(sub.id, '📝 Good start, but please review the corrections noted.')"
+                    >
+                      📝 Needs Corrections
+                    </button>
+                    <button
+                      type="button"
+                      class="quick-chip"
+                      @click="insertQuickFeedback(sub.id, '🔄 Incomplete response. Please revise and resubmit.')"
+                    >
+                      🔄 Needs Resubmission
+                    </button>
+                  </div>
+
+                  <KTextbox
+                    v-model="gradingForms[sub.id].feedback"
+                    :label="feedbackPlaceholder$()"
+                    :textArea="true"
+                    :rows="2"
                   />
                 </div>
-                <KTextbox
-                  v-model="gradingForms[sub.id].feedback"
-                  :label="feedbackPlaceholder$()"
-                  :textArea="true"
-                  :rows="2"
-                />
               </div>
             </div>
           </div>
@@ -388,12 +471,13 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, set as vueSet } from 'vue';
 import { createTranslator } from 'kolibri/utils/i18n';
 import YouTubePlayer from 'kolibri-common/components/YouTubePlayer.vue';
 import AssignmentResource from 'kolibri-common/apiResources/AssignmentResource';
 import AssignmentSubmissionResource from 'kolibri-common/apiResources/AssignmentSubmissionResource';
 import useCoreCoach from '../../composables/useCoreCoach';
+import { pageLoading } from 'kolibri-common/composables/usePageLoading';
 import CoachAppBarPage from '../CoachAppBarPage';
 import { PageNames } from '../../constants';
 import {
@@ -433,7 +517,7 @@ const strings = createTranslator('CoachAssignmentsStrings', {
   maxPointsLabel: { message: 'Max Points', context: 'Input label' },
   dueDateLabel: { message: 'Due Date', context: 'Input label' },
   allowTextLabel: { message: 'Allow written text submission', context: 'Checkbox' },
-  allowFileLabel: { message: 'Allow file upload (PDF, images, documents)', context: 'Checkbox' },
+  allowFileLabel: { message: 'Allow file upload (PDF, images, documents - max 5 MB)', context: 'Checkbox' },
   submissionsForTitle: { message: 'Submissions', context: 'Modal title' },
   noSubmissionsYet: { message: 'No submissions received yet for this assignment.', context: 'Empty text' },
   gradedStatus: { message: 'Graded', context: 'Badge' },
@@ -516,6 +600,42 @@ export default {
     const submissionsLoading = ref(false);
     const submissionsList = ref([]);
     const gradingForms = reactive({});
+    const activeSubFilter = ref('all');
+    const gradingSaved = reactive({});
+
+    const filteredSubmissionsList = computed(() => {
+      if (activeSubFilter.value === 'needs_grading') {
+        return submissionsList.value.filter(s => s.status !== 'graded');
+      }
+      if (activeSubFilter.value === 'graded') {
+        return submissionsList.value.filter(s => s.status === 'graded');
+      }
+      return submissionsList.value;
+    });
+
+    const needsGradingCount = computed(() => {
+      return submissionsList.value.filter(s => s.status !== 'graded').length;
+    });
+
+    const gradedCount = computed(() => {
+      return submissionsList.value.filter(s => s.status === 'graded').length;
+    });
+
+    function formatFileSize(bytes) {
+      if (!bytes || bytes === 0) return '';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function insertQuickFeedback(subId, text) {
+      if (!gradingForms[subId]) {
+        vueSet(gradingForms, subId, { grade: null, feedback: '' });
+      }
+      const current = gradingForms[subId].feedback || '';
+      gradingForms[subId].feedback = current ? `${current} ${text}` : text;
+    }
 
     const {
       backToClassHome$,
@@ -571,10 +691,12 @@ export default {
         console.error('Error fetching assignments', err);
       } finally {
         loading.value = false;
+        pageLoading.value = false;
       }
     }
 
     onMounted(() => {
+      pageLoading.value = false;
       fetchAssignments();
     });
 
@@ -653,6 +775,7 @@ export default {
     async function openSubmissionsDrawer(assignment) {
       activeSubmissionsAssignment.value = assignment;
       submissionsLoading.value = true;
+      activeSubFilter.value = 'all';
       try {
         const subs = await AssignmentSubmissionResource.fetchCollection({
           getParams: { assignment: assignment.id },
@@ -660,10 +783,10 @@ export default {
         });
         submissionsList.value = subs;
         subs.forEach(s => {
-          gradingForms[s.id] = {
-            grade: s.grade,
+          vueSet(gradingForms, s.id, {
+            grade: s.grade != null ? s.grade : null,
             feedback: s.feedback || '',
-          };
+          });
         });
       } catch (err) {
         console.error('Failed to load submissions', err);
@@ -675,6 +798,7 @@ export default {
     function closeSubmissionsDrawer() {
       activeSubmissionsAssignment.value = null;
       submissionsList.value = [];
+      activeSubFilter.value = 'all';
     }
 
     async function submitGrade(sub) {
@@ -688,6 +812,10 @@ export default {
         sub.grade = form.grade;
         sub.feedback = form.feedback;
         sub.status = 'graded';
+        vueSet(gradingSaved, sub.id, true);
+        setTimeout(() => {
+          vueSet(gradingSaved, sub.id, false);
+        }, 3000);
         fetchAssignments();
       } catch (err) {
         console.error('Failed to grade submission', err);
@@ -728,6 +856,13 @@ export default {
       submissionsLoading,
       submissionsList,
       gradingForms,
+      activeSubFilter,
+      gradingSaved,
+      filteredSubmissionsList,
+      needsGradingCount,
+      gradedCount,
+      formatFileSize,
+      insertQuickFeedback,
       openCreateModal,
       closeCreateModal,
       submitNewAssignment,
@@ -1225,5 +1360,75 @@ export default {
   font-weight: 700;
   border-radius: 4px;
   border: 1px solid #9ca3af;
+}
+
+.sub-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.sub-filter-pill {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 16px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+
+  &.active {
+    background: #0d47a1;
+    color: #ffffff;
+    border-color: #0d47a1;
+    box-shadow: 0 2px 4px rgba(13, 71, 161, 0.2);
+  }
+}
+
+.quick-feedback-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.quick-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quick-chip {
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+  }
+}
+
+.sub-file-size {
+  font-size: 12px;
+  font-weight: 600;
 }
 </style>
