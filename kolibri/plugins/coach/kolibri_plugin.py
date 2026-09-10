@@ -21,7 +21,7 @@ class Coach(KolibriPluginBase):
 
     def name(self, lang):
         with translation.override(lang):
-            return _("Coach")
+            return _("Faculty")
 
 
 @register_hook

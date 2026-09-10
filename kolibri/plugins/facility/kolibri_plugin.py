@@ -15,7 +15,7 @@ class FacilityManagementPlugin(KolibriPluginBase):
 
     def name(self, lang):
         with translation.override(lang):
-            return _("Facility")
+            return _("School Admin")
 
 
 @register_hook

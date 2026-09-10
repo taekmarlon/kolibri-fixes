@@ -139,6 +139,10 @@ const coachStrings = createTranslator('CommonCoachStrings', {
     context:
       "The 'Difficult questions' sub-tab within the 'Reports' section allows the coach to view a list of questions learners gave incorrect answers to, and gain insight of how many need help with the concept.",
   },
+  liveClassLabel: {
+    message: 'Live Class',
+    context: 'Label for live classroom',
+  },
   entireClassLabel: {
     message: 'Entire class',
     context:

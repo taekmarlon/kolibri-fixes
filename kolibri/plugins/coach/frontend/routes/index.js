@@ -50,11 +50,70 @@ export default [
   {
     name: PageNames.LIVE_CLASS_ROOT,
     path: '/:classId?/live-class',
+    alias: ['/:classId?/live_class'],
     component: CoachLiveClassPage,
-    handler(toRoute) {
-      showHomePage(toRoute).then(() => {
-        pageLoading.value = false;
-      });
+    async handler(toRoute, fromRoute, next) {
+      if (!toRoute.params.classId) {
+        const { userFacilityId } = useUser();
+        const { selectedFacilityId } = useFacilitySelect();
+        const facilityId = selectedFacilityId.value || get(userFacilityId);
+        if (facilityId && (!store.state.classList || store.state.classList.length === 0)) {
+          try {
+            await store.dispatch('setClassList', facilityId);
+          } catch (e) {}
+        }
+        const currentClassId =
+          store.state.classSummary?.id ||
+          (store.state.classList && store.state.classList.length === 1
+            ? store.state.classList[0].id
+            : null);
+        if (currentClassId) {
+          next({
+            name: PageNames.LIVE_CLASS_ROOT,
+            params: { classId: currentClassId },
+            replace: true,
+          });
+          return;
+        }
+        if (classIdParamRequiredGuard(toRoute, PageNames.LIVE_CLASS_ROOT, next)) {
+          return;
+        }
+      }
+      await showHomePage(toRoute);
+      pageLoading.value = false;
+    },
+    meta: {
+      titleParts: ['liveClassLabel', 'CLASS_NAME'],
+    },
+  },
+  {
+    path: '/live-class',
+    alias: ['/live_class'],
+    async handler(toRoute, fromRoute, next) {
+      const { userFacilityId } = useUser();
+      const { selectedFacilityId } = useFacilitySelect();
+      const facilityId = selectedFacilityId.value || get(userFacilityId);
+      if (facilityId && (!store.state.classList || store.state.classList.length === 0)) {
+        try {
+          await store.dispatch('setClassList', facilityId);
+        } catch (e) {}
+      }
+      const currentClassId =
+        store.state.classSummary?.id ||
+        (store.state.classList && store.state.classList.length === 1
+          ? store.state.classList[0].id
+          : null);
+      if (currentClassId) {
+        next({
+          name: PageNames.LIVE_CLASS_ROOT,
+          params: { classId: currentClassId },
+          replace: true,
+        });
+        return;
+      }
+      if (classIdParamRequiredGuard(toRoute, PageNames.LIVE_CLASS_ROOT, next)) {
+        return;
+      }
     },
   },
   {
@@ -203,5 +262,9 @@ export default [
         });
       }
     },
+  },
+  {
+    path: '*',
+    redirect: '/',
   },
 ];

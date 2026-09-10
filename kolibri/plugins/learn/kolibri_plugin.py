@@ -32,7 +32,7 @@ class Learn(KolibriPluginBase):
 
     def name(self, lang):
         with translation.override(lang):
-            return _("Learn")
+            return _("Students")
 
 
 @register_hook

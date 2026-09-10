@@ -286,7 +286,7 @@
   "EnhancedQuizManagementStrings.selectUpToNQuestions": "Select up to { count, number } { count, plural, one { question } other { questions }}",
   "EnhancedQuizManagementStrings.selectUpToNResources": "Select up to { count, number } { count, plural, one { resource } other { resources }}",
   "EnhancedQuizManagementStrings.tooManyQuestions": "You cannot select more than { count, number } questions",
-  "FacilityAppBarPage.facilityLabelWithName": "Facility – {facilityName}",
+  "FacilityAppBarPage.facilityLabelWithName": "School Admin – {facilityName}",
   "FacilityConfigPage.changeLocation": "Change",
   "FacilityConfigPage.createPinBtn": "Create PIN",
   "FacilityConfigPage.deviceManagementDescription": "This 4-digit PIN allows users to manage content and other settings on learn-only devices",

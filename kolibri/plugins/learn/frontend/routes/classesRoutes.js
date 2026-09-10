@@ -59,6 +59,7 @@ export default [
   {
     name: ClassesPageNames.CLASS_LIVE_CLASS,
     path: '/classes/:classId/live-class',
+    alias: ['/classes/:classId/live_class'],
     props: route => {
       const classId = route.params.classId;
       return {
