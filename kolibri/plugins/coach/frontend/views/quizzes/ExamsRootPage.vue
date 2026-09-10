@@ -31,7 +31,7 @@
             </template>
           </KButton>
           <KRouterLink
-            v-else-if="hasChannels"
+            v-else
             primary
             appearance="raised-button"
             :to="newExamRoute"
