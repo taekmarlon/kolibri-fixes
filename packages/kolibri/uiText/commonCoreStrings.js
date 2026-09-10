@@ -279,7 +279,7 @@ export const coreStrings = createTranslator('CommonCoreStrings', {
       'Channels are collections of educational resources (video, audio, document files or interactive apps) prepared and organized by the channel curator for their use in Kolibri.',
   },
   classCoachLabel: {
-    message: 'Class coach',
+    message: 'Class faculty',
     context:
       'When you create a new coach or change the user type to coach for an existing user, you can choose between class coach and facility coach.\n\nA class coach has access to the coach dashboard and permissions to instruct only the learners in the classes they are assigned to.',
   },
@@ -293,12 +293,12 @@ export const coreStrings = createTranslator('CommonCoreStrings', {
       'In the classes section of Kolibri users can view the list of all the classes in their facility, with the number of enrolled users for each class, and the coaches assigned.',
   },
   coachLabel: {
-    message: 'Coach',
+    message: 'Faculty',
     context:
       'A coach is a specific type of user in Kolibri who can manage  classes and learners. A coach can be either a class coach or a facility coach.',
   },
   coachesLabel: {
-    message: 'Coaches',
+    message: 'Faculty',
     context:
       "In a list of classes, users can see which coaches manage which specific classes in the 'Coaches' column.",
   },
@@ -330,12 +330,12 @@ export const coreStrings = createTranslator('CommonCoreStrings', {
       'A user can grant permission to another user to manage channels and resources in Kolibri, that is to import, export and delete them from the device used.',
   },
   facilityCoachLabel: {
-    message: 'Facility coach',
+    message: 'School faculty',
     context:
       'A type of coach account that has permission to view and manage all classes in a facility.',
   },
   facilityLabel: {
-    message: 'Facility',
+    message: 'School Admin',
     context: 'A facility is a center of education, such as a school.',
   },
   facilitiesLabel: {
@@ -396,12 +396,12 @@ export const coreStrings = createTranslator('CommonCoreStrings', {
       'Refers to the language that is used in a resource or in Kolibri. For example, users can filter learning resources by language.',
   },
   learnerLabel: {
-    message: 'Learner',
+    message: 'Student',
     context:
       'Learner is an account type that has limited permissions. Learners can be enrolled in classes, get assigned resources through lessons and quizzes, and navigate channels directly.\n\nWe intentionally did not use the term "student" to be more inclusive of non-formal educational contexts.',
   },
   learnersLabel: {
-    message: 'Learners',
+    message: 'Students',
     context: 'Plural of learner.',
   },
   levelLabel: {

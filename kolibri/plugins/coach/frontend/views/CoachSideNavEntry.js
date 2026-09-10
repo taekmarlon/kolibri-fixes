@@ -12,7 +12,7 @@ const navStrings = createTranslator('CoachSideNavEntryStrings', {
       'The main section where the coach can see all the information relating to a specific class.',
   },
   coachLabel: {
-    message: 'Coach',
+    message: 'Faculty',
     context:
       'A coach is a specific type of user in Kolibri who can manage classes and learners. A coach can be either a class coach or a facility coach.',
   },
@@ -26,7 +26,7 @@ const navStrings = createTranslator('CoachSideNavEntryStrings', {
       'A group is a collection of learners created by a coach inside a class to help with differentiated learning. Quizzes and lessons can be assigned to individual groups as well as to the whole class.',
   },
   learnersLabel: {
-    message: 'Learners',
+    message: 'Students',
     context:
       'Learner is an account type that has limited permissions. Learners can be enrolled in classes, get assigned resources through lessons and quizzes, and navigate channels directly. We intentionally did not use the term "student" to be more inclusive of non-formal educational contexts.',
   },

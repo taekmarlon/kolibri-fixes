@@ -24,7 +24,7 @@ const navStrings = createTranslator('FacilityManagementSideNavEntryStrings', {
     context: "Title of tab in 'Facility' section.",
   },
   facilityLabel: {
-    message: 'Facility',
+    message: 'School Admin',
     context: 'A facility is a center of education, such as a school.',
   },
 });

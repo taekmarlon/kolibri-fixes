@@ -68,7 +68,7 @@
     },
     $trs: {
       facilityLabelWithName: {
-        message: 'Facility – {facilityName}',
+        message: 'School Admin – {facilityName}',
         context: 'Indicates the name of the facility.',
       },
     },

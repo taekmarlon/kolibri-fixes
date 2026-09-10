@@ -167,11 +167,11 @@
         context: "Link to take coach back to the 'Classes' section.",
       },
       coach: {
-        message: '{count, plural, one {Coach} other {Coaches}}',
+        message: '{count, plural, one {Faculty} other {Faculty}}',
         context: 'Refers to the coach or coaches who have been assigned to a class. ',
       },
       learner: {
-        message: '{count, plural, one {Learner} other {Learners}}',
+        message: '{count, plural, one {Student} other {Students}}',
         context: 'Refers to the learner or learners who are in a class.',
       },
     },

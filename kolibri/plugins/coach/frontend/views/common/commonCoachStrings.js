@@ -102,17 +102,17 @@ const coachStrings = createTranslator('CommonCoachStrings', {
       'A class is a group of enrolled learners and assigned coaches, created and managed by an admin.\n\nCoaches can assign lessons and quizzes to the learners in a class, and view reports of their progress and performance.',
   }, // Kept for use in common.js
   coachLabel: {
-    message: 'Coach',
+    message: 'Faculty',
     context:
       'An account type that has the permission to manage lessons and quizzes within a class and track the progress and performance of learners enrolled in the class. We intentionally did not use the term "teacher" in order to be inclusive of non-formal education contexts.',
   }, // Kept here for use in common.js
   coachLabelWithOneName: {
-    message: 'Coach – {name}',
+    message: 'Faculty – {name}',
     context:
       "Indicates the name of the coach who is assigned to a specific class. Only translate 'Coach'.",
   },
   coachLabelWithOneTwoNames: {
-    message: 'Coach – {name1} – {name2}',
+    message: 'Faculty – {name1} – {name2}',
     context:
       "Indicates the names of the coaches who are assigned to a specific class if there are more than one. Only translate 'Coach'.",
   },

@@ -41,7 +41,7 @@ const navStrings = createTranslator('LearnSideNavEntryStrings', {
     context: 'Label for personal AI Tutor in learner side navigation and top bar',
   },
   learnLabel: {
-    message: 'Learn',
+    message: 'Students',
     context:
       "Each time a learner signs in to Kolibri, the first thing they see is the  'Learn' page with the list of all the classes they are enrolled to.",
   },
