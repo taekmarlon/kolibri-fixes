@@ -15,6 +15,7 @@ import CoachPrompts from '../views/CoachPrompts';
 import HomeActivityPage from '../views/home/HomeActivityPage';
 import StatusTestPage from '../views/common/status/StatusTestPage';
 import CoachLiveClassPage from '../views/CoachLiveClassPage';
+import CoachAnnouncementsPage from '../views/CoachAnnouncementsPage';
 import { ClassesPageNames } from '../../../learn/frontend/constants';
 import { PageNames } from '../constants';
 import { classIdParamRequiredGuard } from './utils';
@@ -114,6 +115,41 @@ export default [
       if (classIdParamRequiredGuard(toRoute, PageNames.LIVE_CLASS_ROOT, next)) {
         return;
       }
+    },
+  },
+  {
+    name: PageNames.ANNOUNCEMENTS,
+    path: '/:classId?/announcements',
+    component: CoachAnnouncementsPage,
+    async handler(toRoute, fromRoute, next) {
+      if (!toRoute.params.classId) {
+        const { userFacilityId } = useUser();
+        const { selectedFacilityId } = useFacilitySelect();
+        const facilityId = selectedFacilityId.value || get(userFacilityId);
+        if (facilityId && (!store.state.classList || store.state.classList.length === 0)) {
+          try {
+            await store.dispatch('setClassList', facilityId);
+          } catch (e) {}
+        }
+        const currentClassId =
+          store.state.classSummary?.id ||
+          (store.state.classList && store.state.classList.length === 1
+            ? store.state.classList[0].id
+            : null);
+        if (currentClassId) {
+          next({
+            name: PageNames.ANNOUNCEMENTS,
+            params: { classId: currentClassId },
+            replace: true,
+          });
+          return;
+        }
+      }
+      await showHomePage(toRoute);
+      pageLoading.value = false;
+    },
+    meta: {
+      titleParts: ['announcementsLabel', 'CLASS_NAME'],
     },
   },
   {

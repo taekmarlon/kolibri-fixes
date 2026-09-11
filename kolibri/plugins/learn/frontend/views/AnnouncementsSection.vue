@@ -92,7 +92,8 @@
     props: {
       classId: {
         type: String,
-        required: true,
+        required: false,
+        default: null,
       },
     },
     setup(props) {
@@ -126,8 +127,12 @@
       async function fetchAnnouncements() {
         loading.value = true;
         try {
+          const params = {};
+          if (props.classId) {
+            params.collection = props.classId;
+          }
           const data = await AnnouncementResource.fetchCollection({
-            getParams: { collection: props.classId },
+            getParams: params,
           });
           announcements.value = data || [];
         } catch (e) {

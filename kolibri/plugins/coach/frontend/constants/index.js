@@ -3,6 +3,7 @@ export const PageNames = {
   HOME_PAGE: 'HomePage', // make sure this matches the Coach 'Home' page name
   EXAM_CREATION_ROOT: 'EXAM_CREATION_ROOT',
   LIVE_CLASS_ROOT: 'LIVE_CLASS_ROOT',
+  ANNOUNCEMENTS: 'ANNOUNCEMENTS',
 
   /* Exams and quizzes */
   EXAMS_ROOT: 'EXAMS_ROOT',

@@ -43,6 +43,10 @@ const navStrings = createTranslator('CoachSideNavEntryStrings', {
     message: 'Live Class',
     context: 'Label for live virtual video classroom section in coach sidebar',
   },
+  announcementsLabel: {
+    message: 'Announcements',
+    context: 'Label for school announcements and events in coach sidebar',
+  },
 });
 
 registerNavItem({
@@ -56,6 +60,12 @@ registerNavItem({
         route: baseRoutes.classHome.path,
         icon: 'dashboard',
         name: baseRoutes.classHome.name,
+      },
+      {
+        label: navStrings.$tr('announcementsLabel'),
+        route: baseRoutes.announcements.path,
+        icon: 'bell',
+        name: baseRoutes.announcements.name,
       },
       {
         label: navStrings.$tr('liveClassLabel'),

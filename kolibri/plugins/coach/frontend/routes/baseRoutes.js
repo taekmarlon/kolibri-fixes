@@ -29,4 +29,8 @@ export default {
     name: PageNames.LIVE_CLASS_ROOT,
     path: '/:classId?/live-class',
   },
+  announcements: {
+    name: PageNames.ANNOUNCEMENTS,
+    path: '/:classId?/announcements',
+  },
 };

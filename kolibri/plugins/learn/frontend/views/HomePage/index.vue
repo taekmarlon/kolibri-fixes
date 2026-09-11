@@ -59,6 +59,8 @@
           data-testid="classes"
           short
         />
+        <!-- School Events & Announcements Board for Learners -->
+        <AnnouncementsSection class="section" />
         <ContinueLearning
           v-if="continueLearning"
           class="section"
@@ -154,6 +156,7 @@
   import LearnAppBarPage from '../LearnAppBarPage';
   import PostSetupModalGroup from '../../../../device/frontend/views/PostSetupModalGroup.vue';
   import commonLearnStrings from '../commonLearnStrings';
+  import AnnouncementsSection from '../AnnouncementsSection';
   import ContinueLearning from './ContinueLearning';
   import ExploreChannels from './ExploreChannels';
 
@@ -167,6 +170,7 @@
   export default {
     name: 'HomePage',
     components: {
+      AnnouncementsSection,
       AssignedCoursesCards,
       AssignedCourseworkCards,
       AssignedLessonsCards,
