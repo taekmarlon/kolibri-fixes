@@ -29,6 +29,7 @@ from kolibri.core.auth.models import FacilityUser
 from kolibri.core.auth.permissions import _ensure_raw_dict
 from kolibri.core.auth.permissions import KolibriAuthPermissions
 from kolibri.core.auth.permissions import KolibriAuthPermissionsFilter
+from kolibri.core.coursework.models import Announcement
 from kolibri.core.coursework.models import Assignment
 from kolibri.core.coursework.models import AssignmentSubmission
 from kolibri.core.coursework.models import DiscussionReply
@@ -904,3 +905,103 @@ class AtRiskAnalyticsViewSet(viewsets.ViewSet):
                 "learners": learner_results,
             }
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Priority 6: School Events & Announcements Board
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class AnnouncementSerializer(ModelSerializer):
+    created_by_name = CharField(
+        source="created_by.full_name", read_only=True, default=""
+    )
+    event_date = DateTimeTzField(required=False, allow_null=True)
+    expiry_date = DateTimeTzField(required=False, allow_null=True)
+
+    class Meta:
+        model = Announcement
+        fields = (
+            "id",
+            "title",
+            "body",
+            "announcement_type",
+            "scope",
+            "collection",
+            "is_pinned",
+            "is_active",
+            "event_date",
+            "expiry_date",
+            "link_url",
+            "created_by",
+            "created_by_name",
+            "date_created",
+            "date_modified",
+        )
+        read_only_fields = (
+            "id",
+            "created_by",
+            "created_by_name",
+            "date_created",
+            "date_modified",
+        )
+
+
+class AnnouncementViewSet(ValuesViewset):
+    """
+    CRUD for school announcements (facility-wide and class-level).
+
+    - GET  /api/coursework/announcement/?collection=<id>  — list active, non-expired
+    - POST /api/coursework/announcement/                   — create (coach or admin)
+    - PATCH/PUT  /api/coursework/announcement/<id>/        — edit own announcement
+    - DELETE     /api/coursework/announcement/<id>/        — delete own announcement
+    """
+
+    serializer_class = AnnouncementSerializer
+    permission_classes = (KolibriAuthPermissions,)
+    filter_backends = (KolibriAuthPermissionsFilter,)
+
+    values = (
+        "id",
+        "title",
+        "body",
+        "announcement_type",
+        "scope",
+        "collection_id",
+        "is_pinned",
+        "is_active",
+        "event_date",
+        "expiry_date",
+        "link_url",
+        "created_by_id",
+        "created_by__full_name",
+        "date_created",
+        "date_modified",
+    )
+
+    field_map = {
+        "collection": "collection_id",
+        "created_by": "created_by_id",
+        "created_by_name": "created_by__full_name",
+    }
+
+    def get_queryset(self):
+        qs = Announcement.objects.filter(is_active=True)
+
+        # Exclude expired announcements (expiry_date in the past)
+        now = local_now()
+        qs = qs.filter(Q(expiry_date__isnull=True) | Q(expiry_date__gte=now))
+
+        # Filter by collection if provided
+        collection_id = self.request.query_params.get("collection")
+        if collection_id:
+            qs = qs.filter(collection_id=collection_id)
+
+        # Pinned first, then newest
+        return qs.order_by("-is_pinned", "-date_created")
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save()

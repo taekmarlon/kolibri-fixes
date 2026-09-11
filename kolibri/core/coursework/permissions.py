@@ -188,3 +188,33 @@ class DiscussionReplyPermissions(BasePermissions):
         return Q(thread__collection_id__in=member_collection_ids) | Q(
             thread__collection_id__in=coach_collection_ids
         )
+
+
+class MemberCanReadAnnouncement(BasePermissions):
+    """
+    Grants read access to active announcements for any authenticated user
+    who is a member of the announcement's target collection (class or facility).
+    This allows learners to read announcements for their class.
+    """
+
+    def user_can_create_object(self, user, obj):
+        return False
+
+    def user_can_read_object(self, user, obj):
+        if isinstance(user, AnonymousUser) or not user.is_authenticated:
+            return False
+        return user.is_member_of(obj.collection) and obj.is_active
+
+    def user_can_update_object(self, user, obj):
+        return False
+
+    def user_can_delete_object(self, user, obj):
+        return False
+
+    def readable_by_user_filter(self, user):
+        if isinstance(user, AnonymousUser) or not user.is_authenticated:
+            return q_none
+        return Q(
+            collection_id__in=user.memberships.all().values("collection_id"),
+            is_active=True,
+        )

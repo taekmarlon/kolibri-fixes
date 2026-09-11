@@ -6,6 +6,9 @@
         <OverviewBlock />
       </KGridItem>
       <KGridItem>
+        <AnnouncementsBlock />
+      </KGridItem>
+      <KGridItem>
         <AtRiskLearnersBlock />
       </KGridItem>
       <KGridItem>
@@ -43,6 +46,7 @@
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import CoachAppBarPage from '../../CoachAppBarPage';
   import commonCoach from '../../common';
+  import AnnouncementsBlock from './AnnouncementsBlock';
   import AttendanceBlock from './AttendanceBlock';
   import AtRiskLearnersBlock from './AtRiskLearnersBlock';
   import CourseworkBlock from './CourseworkBlock';
@@ -56,6 +60,7 @@
     name: 'HomePage',
     components: {
       CoachAppBarPage,
+      AnnouncementsBlock,
       AtRiskLearnersBlock,
       AttendanceBlock,
       CourseworkBlock,

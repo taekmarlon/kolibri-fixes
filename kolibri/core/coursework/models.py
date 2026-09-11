@@ -11,6 +11,7 @@ from kolibri.core.auth.permissions.base import RoleBasedPermissions
 from kolibri.core.coursework.permissions import AssignmentSubmissionPermissions
 from kolibri.core.coursework.permissions import DiscussionReplyPermissions
 from kolibri.core.coursework.permissions import DiscussionThreadPermissions
+from kolibri.core.coursework.permissions import MemberCanReadAnnouncement
 from kolibri.core.coursework.permissions import UserCanReadAssignment
 from kolibri.core.fields import DateTimeTzField
 from kolibri.core.fields import JSONField
@@ -318,6 +319,96 @@ class LearnerIntervention(AbstractFacilityDataModel):
     def pre_save(self, **kwargs):
         super().pre_save(**kwargs)
         self.enforce_authoring_user_field("coach", **kwargs)
+
+    def infer_dataset(self, *args, **kwargs):
+        return self.cached_related_dataset_lookup("collection")
+
+    def calculate_partition(self):
+        return self.dataset_id
+
+
+class Announcement(AbstractFacilityDataModel):
+    """
+    A school-wide or class-level announcement, event notice, DepEd memo,
+    or urgent bulletin posted by admins or coaches.
+
+    Scope:
+      - 'facility': visible to everyone in the facility (admin-only creation)
+      - 'class': visible only to members of the specific classroom (coach creation)
+    """
+
+    morango_model_name = "announcement"
+
+    ANNOUNCEMENT_TYPES = (
+        ("general", "General Notice"),
+        ("event", "School Event"),
+        ("deped_memo", "DepEd Memorandum"),
+        ("urgent", "Urgent Bulletin"),
+    )
+
+    SCOPE_CHOICES = (
+        ("facility", "Facility-Wide"),
+        ("class", "Class-Level"),
+    )
+
+    permissions = (
+        RoleBasedPermissions(
+            target_field="collection",
+            can_be_created_by=(role_kinds.ADMIN, role_kinds.COACH),
+            can_be_read_by=(role_kinds.ADMIN, role_kinds.COACH),
+            can_be_updated_by=(role_kinds.ADMIN, role_kinds.COACH),
+            can_be_deleted_by=(role_kinds.ADMIN, role_kinds.COACH),
+        )
+        | MemberCanReadAnnouncement()
+    )
+
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+    announcement_type = models.CharField(
+        max_length=20,
+        choices=ANNOUNCEMENT_TYPES,
+        default="general",
+    )
+    scope = models.CharField(
+        max_length=10,
+        choices=SCOPE_CHOICES,
+        default="class",
+    )
+
+    # The target collection: either a Facility (facility-wide) or a Classroom (class-level)
+    collection = models.ForeignKey(
+        Collection,
+        related_name="announcements",
+        on_delete=models.CASCADE,
+    )
+    created_by = models.ForeignKey(
+        FacilityUser,
+        related_name="announcements_created",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+    )
+
+    is_pinned = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    # Optional metadata
+    event_date = DateTimeTzField(null=True, blank=True)
+    expiry_date = DateTimeTzField(null=True, blank=True)
+    link_url = models.URLField(max_length=500, blank=True, default="")
+
+    date_created = DateTimeTzField(default=local_now, editable=False)
+    date_modified = DateTimeTzField(default=local_now)
+
+    class Meta:
+        ordering = ["-is_pinned", "-date_created"]
+
+    def __str__(self):
+        return f"[{self.get_announcement_type_display()}] {self.title}"
+
+    def pre_save(self, **kwargs):
+        super().pre_save(**kwargs)
+        self.enforce_authoring_user_field("created_by", **kwargs)
 
     def infer_dataset(self, *args, **kwargs):
         return self.cached_related_dataset_lookup("collection")

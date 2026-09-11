@@ -90,6 +90,9 @@
         />
       </div>
 
+      <!-- Announcements & School Notices for learners -->
+      <AnnouncementsSection :class-id="classId" />
+
       <AssignedCoursesCards :courses="activeCourses" />
       <AssignedCourseworkCards :classId="classId" />
       <AssignedLessonsCards
@@ -123,6 +126,7 @@
   import { buildLiveMeetingUrl } from 'kolibri-common/utils/liveMeeting';
   import commonLearnStrings from '../commonLearnStrings';
   import LearnAppBarPage from '../LearnAppBarPage';
+  import AnnouncementsSection from '../AnnouncementsSection';
   import AssignedCoursesCards from './AssignedCoursesCards';
   import AssignedCourseworkCards from './AssignedCourseworkCards';
   import AssignedQuizzesCards from './AssignedQuizzesCards';
@@ -136,6 +140,7 @@
       };
     },
     components: {
+      AnnouncementsSection,
       AssignedCoursesCards,
       AssignedCourseworkCards,
       AssignedQuizzesCards,
