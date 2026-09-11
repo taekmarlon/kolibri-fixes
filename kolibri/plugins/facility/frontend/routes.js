@@ -17,6 +17,7 @@ import NewUsersPage from './views/users/NewUsersPage.vue';
 import UserEditPage from './views/UserEditPage';
 import AllFacilitiesPage from './views/AllFacilitiesPage';
 import UsersTrashPage from './views/users/UsersTrashPage/index.vue';
+import FacilityAnnouncementsPage from './views/FacilityAnnouncementsPage';
 
 import { showClassesPage } from './modules/classManagement/handlers';
 import { showClassEditPage } from './modules/classEditManagement/handlers';
@@ -167,6 +168,17 @@ export default [
     path: '/:facility_id?/settings',
     handler: toRoute => {
       if (facilityParamRequiredGuard(toRoute, FacilityConfigPage.name)) {
+        return;
+      }
+      store.dispatch('preparePage', { isAsync: false });
+    },
+  },
+  {
+    name: PageNames.ANNOUNCEMENTS_PAGE,
+    component: FacilityAnnouncementsPage,
+    path: '/:facility_id?/announcements',
+    handler: toRoute => {
+      if (facilityParamRequiredGuard(toRoute, FacilityAnnouncementsPage.name)) {
         return;
       }
       store.dispatch('preparePage', { isAsync: false });

@@ -22,7 +22,9 @@ export const PageNames = {
   COURSE_WELCOME: 'COURSE_WELCOME',
   LIVE_MEETING: 'LIVE_MEETING',
   AI_TUTOR: 'AI_TUTOR',
+  ANNOUNCEMENTS: 'ANNOUNCEMENTS',
 };
+
 
 export const ExternalPageNames = {
   MY_DOWNLOADS: 'MY_DOWNLOADS',

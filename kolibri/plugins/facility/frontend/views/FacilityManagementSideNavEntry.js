@@ -15,6 +15,10 @@ const navStrings = createTranslator('FacilityManagementSideNavEntryStrings', {
     context:
       'A user is any person who has access to a facility in Kolibri. There are four main types of users in Kolibri: Learners, Coaches, Admins and Super admins.',
   },
+  announcementsLabel: {
+    message: 'Announcements',
+    context: 'Title of Announcements tab in Facility section.',
+  },
   settingsLabel: {
     message: 'Settings',
     context: "Title of tab used in 'Facility' and 'Device' sections.",
@@ -40,6 +44,12 @@ registerNavItem({
         route: baseRoutes.classes.path,
         icon: 'classes',
         name: baseRoutes.classes.name,
+      },
+      {
+        label: navStrings.$tr('announcementsLabel'),
+        route: baseRoutes.announcements.path,
+        icon: 'bell',
+        name: baseRoutes.announcements.name,
       },
       {
         label: navStrings.$tr('usersLabel'),

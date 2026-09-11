@@ -17,4 +17,8 @@ export default {
     name: PageNames.FACILITY_CONFIG_PAGE,
     path: '/:facility_id?/settings',
   },
+  announcements: {
+    name: PageNames.ANNOUNCEMENTS_PAGE,
+    path: '/:facility_id?/announcements',
+  },
 };

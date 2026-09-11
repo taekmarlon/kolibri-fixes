@@ -1,8 +1,9 @@
 <template>
   <div
-    v-if="announcements.length > 0 || loading"
+    v-if="standalone || announcements.length > 0 || loading"
     class="announcements-section"
-    :style="{ borderTop: `2px solid ${$themeTokens.fineLine}`, paddingTop: '16px', marginTop: '24px' }"
+    :class="{ 'standalone-section': standalone }"
+    :style="standalone ? {} : { borderTop: `2px solid ${$themeTokens.fineLine}`, paddingTop: '16px', marginTop: '24px' }"
   >
     <!-- Section header -->
     <div class="section-header">
@@ -11,19 +12,45 @@
       </h2>
     </div>
 
+    <!-- Filter tabs (shown in standalone view) -->
+    <div v-if="standalone" class="filter-row">
+      <button
+        v-for="f in filters"
+        :key="f.value"
+        class="filter-pill"
+        :class="{ active: activeFilter === f.value }"
+        :style="activeFilter === f.value
+          ? { background: $themeTokens.primary, color: '#fff', border: 'none' }
+          : { background: $themeTokens.surface, color: $themeTokens.text, border: `1px solid ${$themeTokens.fineLine}` }"
+        @click="activeFilter = f.value"
+      >
+        {{ f.emoji }} {{ f.label }} ({{ filterCount(f.value) }})
+      </button>
+    </div>
+
     <!-- Loading -->
     <KCircularLoader v-if="loading" />
+
+    <!-- Empty state -->
+    <div
+      v-else-if="filteredAnnouncements.length === 0"
+      class="empty-state"
+      :style="{ color: $themeTokens.annotation }"
+    >
+      <span style="font-size: 2rem">📢</span>
+      <p>{{ noAnnouncementsMsg$() }}</p>
+    </div>
 
     <!-- Announcement cards -->
     <div v-else class="ann-list">
       <div
-        v-for="ann in announcements"
+        v-for="ann in filteredAnnouncements"
         :key="ann.id"
         class="ann-card"
         :style="{
           background: $themeTokens.surface,
           border: `1px solid ${$themeTokens.fineLine}`,
-          borderLeft: `4px solid ${typeColor(ann.announcement_type)}`
+          borderLeft: `4px solid ${typeColor(ann.announcement_type)}`,
         }"
       >
         <div class="ann-top">
@@ -76,15 +103,22 @@
 </template>
 
 <script>
-  import { ref, onMounted } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
   import AnnouncementResource from 'kolibri-common/apiResources/AnnouncementResource';
 
   const strings = createTranslator('AnnouncementsSectionStrings', {
-    sectionTitle: { message: 'Announcements & School Notices', context: 'Learner announcements section title' },
+    sectionTitle: {
+      message: 'Announcements & School Notices',
+      context: 'Learner announcements section title',
+    },
     eventOnLabel: { message: 'Event on', context: 'Event date prefix for learner' },
     viewLinkBtn: { message: 'View Link', context: 'Link button label' },
     schoolAdminLabel: { message: 'School', context: 'Fallback author label for learner view' },
+    noAnnouncementsMsg: {
+      message: 'No announcements posted at this time.',
+      context: 'Empty state message when no announcements are available',
+    },
   });
 
   export default {
@@ -95,15 +129,51 @@
         required: false,
         default: null,
       },
+      standalone: {
+        type: Boolean,
+        default: false,
+      },
     },
     setup(props) {
       const announcements = ref([]);
       const loading = ref(true);
+      const activeFilter = ref('all');
 
-      const { sectionTitle$, eventOnLabel$, viewLinkBtn$, schoolAdminLabel$ } = strings;
+      const {
+        sectionTitle$,
+        eventOnLabel$,
+        viewLinkBtn$,
+        schoolAdminLabel$,
+        noAnnouncementsMsg$,
+      } = strings;
+
+      const filters = [
+        { value: 'all', label: 'All', emoji: '📋' },
+        { value: 'pinned', label: 'Pinned', emoji: '📌' },
+        { value: 'event', label: 'Events', emoji: '📅' },
+        { value: 'deped_memo', label: 'DepEd Memos', emoji: '📋' },
+        { value: 'urgent', label: 'Urgent', emoji: '🚨' },
+      ];
+
+      const filteredAnnouncements = computed(() => {
+        if (!props.standalone || activeFilter.value === 'all') return announcements.value;
+        if (activeFilter.value === 'pinned') return announcements.value.filter(a => a.is_pinned);
+        return announcements.value.filter(a => a.announcement_type === activeFilter.value);
+      });
+
+      function filterCount(filterValue) {
+        if (filterValue === 'all') return announcements.value.length;
+        if (filterValue === 'pinned') return announcements.value.filter(a => a.is_pinned).length;
+        return announcements.value.filter(a => a.announcement_type === filterValue).length;
+      }
 
       function typeColor(type) {
-        const colors = { general: '#1976d2', event: '#388e3c', deped_memo: '#7b1fa2', urgent: '#d32f2f' };
+        const colors = {
+          general: '#1976d2',
+          event: '#388e3c',
+          deped_memo: '#7b1fa2',
+          urgent: '#d32f2f',
+        };
         return colors[type] || '#607d8b';
       }
 
@@ -112,12 +182,23 @@
       }
 
       function typeLabel(type) {
-        return { general: 'Notice', event: 'Event', deped_memo: 'DepEd', urgent: '⚠️ Urgent' }[type] || type;
+        return (
+          {
+            general: 'Notice',
+            event: 'Event',
+            deped_memo: 'DepEd',
+            urgent: '⚠️ Urgent',
+          }[type] || type
+        );
       }
 
       function formatDate(dt) {
         if (!dt) return '';
-        return new Date(dt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+        return new Date(dt).toLocaleDateString('en-PH', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        });
       }
 
       function openLink(url) {
@@ -146,7 +227,11 @@
 
       return {
         announcements,
+        filteredAnnouncements,
         loading,
+        activeFilter,
+        filters,
+        filterCount,
         typeColor,
         typeEmoji,
         typeLabel,
@@ -156,6 +241,7 @@
         eventOnLabel$,
         viewLinkBtn$,
         schoolAdminLabel$,
+        noAnnouncementsMsg$,
       };
     },
   };
@@ -170,69 +256,99 @@
   }
 
   .section-title {
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 600;
     margin: 0;
+  }
+
+  .filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .filter-pill {
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &.active {
+      font-weight: 600;
+    }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 36px 16px;
+    font-size: 0.95rem;
+
+    p {
+      margin-top: 8px;
+    }
   }
 
   .ann-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
   }
 
   .ann-card {
     border-radius: 6px;
-    padding: 10px 14px;
+    padding: 12px 16px;
   }
 
   .ann-top {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 4px;
+    gap: 8px;
+    margin-bottom: 6px;
     flex-wrap: wrap;
   }
 
   .type-badge {
-    padding: 2px 7px;
+    padding: 2px 8px;
     border-radius: 10px;
-    font-size: 0.73rem;
+    font-size: 0.75rem;
     font-weight: 600;
   }
 
   .pin-label {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
   }
 
   .ann-date {
     margin-left: auto;
-    font-size: 0.73rem;
+    font-size: 0.75rem;
   }
 
   .ann-title {
-    margin: 0 0 3px;
-    font-size: 0.9rem;
+    margin: 0 0 4px;
+    font-size: 1rem;
     font-weight: 600;
   }
 
   .ann-body {
-    margin: 0 0 5px;
-    font-size: 0.83rem;
-    line-height: 1.45;
+    margin: 0 0 6px;
+    font-size: 0.88rem;
+    line-height: 1.5;
     white-space: pre-wrap;
   }
 
   .ann-event {
-    margin: 0 0 5px;
-    font-size: 0.8rem;
+    margin: 0 0 6px;
+    font-size: 0.85rem;
     font-weight: 500;
   }
 
   .ann-author {
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     font-style: italic;
-    margin: 6px 0 0;
+    margin: 8px 0 0;
   }
 
 </style>

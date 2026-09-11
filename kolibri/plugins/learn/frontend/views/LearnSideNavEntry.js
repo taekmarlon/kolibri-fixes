@@ -40,6 +40,10 @@ const navStrings = createTranslator('LearnSideNavEntryStrings', {
     message: 'AI Tutor',
     context: 'Label for personal AI Tutor in learner side navigation and top bar',
   },
+  announcementsLabel: {
+    message: 'Announcements',
+    context: 'Label for school announcements and events in learner side navigation and top bar',
+  },
   learnLabel: {
     message: 'Students',
     context:
@@ -87,6 +91,12 @@ registerNavItem({
     }
 
     navItems.push(
+      {
+        label: navStrings.$tr('announcementsLabel'),
+        icon: 'bell',
+        route: baseRoutes.announcements.path,
+        name: baseRoutes.announcements.name,
+      },
       {
         label: navStrings.$tr('libraryLabel'),
         icon: 'library',

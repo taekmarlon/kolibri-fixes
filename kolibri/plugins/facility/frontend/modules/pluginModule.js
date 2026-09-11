@@ -103,6 +103,10 @@ export default {
           name: PageNames.FACILITY_CONFIG_PAGE,
           params,
         },
+        FacilityAnnouncementsPage: {
+          name: PageNames.ANNOUNCEMENTS_PAGE,
+          params,
+        },
         ImportCsvPage: {
           name: PageNames.IMPORT_CSV_PAGE,
           params,

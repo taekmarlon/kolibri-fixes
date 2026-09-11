@@ -24,4 +24,8 @@ export default {
     name: PageNames.AI_TUTOR,
     path: '/ai-tutor',
   },
+  announcements: {
+    name: PageNames.ANNOUNCEMENTS,
+    path: '/announcements',
+  },
 };

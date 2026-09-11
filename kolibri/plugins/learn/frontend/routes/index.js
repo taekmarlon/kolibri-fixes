@@ -15,6 +15,7 @@ import BookmarkPage from '../views/BookmarkPage.vue';
 import ExploreLibrariesPage from '../views/ExploreLibrariesPage';
 import LiveMeetingPage from '../views/LiveMeetingPage';
 import LearnerAiTutorPage from '../views/LearnerAiTutorPage';
+import LearnerAnnouncementsPage from '../views/LearnerAnnouncementsPage';
 import classesRoutes from './classesRoutes';
 
 // Conditionally import QTI sandbox routes in non-production
@@ -68,6 +69,16 @@ export default [
     name: PageNames.AI_TUTOR,
     path: '/ai-tutor',
     component: LearnerAiTutorPage,
+    handler(to, from, next) {
+      clearError();
+      pageLoading.value = false;
+      next();
+    },
+  },
+  {
+    name: PageNames.ANNOUNCEMENTS,
+    path: '/announcements',
+    component: LearnerAnnouncementsPage,
     handler(to, from, next) {
       clearError();
       pageLoading.value = false;
