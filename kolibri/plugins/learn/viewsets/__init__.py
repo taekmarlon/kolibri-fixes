@@ -56,14 +56,66 @@ def _map_contentnodes(request, content_ids):
     return contentnode_map
 
 
+def _build_custom_contentnode(resource):
+    res_type = resource.get("resource_type")
+    kind_map = {
+        "youtube": "video",
+        "image": "image",
+        "html5": "html5",
+        "h5p": "html5",
+    }
+    kind = kind_map.get(res_type, "document")
+    activity_map = {
+        "video": learning_activities.WATCH,
+        "html5": learning_activities.EXPLORE,
+    }
+    activity = activity_map.get(kind, learning_activities.READ)
+
+    return {
+        "id": resource["contentnode_id"],
+        "content_id": resource["content_id"],
+        "title": resource.get("title", "Custom Resource"),
+        "description": resource.get("description", ""),
+        "kind": kind,
+        "is_custom": True,
+        "thumbnail": (
+            resource.get("file_url")
+            if res_type == "image"
+            else resource.get("thumbnail")
+        ),
+        "learning_activities": [activity],
+        "resource_type": res_type,
+        "url": resource.get("url", ""),
+        "file_url": resource.get("file_url", ""),
+        "file_name": resource.get("file_name", ""),
+        "content": resource.get("content", ""),
+    }
+
+
+def _get_custom_progress_map(request, lessons):
+    if request.user.is_anonymous:
+        return {}
+    custom_content_ids = {
+        resource["content_id"]
+        for lesson in lessons
+        for resource in (lesson.get("resources") or [])
+        if resource.get("is_custom") and resource.get("content_id")
+    }
+    if not custom_content_ids:
+        return {}
+    logs = ContentSummaryLog.objects.filter(
+        user=request.user, content_id__in=custom_content_ids
+    ).values("content_id", "progress")
+    return {log["content_id"]: log["progress"] for log in logs}
+
+
 def _consolidate_lessons_data(request, lessons):
-    lesson_contentnode_ids = set()
-    for lesson in lessons:
-        lesson_contentnode_ids |= {
-            resource["contentnode_id"]
-            for resource in lesson["resources"]
-            if not resource.get("is_custom") and "contentnode_id" in resource
-        }
+    lesson_contentnode_ids = {
+        resource["contentnode_id"]
+        for lesson in lessons
+        for resource in lesson.get("resources", [])
+        if not resource.get("is_custom") and "contentnode_id" in resource
+    }
 
     contentnode_progress = (
         contentnode_progress_viewset.serialize_list(
@@ -74,61 +126,27 @@ def _consolidate_lessons_data(request, lessons):
     )
 
     contentnode_map = _map_contentnodes(request, lesson_contentnode_ids)
-
     progress_map = {l["content_id"]: l["progress"] for l in contentnode_progress}
+    progress_map.update(_get_custom_progress_map(request, lessons))
 
     for lesson in lessons:
+        resources = lesson.get("resources", [])
         lesson["progress"] = {
             "resource_progress": sum(
-                (
-                    progress_map[resource["content_id"]]
-                    for resource in lesson["resources"]
-                    if resource["content_id"] in progress_map
-                )
+                progress_map[r["content_id"]]
+                for r in resources
+                if r.get("content_id") in progress_map
             ),
-            "total_resources": len(lesson["resources"]),
+            "total_resources": len(resources),
         }
         missing_resource = False
-        for resource in lesson["resources"]:
-            resource["progress"] = progress_map.get(resource["content_id"], 0)
+        for resource in resources:
+            resource["progress"] = progress_map.get(resource.get("content_id"), 0)
             if resource.get("is_custom"):
-                kind = "document"
-                res_type = resource.get("resource_type")
-                if res_type == "youtube":
-                    kind = "video"
-                elif res_type == "image":
-                    kind = "image"
-                elif res_type == "html5":
-                    kind = "html5"
-
-                resource["contentnode"] = {
-                    "id": resource["contentnode_id"],
-                    "content_id": resource["content_id"],
-                    "title": resource.get("title", "Custom Resource"),
-                    "description": resource.get("description", ""),
-                    "kind": kind,
-                    "is_custom": True,
-                    "thumbnail": resource.get("file_url")
-                    if res_type == "image"
-                    else resource.get("thumbnail"),
-                    "learning_activities": [
-                        learning_activities.WATCH
-                        if kind == "video"
-                        else (
-                            learning_activities.EXPLORE
-                            if kind == "html5"
-                            else learning_activities.READ
-                        )
-                    ],
-                    "resource_type": res_type,
-                    "url": resource.get("url", ""),
-                    "file_url": resource.get("file_url", ""),
-                    "file_name": resource.get("file_name", ""),
-                    "content": resource.get("content", ""),
-                }
+                resource["contentnode"] = _build_custom_contentnode(resource)
             else:
                 resource["contentnode"] = contentnode_map.get(
-                    resource["contentnode_id"], None
+                    resource.get("contentnode_id")
                 )
                 missing_resource = missing_resource or not resource["contentnode"]
         lesson["missing_resource"] = missing_resource

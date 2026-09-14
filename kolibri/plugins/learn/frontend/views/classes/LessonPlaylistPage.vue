@@ -135,7 +135,7 @@
                   ? 'video'
                   : r.resource_type === 'image'
                   ? 'image'
-                  : r.resource_type === 'html5'
+                  : r.resource_type === 'html5' || r.resource_type === 'h5p'
                   ? 'html5'
                   : 'document';
               return {

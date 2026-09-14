@@ -9,6 +9,12 @@
         <template #actions>
           <div style="display: flex; gap: 8px;">
             <KButton
+              appearance="raised-button"
+              icon="html5"
+              :text="interactiveActivitiesAction$()"
+              @click="showInteractiveModal = true"
+            />
+            <KButton
               v-if="isAiEnabled"
               appearance="raised-button"
               icon="generate"
@@ -204,6 +210,13 @@
         v-if="showAiLessonModal"
         @close="showAiLessonModal = false"
       />
+      <InteractiveActivityCreatorModal
+        v-if="showInteractiveModal"
+        :classId="classId"
+        :lessons="lessons"
+        @close="showInteractiveModal = false"
+        @created="handleInteractiveCreated"
+      />
     </KPageContainer>
   </CoachAppBarPage>
 
@@ -238,6 +251,7 @@
   import CSVExporter from '../../csv/exporter';
   import CoachHeader from '../common/CoachHeader.vue';
   import AiLessonGeneratorModal from '../common/AiLessonGeneratorModal.vue';
+  import InteractiveActivityCreatorModal from '../common/InteractiveActivityCreatorModal.vue';
   import { PageNames } from '../../constants';
   import { getItemTerm, DEPED_TERM_CONFIG } from '../../utils/depEdTerms';
 
@@ -245,6 +259,13 @@
     generateLessonWithAi: {
       message: 'Plan Lesson with AI',
       context: 'Button label for AI lesson plan generator',
+    },
+  });
+
+  const interactiveStrings = createTranslator('InteractiveActivityRootStrings', {
+    interactiveActivitiesAction: {
+      message: 'Interactive Activities',
+      context: 'Button label on lessons page to create an interactive activity',
     },
   });
 
@@ -257,6 +278,7 @@
       AssignmentDetailsModal,
       ReportsControls,
       AiLessonGeneratorModal,
+      InteractiveActivityCreatorModal,
     },
     mixins: [commonCoach, commonCoreStrings],
     setup() {
@@ -267,7 +289,9 @@
       const { windowIsSmall } = useKResponsiveWindow();
       const { isAiEnabled } = useAiTutor();
       const { generateLessonWithAi$ } = aiLessonStrings;
+      const { interactiveActivitiesAction$ } = interactiveStrings;
       const showAiLessonModal = ref(false);
+      const showInteractiveModal = ref(false);
 
       return {
         show,
@@ -279,6 +303,8 @@
         isAiEnabled,
         generateLessonWithAi$,
         showAiLessonModal,
+        interactiveActivitiesAction$,
+        showInteractiveModal,
       };
     },
     data() {
@@ -447,6 +473,9 @@
           .catch(() => {
             Vue.delete(this.updatingVisibilityLessons, lesson.id);
           });
+      },
+      handleInteractiveCreated() {
+        this.$store.dispatch('lessonsRoot/refreshClassLessons', this.$route.params.classId);
       },
       isUpdatingVisibility(lessonId) {
         return Object.keys(this.updatingVisibilityLessons).includes(lessonId);

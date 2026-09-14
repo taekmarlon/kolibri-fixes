@@ -1,7 +1,9 @@
+import logging
 import os
 import uuid
 import zipfile
 
+import requests
 from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
@@ -36,6 +38,8 @@ from kolibri.core.lessons.models import Lesson
 from kolibri.core.lessons.models import LessonAssignment
 from kolibri.core.query import annotate_array_aggregate
 
+logger = logging.getLogger(__name__)
+
 
 class ResourceSerializer(Serializer):
     content_id = CharField()
@@ -50,6 +54,7 @@ class ResourceSerializer(Serializer):
     file_name = CharField(required=False, allow_blank=True, allow_null=True)
     file_size = IntegerField(required=False, allow_null=True, default=0)
     content = CharField(required=False, allow_blank=True, allow_null=True)
+    h5p_content_id = CharField(required=False, allow_blank=True, allow_null=True)
 
 
 class ClassroomSerializer(ModelSerializer):
@@ -289,7 +294,7 @@ class LessonPermissions(KolibriAuthPermissions):
     # Overrides the default validator to sanitize the Lesson POST Payload
     # before validation
     def has_permission(self, request, view):
-        if getattr(view, "action", None) == "custom_resource":
+        if getattr(view, "action", None) in ("custom_resource", "upload_image"):
             return request.user.is_authenticated
         return super().has_permission(request, view)
 
@@ -322,8 +327,10 @@ def _detect_file_resource_type(file_name, requested_type):
         return "image"
     if ext == ".pdf":
         return "pdf"
-    if ext == ".zip":
+    if ext in [".zip", ".html", ".htm"]:
         return "html5"
+    if ext == ".h5p":
+        return "h5p"
     return "document"
 
 
@@ -356,6 +363,125 @@ def _save_uploaded_custom_file(file_obj, resource_id):
         for chunk in file_obj.chunks():
             destination.write(chunk)
     return f"/media/lessons/resources/{safe_name}"
+
+
+def _process_custom_resource_file(file_obj, resource_id, resource_type):
+    max_size = (
+        20 * 1024 * 1024
+        if file_obj.name.lower().endswith((".zip", ".h5p"))
+        else 5 * 1024 * 1024
+    )
+    if file_obj.size > max_size:
+        limit_str = "20MB" if max_size > 5 * 1024 * 1024 else "5MB"
+        raise ValidationError(
+            f"File size exceeds the {limit_str} maximum limit. Please upload a file smaller than {limit_str}."
+        )
+    file_name = file_obj.name
+    file_size = getattr(file_obj, "size", 0)
+    detected_type = _detect_file_resource_type(file_name, resource_type)
+    if (detected_type in ["html5", "h5p"]) and (
+        file_name.lower().endswith((".zip", ".h5p"))
+    ):
+        file_url = _extract_html5_zip(file_obj, resource_id)
+    else:
+        file_url = _save_uploaded_custom_file(file_obj, resource_id)
+    return detected_type, file_name, file_size, file_url
+
+
+def _fetch_h5p_content_bundle(h5p_content_id):
+    from kolibri.core.h5p.proxy import H5P_NODE_BASE_URL
+
+    bundle_url = f"{H5P_NODE_BASE_URL}/h5p/html/{h5p_content_id}"
+    try:
+        resp = requests.get(bundle_url, timeout=30)
+        if resp.status_code == 200 and resp.text:
+            return resp.text, ""
+        logger.warning(
+            f"Failed to fetch H5P bundle for {h5p_content_id}: status {resp.status_code}"
+        )
+    except Exception as err:
+        logger.error(
+            f"Error connecting to H5P engine for bundle {h5p_content_id}: {err}"
+        )
+    return "", ""
+
+
+def _save_interactive_html(content, resource_id, title):
+    save_dir = os.path.join(settings.MEDIA_ROOT, "lessons", "interactive", resource_id)
+    os.makedirs(save_dir, exist_ok=True)
+    index_path = os.path.join(save_dir, "index.html")
+    xapi_bridge = (
+        "<script>(function(){"
+        "function setup(){"
+        "if(window.H5P&&window.H5P.externalDispatcher){"
+        "window.H5P.externalDispatcher.on('xAPI',function(e){"
+        "var v=e&&e.data&&e.data.statement&&e.data.statement.verb&&e.data.statement.verb.id||'';"
+        "if(v.indexOf('completed')!==-1||v.indexOf('passed')!==-1||v.indexOf('answered')!==-1){"
+        "if(window.parent&&window.parent!==window){"
+        "window.parent.postMessage({type:'H5P_COMPLETE'},'*');"
+        "}"
+        "}"
+        "});"
+        "}else{setTimeout(setup,200);}"
+        "}"
+        "setup();"
+        "})();</script>"
+    )
+    if "</body>" in content and "H5P_COMPLETE" not in content:
+        last_body_idx = content.rfind("</body>")
+        if last_body_idx != -1:
+            content = (
+                content[:last_body_idx]
+                + f"{xapi_bridge}</body>"
+                + content[last_body_idx + len("</body>") :]
+            )
+        else:
+            content = f"{content}{xapi_bridge}"
+    elif "H5P_COMPLETE" not in content:
+        content = f"{content}{xapi_bridge}"
+    with open(index_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    file_url = f"/media/lessons/interactive/{resource_id}/index.html"
+    file_name = f"{title.lower().replace(' ', '_')}.html"
+    file_size = len(content.encode("utf-8"))
+    return file_url, file_name, file_size
+
+
+def _handle_custom_resource_content(
+    data, resource_id, title, file_obj, content, resource_type
+):
+    file_url = ""
+    file_name = ""
+    file_size = 0
+    url = ""
+
+    if file_obj:
+        resource_type, file_name, file_size, file_url = _process_custom_resource_file(
+            file_obj, resource_id, resource_type
+        )
+        return resource_type, file_name, file_size, file_url, url, content
+
+    h5p_id = (data.get("h5p_content_id") or data.get("content_id") or "").strip()
+    if resource_type in ["h5p", "interactive"] and h5p_id and not content:
+        fetched, _ = _fetch_h5p_content_bundle(h5p_id)
+        if fetched:
+            content = fetched
+
+    if resource_type in ["h5p", "interactive"] and content:
+        resource_type = "h5p"
+        file_url, file_name, file_size = _save_interactive_html(
+            content, resource_id, title
+        )
+    elif resource_type == "youtube" or (
+        "youtube.com" in data.get("url", "") or "youtu.be" in data.get("url", "")
+    ):
+        resource_type = "youtube"
+        url = (data.get("url") or "").strip()
+    elif resource_type not in ["content_card", "lesson_builder", "ai_text"]:
+        resource_type = "ai_text" if content else resource_type
+        url = (data.get("url") or "").strip()
+
+    return resource_type, file_name, file_size, file_url, url, content
 
 
 class LessonViewset(ValuesViewset):
@@ -453,32 +579,25 @@ class LessonViewset(ValuesViewset):
         description = (data.get("description") or "").strip()
         resource_type = data.get("resource_type") or ""
         file_obj = request.FILES.get("file")
-
-        file_url = ""
-        file_name = ""
-        file_size = 0
-        url = ""
         content = (data.get("content") or "").strip()
+        h5p_content_id = (
+            data.get("h5p_content_id") or data.get("content_id") or ""
+        ).strip()
 
-        if file_obj:
-            file_name = file_obj.name
-            file_size = getattr(file_obj, "size", 0)
-            resource_type = _detect_file_resource_type(file_name, resource_type)
-            if resource_type == "html5" and file_name.lower().endswith(".zip"):
-                file_url = _extract_html5_zip(file_obj, resource_id)
-            else:
-                file_url = _save_uploaded_custom_file(file_obj, resource_id)
-        elif resource_type == "youtube" or (
-            "youtube.com" in data.get("url", "") or "youtu.be" in data.get("url", "")
-        ):
-            resource_type = "youtube"
-            url = (data.get("url") or "").strip()
-        elif resource_type == "content_card":
-            resource_type = "content_card"
-        elif resource_type == "ai_text" or content:
-            resource_type = "ai_text"
-        else:
-            url = (data.get("url") or "").strip()
+        try:
+            (
+                resource_type,
+                file_name,
+                file_size,
+                file_url,
+                url,
+                content,
+            ) = _handle_custom_resource_content(
+                data, resource_id, title, file_obj, content, resource_type
+            )
+        except ValidationError as e:
+            msg = e.detail[0] if isinstance(e.detail, list) else e.detail
+            return Response({"detail": str(msg)}, status=status.HTTP_400_BAD_REQUEST)
 
         custom_res = {
             "contentnode_id": resource_id,
@@ -493,6 +612,7 @@ class LessonViewset(ValuesViewset):
             "file_name": file_name,
             "file_size": file_size,
             "content": content,
+            "h5p_content_id": h5p_content_id,
         }
 
         current_resources = list(lesson.resources or [])
@@ -501,3 +621,45 @@ class LessonViewset(ValuesViewset):
         lesson.save()
 
         return Response(custom_res, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        parser_classes=(MultiPartParser, FormParser),
+    )
+    def upload_image(self, request, **kwargs):
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        file_obj = request.FILES.get("file") or request.FILES.get("image")
+        if not file_obj:
+            return Response(
+                {"detail": "No image file provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext not in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]:
+            return Response(
+                {"detail": f"Unsupported image file extension: {ext}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if file_obj.size > 5 * 1024 * 1024:
+            return Response(
+                {
+                    "detail": "Image file size exceeds the 5MB maximum limit. Please choose an image smaller than 5MB."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        save_dir = os.path.join(settings.MEDIA_ROOT, "lessons", "images")
+        os.makedirs(save_dir, exist_ok=True)
+        image_id = uuid.uuid4().hex
+        safe_name = f"{image_id}_{os.path.basename(file_obj.name)}"
+        full_path = os.path.join(save_dir, safe_name)
+        with open(full_path, "wb+") as destination:
+            for chunk in file_obj.chunks():
+                destination.write(chunk)
+        return Response(
+            {"url": f"/media/lessons/images/{safe_name}"}, status=status.HTTP_200_OK
+        )

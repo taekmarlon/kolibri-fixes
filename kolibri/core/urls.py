@@ -66,6 +66,7 @@ lang_prefixed_patterns = [
 core_urlpatterns = (
     [
         re_path(r"^api/", include("kolibri.core.api_urls")),
+        re_path(r"^h5p/", include("kolibri.core.h5p.urls")),
         re_path(r"", include(i18n_patterns(lang_prefixed_patterns))),
         re_path(r"", include("kolibri.core.content.urls")),
         re_path(r"^status/", StatusCheckView.as_view(), name="status_check"),

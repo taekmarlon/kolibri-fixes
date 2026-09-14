@@ -1,3 +1,5 @@
+import uuid
+
 from django.urls import reverse
 
 from kolibri.core.auth.models import Classroom
@@ -9,6 +11,8 @@ from kolibri.core.auth.test.helpers import KolibriAPITestCase as APITestCase
 from kolibri.core.auth.test.helpers import provision_device
 from kolibri.core.lessons.models import Lesson
 from kolibri.core.lessons.models import LessonAssignment
+from kolibri.core.logger.models import ContentSummaryLog
+from kolibri.utils.time_utils import local_now
 
 
 class LearnerLessonTestCase(APITestCase):
@@ -142,3 +146,115 @@ class LearnerLessonTestCase(APITestCase):
         self.assertEqual(classroom["id"], str(self.classroom.id))
         self.assertEqual(classroom["name"], "Own Classroom")
         self.assertEqual(classroom["parent"], str(self.classroom.parent.id))
+
+    def test_learner_custom_resource_progress_tracking(self):
+        res1_id = uuid.uuid4().hex
+        res2_id = uuid.uuid4().hex
+        custom_lesson = Lesson.objects.create(
+            title="Custom Progress Lesson",
+            collection=self.classroom,
+            created_by=self.learner_user,
+            is_active=True,
+            resources=[
+                {
+                    "content_id": res1_id,
+                    "contentnode_id": uuid.uuid4().hex,
+                    "channel_id": "custom",
+                    "is_custom": True,
+                    "resource_type": "youtube",
+                    "title": "Custom YouTube",
+                },
+                {
+                    "content_id": res2_id,
+                    "contentnode_id": uuid.uuid4().hex,
+                    "channel_id": "custom",
+                    "is_custom": True,
+                    "resource_type": "pdf",
+                    "title": "Custom PDF",
+                },
+            ],
+        )
+        LessonAssignment.objects.create(
+            lesson=custom_lesson,
+            assigned_by=self.learner_user,
+            collection=self.classroom,
+        )
+        self.client.login(username="learner", password="password")
+
+        # Initially 0 progress
+        res = self.client.get(
+            reverse(self.basename + "-detail", kwargs={"pk": custom_lesson.id})
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data["progress"]["resource_progress"], 0)
+        self.assertEqual(res.data["resources"][0]["progress"], 0)
+        self.assertEqual(res.data["resources"][1]["progress"], 0)
+
+        # Learner completes resource 1 (progress=1.0) and starts resource 2 (progress=0.5)
+        ContentSummaryLog.objects.create(
+            user=self.learner_user,
+            content_id=res1_id,
+            progress=1.0,
+            kind="video",
+            start_timestamp=local_now(),
+            completion_timestamp=local_now(),
+        )
+        ContentSummaryLog.objects.create(
+            user=self.learner_user,
+            content_id=res2_id,
+            progress=0.5,
+            kind="document",
+            start_timestamp=local_now(),
+        )
+
+        # Re-fetch lesson: progress is accurately computed
+        res = self.client.get(
+            reverse(self.basename + "-detail", kwargs={"pk": custom_lesson.id})
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data["resources"][0]["progress"], 1.0)
+        self.assertEqual(res.data["resources"][1]["progress"], 0.5)
+        self.assertAlmostEqual(res.data["progress"]["resource_progress"], 1.5)
+
+    def test_learner_classroom_custom_resource_progress(self):
+        res1_id = uuid.uuid4().hex
+        custom_lesson = Lesson.objects.create(
+            title="Classroom Custom Lesson",
+            collection=self.classroom,
+            created_by=self.learner_user,
+            is_active=True,
+            resources=[
+                {
+                    "content_id": res1_id,
+                    "contentnode_id": uuid.uuid4().hex,
+                    "channel_id": "custom",
+                    "is_custom": True,
+                    "resource_type": "youtube",
+                    "title": "Custom Video",
+                }
+            ],
+        )
+        LessonAssignment.objects.create(
+            lesson=custom_lesson,
+            assigned_by=self.learner_user,
+            collection=self.classroom,
+        )
+        ContentSummaryLog.objects.create(
+            user=self.learner_user,
+            content_id=res1_id,
+            progress=1.0,
+            kind="video",
+            start_timestamp=local_now(),
+            completion_timestamp=local_now(),
+        )
+
+        self.client.login(username="learner", password="password")
+        classroom_url = reverse("kolibri:kolibri.plugins.learn:learnerclassroom-list")
+        res = self.client.get(classroom_url)
+        self.assertEqual(res.status_code, 200)
+        classroom_data = res.data[0]
+        matching_lesson = next(
+            l for l in classroom_data["lessons"] if l["id"] == custom_lesson.id
+        )
+        self.assertEqual(matching_lesson["progress"]["resource_progress"], 1.0)
+        self.assertEqual(matching_lesson["resources"][0]["progress"], 1.0)

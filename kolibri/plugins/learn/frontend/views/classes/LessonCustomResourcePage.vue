@@ -129,13 +129,14 @@
           >
         </div>
 
-        <!-- 4. HTML5 Interactive Simulation / App -->
+        <!-- 4. HTML5 / H5P Interactive Activity -->
         <div
-          v-else-if="resource.resource_type === 'html5'"
+          v-else-if="resource.resource_type === 'html5' || resource.resource_type === 'h5p'"
           class="html5-box viewer-wrapper"
         >
           <iframe
-            :src="resource.file_url"
+            :key="interactiveUrl"
+            :src="interactiveUrl"
             sandbox="allow-scripts allow-same-origin"
             allow="fullscreen"
             class="html5-iframe"
@@ -163,7 +164,183 @@
           </div>
         </div>
 
-        <!-- 6. AI Generated Study Guide / Markdown Notes -->
+        <!-- 6. Custom Built Structured Lesson -->
+        <div
+          v-else-if="resource.resource_type === 'lesson_builder'"
+          class="lesson-builder-box viewer-wrapper"
+        >
+          <div class="lesson-builder-stream">
+            <div
+              v-for="(block, bIndex) in parsedLessonBlocks"
+              :key="block.id || `block-${bIndex}`"
+              class="lesson-stream-block"
+            >
+              <!-- Heading Block -->
+              <div
+                v-if="block.type === 'heading'"
+                class="stream-heading-block"
+                :style="{ borderBottom: `2px solid ${$themeTokens.fineLine}` }"
+              >
+                <h2
+                  class="stream-heading-title"
+                  :style="{ color: $themeTokens.text }"
+                >
+                  {{ block.title }}
+                </h2>
+                <p
+                  v-if="block.subtitle"
+                  class="stream-heading-subtitle"
+                  :style="{ color: $themeTokens.annotation }"
+                >
+                  {{ block.subtitle }}
+                </p>
+              </div>
+
+              <!-- Text Block -->
+              <div
+                v-else-if="block.type === 'text'"
+                class="stream-text-block"
+              >
+                <AiMessageRenderer :content="block.text" />
+              </div>
+
+              <!-- Image / Diagram Block -->
+              <div
+                v-else-if="block.type === 'image'"
+                class="stream-image-block"
+              >
+                <div
+                  v-if="block.image_url"
+                  class="stream-image-container"
+                >
+                  <img
+                    :src="block.image_url"
+                    :alt="block.caption || resource.title"
+                    class="stream-image"
+                  >
+                  <p
+                    v-if="block.caption"
+                    class="stream-image-caption"
+                    :style="{ color: $themeTokens.annotation }"
+                  >
+                    {{ block.caption }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Video Embed Block -->
+              <div
+                v-else-if="block.type === 'video'"
+                class="stream-video-block"
+              >
+                <YouTubePlayer
+                  v-if="block.url"
+                  :url="block.url"
+                  :title="block.notes || resource.title"
+                />
+                <p
+                  v-if="block.notes"
+                  class="stream-video-notes mt-8"
+                  :style="{ color: $themeTokens.annotation }"
+                >
+                  {{ block.notes }}
+                </p>
+              </div>
+
+              <!-- Callout / Key Concept Block -->
+              <div
+                v-else-if="block.type === 'callout'"
+                class="stream-callout-block"
+                :style="{
+                  backgroundColor: getCalloutBgColor(block.callout_type),
+                  border: `1px solid ${$themeTokens.fineLine}`,
+                  borderLeft: `5px solid ${getCalloutBorderColor(block.callout_type)}`,
+                  borderRadius: '6px',
+                  padding: '16px',
+                  margin: '16px 0',
+                }"
+              >
+                <div class="callout-header-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                  <KIcon
+                    :icon="getCalloutIcon(block.callout_type)"
+                    :style="{ color: getCalloutBorderColor(block.callout_type) }"
+                  />
+                  <strong
+                    class="callout-title"
+                    :style="{ color: $themeTokens.text, fontSize: '1.05rem' }"
+                  >
+                    {{ block.title || defaultCalloutTitle(block.callout_type) }}
+                  </strong>
+                </div>
+                <div class="callout-content-body">
+                  <AiMessageRenderer :content="block.text" />
+                </div>
+              </div>
+
+              <!-- Practice & Reflection Checkpoint Block -->
+              <div
+                v-else-if="block.type === 'checkpoint'"
+                class="stream-checkpoint-block"
+                :style="{
+                  backgroundColor: $themePalette.grey.v_100,
+                  border: `1.5px solid ${$themeTokens.fineLine}`,
+                  borderRadius: '8px',
+                  padding: '18px',
+                  margin: '20px 0',
+                }"
+              >
+                <div style="margin-bottom: 10px;">
+                  <span
+                    class="checkpoint-badge"
+                    :style="{
+                      backgroundColor: $themeTokens.primary,
+                      color: $themeTokens.textInverted,
+                      padding: '3px 8px',
+                      borderRadius: '12px',
+                      fontSize: '0.8rem',
+                      fontWeight: 'bold',
+                      display: 'inline-block',
+                      marginBottom: '8px',
+                    }"
+                  >
+                    {{ checkpointBadge$() }}
+                  </span>
+                  <p :style="{ color: $themeTokens.text, fontWeight: '600', fontSize: '1.05rem', margin: 0 }">
+                    {{ block.question }}
+                  </p>
+                </div>
+                <div
+                  v-if="block.answer"
+                  class="checkpoint-answer-toggle mt-12"
+                >
+                  <KButton
+                    appearance="flat-button"
+                    :icon="isCheckpointRevealed(block.id || bIndex) ? 'chevronUp' : 'chevronDown'"
+                    :text="isCheckpointRevealed(block.id || bIndex) ? hideAnswerLabel$() : revealAnswerLabel$()"
+                    @click="toggleCheckpoint(block.id || bIndex)"
+                  />
+                  <div
+                    v-if="isCheckpointRevealed(block.id || bIndex)"
+                    class="checkpoint-answer-content mt-8"
+                    :style="{
+                      backgroundColor: $themeTokens.surface,
+                      border: `1px solid ${$themeTokens.fineLine}`,
+                      borderRadius: '6px',
+                      padding: '14px',
+                    }"
+                  >
+                    <div style="font-weight: bold; margin-bottom: 6px;" :style="{ color: $themeTokens.annotation }">
+                      {{ modelAnswerLabel$() }}:
+                    </div>
+                    <AiMessageRenderer :content="block.answer" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. AI Generated Study Guide / Markdown Notes -->
         <div
           v-else-if="resource.resource_type === 'ai_text' || resource.content"
           class="ai-box viewer-wrapper"
@@ -243,7 +420,7 @@
 
 <script>
 
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import { useRoute } from 'vue-router/composables';
   import client from 'kolibri/client';
   import urls from 'kolibri/urls';
@@ -294,6 +471,22 @@
       message: '✨ AI Study Notes',
       context: 'Badge label for AI generated notes',
     },
+    checkpointBadge: {
+      message: 'Quick Check & Reflection',
+      context: 'Badge for practice checkpoints',
+    },
+    revealAnswerLabel: {
+      message: 'Show Explanation / Answer',
+      context: 'Toggle button label',
+    },
+    hideAnswerLabel: {
+      message: 'Hide Explanation',
+      context: 'Toggle button label',
+    },
+    modelAnswerLabel: {
+      message: 'Explanation & Key Concept',
+      context: 'Header for revealed answer',
+    },
   });
 
   export default {
@@ -321,9 +514,10 @@
       const resourceKindIcon = computed(() => {
         if (!resource.value) return 'document';
         const type = resource.value.resource_type;
+        if (type === 'lesson_builder') return 'lesson';
         if (type === 'youtube') return 'video';
         if (type === 'image') return 'image';
-        if (type === 'html5') return 'html5';
+        if (type === 'html5' || type === 'h5p') return 'html5';
         if (type === 'content_card') return 'topic';
         if (type === 'ai_text') return 'hint';
         return 'document';
@@ -332,13 +526,22 @@
       const typePillText = computed(() => {
         if (!resource.value) return 'RESOURCE';
         const type = resource.value.resource_type;
+        if (type === 'lesson_builder') return 'CUSTOM LESSON';
         if (type === 'youtube') return 'YOUTUBE VIDEO';
         if (type === 'pdf') return 'PDF DOCUMENT';
         if (type === 'image') return 'PICTURE / DIAGRAM';
         if (type === 'html5') return 'HTML5 SIMULATION';
+        if (type === 'h5p') return 'INTERACTIVE ACTIVITY';
         if (type === 'content_card') return 'CONTENT CARD';
         if (type === 'ai_text') return 'AI STUDY GUIDE';
         return 'DOCUMENT';
+      });
+
+      const interactiveUrl = computed(() => {
+        if (!resource.value || !resource.value.file_url) return '';
+        const url = resource.value.file_url;
+        const v = resource.value.file_size || resource.value.content_id || '1';
+        return url.includes('?') ? `${url}&v=${v}` : `${url}?v=${v}`;
       });
 
       const breadcrumbs = computed(() => {
@@ -447,20 +650,101 @@
         }
       }
 
+      const revealedCheckpoints = ref({});
+      function toggleCheckpoint(id) {
+        revealedCheckpoints.value = {
+          ...revealedCheckpoints.value,
+          [id]: !revealedCheckpoints.value[id],
+        };
+      }
+      function isCheckpointRevealed(id) {
+        return Boolean(revealedCheckpoints.value[id]);
+      }
+
+      function getCalloutBorderColor(calloutType) {
+        if (calloutType === 'warning') return '#d97706';
+        if (calloutType === 'tip') return '#059669';
+        return '#2563eb';
+      }
+
+      function getCalloutBgColor(calloutType) {
+        if (calloutType === 'warning') return '#fffbeb';
+        if (calloutType === 'tip') return '#ecfdf5';
+        return '#eff6ff';
+      }
+
+      function getCalloutIcon(calloutType) {
+        if (calloutType === 'warning') return 'warning';
+        if (calloutType === 'tip') return 'star';
+        return 'hint';
+      }
+
+      function defaultCalloutTitle(calloutType) {
+        if (calloutType === 'warning') return 'Important Note';
+        if (calloutType === 'tip') return 'Study Tip';
+        return 'Key Concept';
+      }
+
+      const parsedLessonBlocks = computed(() => {
+        if (!resource.value || !resource.value.content) return [];
+        try {
+          const parsed = JSON.parse(resource.value.content);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [
+            {
+              id: 'fallback-text',
+              type: 'text',
+              text: resource.value.content,
+            },
+          ];
+        }
+      });
+
+      function handleWindowMessage(event) {
+        if (
+          event &&
+          event.data &&
+          (event.data.type === 'KOLIBRI_RESOURCE_COMPLETE' ||
+            event.data.type === 'H5P_COMPLETE')
+        ) {
+          if (!isCompleted.value) {
+            handleMarkAsCompleted();
+          }
+        }
+      }
+
+      watch(resourceId, () => {
+        loadData();
+      });
+
       onMounted(() => {
         loadData();
+        window.addEventListener('message', handleWindowMessage);
+      });
+
+      onUnmounted(() => {
+        window.removeEventListener('message', handleWindowMessage);
       });
 
       return {
         pageLoading,
         resource,
         isCompleted,
+        interactiveUrl,
         resourceKindIcon,
         typePillText,
         breadcrumbs,
         formatFileSize,
         handleMarkAsCompleted,
         downloadFile,
+        parsedLessonBlocks,
+        toggleCheckpoint,
+        isCheckpointRevealed,
+        getCalloutBorderColor,
+        getCalloutBgColor,
+        getCalloutIcon,
+        defaultCalloutTitle,
         ...resourceStrings,
       };
     },
@@ -604,6 +888,62 @@
     .card-text-body {
       font-size: 1.05rem;
       line-height: 1.7;
+    }
+  }
+
+  .lesson-builder-box {
+    padding: 24px 32px;
+
+    .lesson-builder-stream {
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    .lesson-stream-block {
+      margin-bottom: 24px;
+    }
+
+    .stream-heading-block {
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+
+      .stream-heading-title {
+        margin: 0 0 4px;
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+
+      .stream-heading-subtitle {
+        margin: 0;
+        font-size: 1rem;
+      }
+    }
+
+    .stream-text-block {
+      font-size: 1.05rem;
+      line-height: 1.75;
+    }
+
+    .stream-image-block {
+      text-align: center;
+      margin: 20px 0;
+
+      .stream-image {
+        max-width: 100%;
+        max-height: 520px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+
+      .stream-image-caption {
+        margin-top: 8px;
+        font-size: 0.9rem;
+        font-style: italic;
+      }
+    }
+
+    .stream-video-block {
+      margin: 20px 0;
     }
   }
 

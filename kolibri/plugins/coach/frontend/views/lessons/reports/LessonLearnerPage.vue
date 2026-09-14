@@ -115,7 +115,38 @@
         return this.$route.params.groupId && this.groupMap[this.$route.params.groupId];
       },
       table() {
-        const contentArray = this.lesson.node_ids.map(node_id => this.contentNodeMap[node_id]);
+        const resourceMap = {};
+        if (this.lesson && this.lesson.resources) {
+          for (const r of this.lesson.resources) {
+            const id = r.contentnode_id || r.content_id;
+            if (id) {
+              resourceMap[id] = r;
+            }
+          }
+        }
+        const contentArray = (this.lesson?.node_ids || []).map(node_id => {
+          let content = this.contentNodeMap[node_id];
+          if (!content && resourceMap[node_id] && resourceMap[node_id].is_custom) {
+            const r = resourceMap[node_id];
+            const kind =
+              r.resource_type === 'youtube' || r.resource_type === 'video'
+                ? 'video'
+                : r.resource_type === 'image'
+                  ? 'image'
+                  : r.resource_type === 'h5p' || r.resource_type === 'html5'
+                    ? 'html5'
+                    : 'document';
+            content = {
+              node_id,
+              content_id: r.content_id || node_id,
+              title: r.title || 'Custom Resource',
+              kind,
+              is_custom: true,
+              resource_type: r.resource_type,
+            };
+          }
+          return content;
+        });
         return contentArray.map((content, index) => {
           if (!content) {
             return this.missingResourceObj(index);

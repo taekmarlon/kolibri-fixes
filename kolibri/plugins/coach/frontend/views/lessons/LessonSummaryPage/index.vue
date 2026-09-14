@@ -17,7 +17,14 @@
               appearance="raised-button"
               :primary="true"
               class="add-custom-resource-button"
-              @click="showAddCustomResourceModal = true"
+              @click="openCustomResourceModal('builder')"
+            />
+            <KButton
+              :text="addH5PInteractiveAction$()"
+              icon="html5"
+              appearance="raised-button"
+              class="add-h5p-interactive-button"
+              @click="openCustomResourceModal('h5p')"
             />
             <KRouterLink
               :to="lessonSelectionRootPage"
@@ -72,7 +79,14 @@
                   appearance="raised-button"
                   :primary="true"
                   class="add-custom-resource-btn"
-                  @click="showAddCustomResourceModal = true"
+                  @click="openCustomResourceModal('builder')"
+                />
+                <KButton
+                  :text="addH5PInteractiveAction$()"
+                  icon="html5"
+                  appearance="raised-button"
+                  class="add-h5p-interactive-btn"
+                  @click="openCustomResourceModal('h5p')"
                 />
               </div>
               <LessonResourcesTable
@@ -102,6 +116,7 @@
     <AddCustomResourceModal
       v-if="showAddCustomResourceModal"
       :lessonId="lessonId"
+      :initialTab="customResourceModalInitialTab"
       @close="showAddCustomResourceModal = false"
       @added="handleCustomResourceAdded"
     />
@@ -139,6 +154,10 @@
       message: 'Add Custom Resource',
       context: 'Button label on lesson summary page',
     },
+    addH5PInteractiveAction: {
+      message: 'H5P Interactive',
+      context: 'Button label for adding H5P interactive activity',
+    },
   });
 
   export default {
@@ -162,7 +181,7 @@
       const store = getCurrentInstance().proxy.$store;
       const route = useRoute();
       const lessonId = computed(() => route.params.lessonId);
-      const { addCustomResourceAction$ } = summaryStrings;
+      const { addCustomResourceAction$, addH5PInteractiveAction$ } = summaryStrings;
 
       showLessonSummaryPage(store, route.params);
 
@@ -175,6 +194,7 @@
         createSnackbar,
         clearSnackbar,
         addCustomResourceAction$,
+        addH5PInteractiveAction$,
       };
     },
     props: {
@@ -189,6 +209,7 @@
       return {
         currentAction: '',
         showAddCustomResourceModal: false,
+        customResourceModalInitialTab: 'builder',
         ReportsLessonTabs,
         workingResourcesBackup,
         REPORTS_LESSON_TABS_ID,
@@ -249,7 +270,7 @@
                 ? 'video'
                 : resource.resource_type === 'image'
                   ? 'image'
-                  : resource.resource_type === 'html5'
+                  : resource.resource_type === 'html5' || resource.resource_type === 'h5p'
                     ? 'html5'
                     : 'document';
 
@@ -417,6 +438,10 @@
         this.workingResourcesBackup = [...current];
         this.updateCurrentLesson(this.lessonId);
       },
+      openCustomResourceModal(tab = 'builder') {
+        this.customResourceModalInitialTab = tab;
+        this.showAddCustomResourceModal = true;
+      },
     },
     $trs: {
       undoActionPrompt: {
@@ -458,6 +483,14 @@
     text-align: center;
   }
 
+  .add-custom-resource-button {
+    margin-right: 8px;
+  }
+
+  .add-h5p-interactive-button {
+    margin-right: 8px;
+  }
+
   .manage-resources-button {
     margin-right: 8px;
   }
@@ -465,6 +498,7 @@
   .resources-action-bar {
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
     margin-top: 16px;
     margin-bottom: 16px;
   }

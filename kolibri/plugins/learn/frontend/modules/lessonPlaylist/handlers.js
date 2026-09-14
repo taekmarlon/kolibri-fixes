@@ -3,7 +3,9 @@ import useUser from 'kolibri/composables/useUser';
 import { handleApiError } from 'kolibri/utils/appError';
 import { get } from '@vueuse/core';
 import { pageLoading } from 'kolibri-common/composables/usePageLoading';
-import useContentNodeProgress from '../../composables/useContentNodeProgress';
+import useContentNodeProgress, {
+  setContentNodeProgress,
+} from '../../composables/useContentNodeProgress';
 import { LearningActivities } from 'kolibri/constants';
 import { LearnerLessonResource } from '../../apiResources';
 import { ClassesPageNames } from '../../constants';
@@ -43,7 +45,7 @@ export function showLessonPlaylist(store, { lessonId }) {
                 ? 'video'
                 : r.resource_type === 'image'
                 ? 'image'
-                : r.resource_type === 'html5'
+                : r.resource_type === 'html5' || r.resource_type === 'h5p'
                 ? 'html5'
                 : 'document';
 
@@ -71,6 +73,12 @@ export function showLessonPlaylist(store, { lessonId }) {
               file_size: r.file_size,
               content: r.content,
             };
+            if (r.progress !== undefined) {
+              setContentNodeProgress({
+                content_id: r.content_id,
+                progress: r.progress,
+              });
+            }
           }
         }
       }
