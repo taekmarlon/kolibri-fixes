@@ -29,7 +29,7 @@ RUN pnpm run build
 
 # Install H5P Server dependencies
 WORKDIR /app/h5p_server
-RUN npm install --omit=dev || npm install
+RUN npm install --omit=dev --legacy-peer-deps
 WORKDIR /app
 
 # --- Nginx config ---
