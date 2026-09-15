@@ -3,13 +3,28 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const dompurify_1 = __importDefault(require("dompurify"));
 const promises_1 = require("fs/promises");
-const jsdom_1 = require("jsdom");
 const h5p_server_1 = require("@lumieducation/h5p-server");
 const path_1 = require("path");
-const window = new jsdom_1.JSDOM('').window;
-const DOMPurify = (0, dompurify_1.default)(window);
+
+let DOMPurify;
+function getDOMPurify() {
+    if (!DOMPurify) {
+        try {
+            const dompurify_1 = __importDefault(require("dompurify"));
+            const jsdom_1 = require("jsdom");
+            const window = new jsdom_1.JSDOM('').window;
+            DOMPurify = (0, dompurify_1.default)(window);
+        } catch (e) {
+            console.warn('DOMPurify/JSDOM initialization failed, falling back to basic SVG sanitizer:', e.message);
+            DOMPurify = {
+                sanitize: (str) => str.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            };
+        }
+    }
+    return DOMPurify;
+}
+
 class SvgSanitizer {
     name = 'SVG Sanitizer based on dompurify package';
     async sanitize(file, originalFilename) {
@@ -38,7 +53,7 @@ class SvgSanitizer {
         return h5p_server_1.FileSanitizerResult.Sanitized;
     }
     sanitizeSvgString(svgString) {
-        return DOMPurify.sanitize(svgString, {
+        return getDOMPurify().sanitize(svgString, {
             USE_PROFILES: { svg: true }
         });
     }

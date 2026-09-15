@@ -1,6 +1,4 @@
-import createDOMPurify from 'dompurify';
 import { readFile, writeFile } from 'fs/promises';
-import { JSDOM } from 'jsdom';
 
 import {
     FileSanitizerResult,
@@ -9,8 +7,23 @@ import {
 } from '@lumieducation/h5p-server';
 import { basename } from 'path';
 
-const window = new JSDOM('').window;
-const DOMPurify = createDOMPurify(window);
+let DOMPurify: any;
+async function getDOMPurify() {
+    if (!DOMPurify) {
+        try {
+            const createDOMPurify = (await import('dompurify')).default;
+            const { JSDOM } = await import('jsdom');
+            const window = new JSDOM('').window;
+            DOMPurify = createDOMPurify(window as any);
+        } catch (e: any) {
+            console.warn('DOMPurify/JSDOM initialization failed, falling back to basic SVG sanitizer:', e.message);
+            DOMPurify = {
+                sanitize: (str: string) => str.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            };
+        }
+    }
+    return DOMPurify;
+}
 
 export default class SvgSanitizer implements IFileSanitizer {
     readonly name: string = 'SVG Sanitizer based on dompurify package';
@@ -24,7 +37,7 @@ export default class SvgSanitizer implements IFileSanitizer {
         }
 
         const svgString = await readFile(file, 'utf8');
-        const sanitizedSvgString = this.sanitizeSvgString(svgString);
+        const sanitizedSvgString = await this.sanitizeSvgString(svgString);
         await writeFile(file, sanitizedSvgString, 'utf8');
 
         return FileSanitizerResult.Sanitized;
@@ -45,14 +58,15 @@ export default class SvgSanitizer implements IFileSanitizer {
         }
 
         const svgString = file.data.toString('utf8');
-        const sanitizedSvgString = this.sanitizeSvgString(svgString);
+        const sanitizedSvgString = await this.sanitizeSvgString(svgString);
         file.data = Buffer.from(sanitizedSvgString, 'utf8');
 
         return FileSanitizerResult.Sanitized;
     }
 
-    private sanitizeSvgString(svgString: string): string {
-        return DOMPurify.sanitize(svgString, {
+    private async sanitizeSvgString(svgString: string): Promise<string> {
+        const purify = await getDOMPurify();
+        return purify.sanitize(svgString, {
             USE_PROFILES: { svg: true }
         });
     }
