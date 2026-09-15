@@ -192,12 +192,18 @@ class LessonSerializer(ModelSerializer):
             "learner_ids": ["df6308209356328f726a09aa9bd323b8"] // learner ids this lesson is directly assigned to
         }
         """
-        collections = validated_data.pop("assignments", [])
+        collections = validated_data.pop("assignments", None)
         learners = validated_data.pop("learner_ids", [])
         new_lesson = Lesson.objects.create(**validated_data)
 
-        for collection in collections:
-            self._create_lesson_assignment(lesson=new_lesson, collection=collection)
+        if collections is not None:
+            for collection in collections:
+                self._create_lesson_assignment(lesson=new_lesson, collection=collection)
+        elif not learners:
+            # Default to assigning to the entire classroom if no assignments/learners were specified
+            self._create_lesson_assignment(
+                lesson=new_lesson, collection=new_lesson.collection
+            )
 
         if learners:
             adhoc_group = create_adhoc_group_for_learners(

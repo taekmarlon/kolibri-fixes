@@ -91,4 +91,24 @@ try:
 except Exception as e:
     logger.warning("==> [Render Init] Error copying wallpaper: %s", e)
 
+# 4. Auto-assign any orphaned lessons to their classroom
+try:
+    from kolibri.core.lessons.models import Lesson
+    from kolibri.core.lessons.models import LessonAssignment
+
+    unassigned_lessons = Lesson.objects.filter(lesson_assignments__isnull=True)
+    for lesson in unassigned_lessons:
+        if lesson.collection:
+            LessonAssignment.objects.get_or_create(
+                lesson=lesson,
+                collection=lesson.collection,
+            )
+            logger.info(
+                "==> [Render Init] Auto-assigned lesson '%s' to classroom '%s'",
+                lesson.title,
+                lesson.collection.name,
+            )
+except Exception as e:
+    logger.warning("==> [Render Init] Error auto-assigning orphaned lessons: %s", e)
+
 logger.info("==> [Render Init] Complete.")

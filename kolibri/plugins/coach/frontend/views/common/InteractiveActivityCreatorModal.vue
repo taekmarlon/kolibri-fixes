@@ -436,6 +436,7 @@
               data: {
                 title: finalLessonTitle,
                 collection: props.classId,
+                assignments: [props.classId],
                 active: true,
                 resources: [],
               },
@@ -618,6 +619,7 @@
               data: {
                 title: finalLessonTitle,
                 collection: props.classId,
+                assignments: [props.classId],
                 active: true,
                 resources: [],
               },
