@@ -28,7 +28,7 @@
         "lint:main": "eslint . --quiet",
         "lint": "concurrently \"npm:lint:main\" \"npm:lint:docs\"",
         "localize": "./localize.sh",
-        "prepare": "husky",
+        "prepare": "exit 0",
         "publish:h5p-express": "cd packages/h5p-express && npm publish",
         "publish:h5p-html-exporter": "cd packages/h5p-html-exporter && npm publish",
         "publish:h5p-mongos3": "cd packages/h5p-mongos3 && npm publish",
