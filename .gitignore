@@ -18,10 +18,10 @@ docker-whl.iid
 .eggs
 *.egg
 *.egg-info
-dist
+/dist
 dist-packages-temp
 dist-packages-cache
-build
+/build
 eggs
 parts
 bin
@@ -118,6 +118,14 @@ h5p_server/**/h5p/content/
 h5p_server/**/h5p/temporary-storage/
 h5p_server/**/h5p/user-data/
 
+# Keep H5P Server pre-compiled build artifacts, public assets, and library bundles
+!h5p_server/**/build
+!h5p_server/**/build/**
+!h5p_server/**/dist
+!h5p_server/**/dist/**
+!h5p_server/**/public
+!h5p_server/**/public/**
+
 # virtual environment
 venv/
 .venv/
@@ -157,6 +165,11 @@ SQLITE_MAX_VARIABLE_NUMBER.cache
 
 # don't ignore the TTF font for H5P
 !h5p-core-18.ttf
+!h5p_server/**/*.ttf
+!h5p_server/**/*.otf
+!h5p_server/**/*.woff
+!h5p_server/**/*.woff2
+!h5p_server/**/*.eot
 
 # static c extensions cache folder
 .cext_cache
