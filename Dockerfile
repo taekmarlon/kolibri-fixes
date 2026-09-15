@@ -29,7 +29,7 @@ RUN pnpm run build
 
 # Install H5P Server dependencies
 WORKDIR /app/h5p_server
-RUN npm install --omit=dev --legacy-peer-deps --ignore-scripts
+RUN npm install --omit=dev --legacy-peer-deps --ignore-scripts --package-lock=false
 WORKDIR /app
 
 # --- Nginx config ---
@@ -122,11 +122,30 @@ python /app/build_tools/sync_render_init.py || true
 echo "==> Starting nginx..."
 nginx
 
+echo "==> Ensuring H5P directories exist..."
+mkdir -p /app/h5p_server/packages/h5p-examples/h5p/content \
+         /app/h5p_server/packages/h5p-examples/h5p/temporary-storage \
+         /app/h5p_server/packages/h5p-examples/h5p/user-data
+
 echo "==> Starting H5P Interactive Server on port 8082..."
 export KOLIBRI_H5P_NODE_URL=http://127.0.0.1:8082
 cd /app/h5p_server/packages/h5p-examples
 PORT=8082 node build/express.js &
+H5P_PID=$!
 cd /app
+
+echo "==> Waiting for H5P Interactive Server to become ready..."
+for i in $(seq 1 15); do
+    if curl -s http://127.0.0.1:8082/ > /dev/null; then
+        echo "==> H5P Interactive Server is ready on port 8082!"
+        break
+    fi
+    sleep 1
+done
+
+if ! kill -0 $H5P_PID 2>/dev/null; then
+    echo "==> ERROR: H5P Interactive Server failed to start!"
+fi
 
 echo "==> Starting Kolibri on port 8000 (zip content on port 8081)..."
 exec kolibri start --port=8000 --zip-port=8081 --foreground
