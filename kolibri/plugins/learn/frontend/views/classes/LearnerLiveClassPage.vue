@@ -129,8 +129,8 @@
       context: 'Label indicating the learner display name',
     },
     launchWindowButton: {
-      message: 'Join Live Class (Unlimited)',
-      context: 'Button to join live video meeting in external window with no limits',
+      message: 'Join Live Class',
+      context: 'Button to join live video meeting in external window',
     },
     backToClassButton: {
       message: 'Back to Class',

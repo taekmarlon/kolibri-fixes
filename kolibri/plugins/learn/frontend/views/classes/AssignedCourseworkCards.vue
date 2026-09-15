@@ -11,16 +11,24 @@
           :label="header"
         />
       </h2>
-      <KButton
-        v-if="classId"
-        appearance="basic-link"
-        icon="people"
-        :text="goToDiscussions$()"
-        :to="discussionsLink"
-      />
+      <div class="header-actions">
+        <KButton
+          v-if="classId"
+          appearance="basic-link"
+          icon="people"
+          :text="goToDiscussions$()"
+          :to="discussionsLink"
+        />
+        <SectionToggleButton
+          :isExpanded="isExpanded"
+          @click="toggleExpand"
+        />
+      </div>
     </div>
 
-    <!-- Quick Access Discussion Board Banner (only when on a specific class page) -->
+    <transition name="section-collapse">
+      <div v-show="isExpanded" class="coursework-body">
+        <!-- Quick Access Discussion Board Banner (only when on a specific class page) -->
     <div
       v-if="classId"
       class="discussions-banner"
@@ -137,6 +145,8 @@
     >
       {{ noAssignmentsMessage$() }}
     </p>
+    </div>
+    </transition>
   </div>
 
 </template>
@@ -147,6 +157,8 @@
   import { createTranslator } from 'kolibri/utils/i18n';
   import AssignmentResource from 'kolibri-common/apiResources/AssignmentResource';
   import AssignmentSubmissionResource from 'kolibri-common/apiResources/AssignmentSubmissionResource';
+  import SectionToggleButton from 'kolibri-common/components/SectionToggleButton';
+  import useCollapsible from 'kolibri-common/composables/useCollapsible';
   import useLearnerResources from '../../composables/useLearnerResources';
   import { assignmentDetailLink, classDiscussionsLink } from './classPageLinks';
 
@@ -215,6 +227,9 @@
 
   export default {
     name: 'AssignedCourseworkCards',
+    components: {
+      SectionToggleButton,
+    },
     props: {
       classId: {
         type: String,
@@ -230,6 +245,8 @@
       },
     },
     setup(props) {
+      const storageKey = props.recent ? 'learn_recent_assignments' : 'learn_class_assignments';
+      const { isExpanded, toggleExpand } = useCollapsible(storageKey, true);
       const { getClass } = useLearnerResources();
       const loading = ref(true);
       const assignments = ref([]);
@@ -314,6 +331,8 @@
         getAssignmentClassName,
         getSubmissionStatus,
         formatDate,
+        isExpanded,
+        toggleExpand,
         ...strings,
       };
     },
@@ -332,6 +351,24 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 16px;
+  }
+
+  .header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-collapse-enter-active,
+  .section-collapse-leave-active {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .section-collapse-enter-from,
+  .section-collapse-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
   }
 
   .discussions-banner {

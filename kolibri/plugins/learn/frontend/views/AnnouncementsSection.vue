@@ -10,9 +10,15 @@
       <h2 class="section-title" :style="{ color: $themeTokens.text }">
         📢 {{ sectionTitle$() }}
       </h2>
+      <SectionToggleButton
+        :isExpanded="isExpanded"
+        @click="toggleExpand"
+      />
     </div>
 
-    <!-- Filter tabs (shown in standalone view) -->
+    <transition name="section-collapse">
+      <div v-show="isExpanded" class="announcements-body">
+        <!-- Filter tabs (shown in standalone view) -->
     <div v-if="standalone" class="filter-row">
       <button
         v-for="f in filters"
@@ -100,12 +106,16 @@
       </div>
     </div>
   </div>
+</transition>
+  </div>
 </template>
 
 <script>
   import { ref, computed, onMounted } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
   import AnnouncementResource from 'kolibri-common/apiResources/AnnouncementResource';
+  import SectionToggleButton from 'kolibri-common/components/SectionToggleButton';
+  import useCollapsible from 'kolibri-common/composables/useCollapsible';
 
   const strings = createTranslator('AnnouncementsSectionStrings', {
     sectionTitle: {
@@ -123,6 +133,9 @@
 
   export default {
     name: 'AnnouncementsSection',
+    components: {
+      SectionToggleButton,
+    },
     props: {
       classId: {
         type: String,
@@ -135,6 +148,7 @@
       },
     },
     setup(props) {
+      const { isExpanded, toggleExpand } = useCollapsible('learn_announcements', true);
       const announcements = ref([]);
       const loading = ref(true);
       const activeFilter = ref('all');
@@ -242,6 +256,8 @@
         viewLinkBtn$,
         schoolAdminLabel$,
         noAnnouncementsMsg$,
+        isExpanded,
+        toggleExpand,
       };
     },
   };
@@ -252,6 +268,7 @@
   .section-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     margin-bottom: 12px;
   }
 
@@ -259,6 +276,18 @@
     font-size: 1.1rem;
     font-weight: 600;
     margin: 0;
+  }
+
+  .section-collapse-enter-active,
+  .section-collapse-leave-active {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .section-collapse-enter-from,
+  .section-collapse-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
   }
 
   .filter-row {

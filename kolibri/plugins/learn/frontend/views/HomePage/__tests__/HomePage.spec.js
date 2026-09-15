@@ -27,10 +27,18 @@ jest.mock('../../../composables/useDeviceSettings');
 jest.mock('../../../composables/useLearnerResources');
 jest.mock('../../../composables/useContentLink');
 jest.mock('kolibri-common/composables/usePageLoading');
-// Needed to test anything using mount() where children use this composable
-jest.mock('kolibri-common/composables/useLearningActivities');
 jest.mock('kolibri-design-system/lib/composables/useKResponsiveWindow');
 jest.mock('kolibri/composables/useTotalProgress');
+jest.mock('kolibri-common/composables/useLiveSessions', () => () => ({
+  activeLiveClass: { value: null },
+  fetchLiveSessions: jest.fn(() => Promise.resolve()),
+  pollLiveSessions: jest.fn(),
+  isClassLive: jest.fn(() => false),
+}));
+jest.mock('../../AnnouncementsSection', () => ({
+  name: 'AnnouncementsSection',
+  render: h => h('div', { class: 'announcements-mock' }),
+}));
 
 const localVue = createLocalVue();
 localVue.use(Vuex);

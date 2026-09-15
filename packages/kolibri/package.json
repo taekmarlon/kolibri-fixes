@@ -28,6 +28,7 @@
     "./components/PrivacyInfoModal": "./components/PrivacyInfoModal",
     "./components/SkipNavigationLink": "./components/SkipNavigationLink",
     "./components/SyncStatusDisplay": "./components/SyncStatusDisplay",
+    "./components/UserAvatar": "./components/UserAvatar",
     "./components/chat/ChatConversationsList": "./components/chat/ChatConversationsList",
     "./components/chat/ChatDock": "./components/chat/ChatDock",
     "./components/chat/ChatEmojiPicker": "./components/chat/ChatEmojiPicker",

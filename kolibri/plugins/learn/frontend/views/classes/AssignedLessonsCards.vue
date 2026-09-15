@@ -1,30 +1,40 @@
 <template>
 
   <div>
-    <h2>
-      <KLabeledIcon
-        icon="lesson"
-        :label="header"
+    <div class="section-header">
+      <h2 :style="{ margin: 0 }">
+        <KLabeledIcon
+          icon="lesson"
+          :label="header"
+        />
+      </h2>
+      <SectionToggleButton
+        :isExpanded="isExpanded"
+        @click="toggleExpand"
       />
-    </h2>
+    </div>
 
-    <KCardGrid
-      v-if="lessons && lessons.length > 0"
-      layout="1-2-3"
-      :layoutOverride="[{ columnGap: '16px', rowGap: '16px' }]"
-    >
-      <AssignmentCard
-        v-for="lesson in lessons"
-        :key="lesson.id"
-        :lesson="lesson"
-        :to="getClassLessonLink(lesson)"
-        :collectionTitle="displayClassName ? getLessonClassName(lesson) : ''"
-      />
-    </KCardGrid>
+    <transition name="section-collapse">
+      <div v-show="isExpanded" class="section-content">
+        <KCardGrid
+          v-if="lessons && lessons.length > 0"
+          layout="1-2-3"
+          :layoutOverride="[{ columnGap: '16px', rowGap: '16px' }]"
+        >
+          <AssignmentCard
+            v-for="lesson in lessons"
+            :key="lesson.id"
+            :lesson="lesson"
+            :to="getClassLessonLink(lesson)"
+            :collectionTitle="displayClassName ? getLessonClassName(lesson) : ''"
+          />
+        </KCardGrid>
 
-    <p v-else>
-      {{ $tr('noLessonsMessage') }}
-    </p>
+        <p v-else>
+          {{ $tr('noLessonsMessage') }}
+        </p>
+      </div>
+    </transition>
   </div>
 
 </template>
@@ -32,6 +42,8 @@
 
 <script>
 
+  import SectionToggleButton from 'kolibri-common/components/SectionToggleButton';
+  import useCollapsible from 'kolibri-common/composables/useCollapsible';
   import useLearnerResources from '../../composables/useLearnerResources';
   import AssignmentCard from '../cards/AssignmentCard';
 
@@ -39,8 +51,10 @@
     name: 'AssignedLessonsCards',
     components: {
       AssignmentCard,
+      SectionToggleButton,
     },
-    setup() {
+    setup(props) {
+      const { isExpanded, toggleExpand } = useCollapsible('learn_lessons', true);
       const { getClass, getClassLessonLink } = useLearnerResources();
 
       function getLessonClassName(lesson) {
@@ -48,7 +62,12 @@
         return lessonClass ? lessonClass.name : '';
       }
 
-      return { getLessonClassName, getClassLessonLink };
+      return {
+        getLessonClassName,
+        getClassLessonLink,
+        isExpanded,
+        toggleExpand,
+      };
     },
     props: {
       lessons: {
@@ -100,4 +119,25 @@
 </script>
 
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .section-collapse-enter-active,
+  .section-collapse-leave-active {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .section-collapse-enter-from,
+  .section-collapse-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+</style>

@@ -148,6 +148,32 @@ class CourseworkAPITestCase(APITestCase):
             student_check_res.data["feedback"], "Excellent microscope detail!"
         )
 
+    def test_learner_cannot_upload_file_exceeding_5mb(self):
+        assignment = Assignment.objects.create(
+            title="Cell Structure Homework",
+            collection=self.classroom,
+            max_points=50,
+            allow_text_submission=True,
+            allow_file_upload=True,
+            is_active=True,
+            created_by=self.coach,
+        )
+        self._login(self.learner1)
+        submission_url = reverse("kolibri:core:submission-list")
+        oversized_file = SimpleUploadedFile(
+            "large_homework.pdf",
+            b"x" * (5 * 1024 * 1024 + 100),
+            content_type="application/pdf",
+        )
+        sub_payload = {
+            "assignment": assignment.id,
+            "text_content": "Here is my homework",
+            "file_attachment": oversized_file,
+        }
+        sub_res = self.client.post(submission_url, sub_payload, format="multipart")
+        self.assertEqual(sub_res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("exceeds the 5 MB maximum limit", str(sub_res.data))
+
     def test_gradebook_overview(self):
         assignment = Assignment.objects.create(
             title="Genetics Quiz",

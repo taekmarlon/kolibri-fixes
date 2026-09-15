@@ -15,8 +15,13 @@ from kolibri.core.auth.models import LearnerGroup
 from kolibri.core.auth.test.helpers import KolibriAPITestCase as APITestCase
 from kolibri.core.auth.test.helpers import provision_device
 from kolibri.core.exams.constants import MAX_QUESTIONS_PER_QUIZ_SECTION
+from kolibri.core.logger.models import AttemptLog
+from kolibri.core.logger.models import ContentSessionLog
 from kolibri.core.logger.models import ContentSummaryLog
 from kolibri.core.logger.models import MasteryLog
+from kolibri.plugins.coach.viewsets.class_summary import (
+    serialize_coach_assigned_quiz_status,
+)
 
 from .. import models
 
@@ -915,3 +920,108 @@ class ExamDraftAPITestCase(BaseExamTest, APITestCase):
         url = reverse("kolibri:core:exam-upload-image")
         response = self.client.post(url, {"file": bad_file}, format="multipart")
         self.assertEqual(response.status_code, 400)
+
+    def test_upload_image_exceeds_5mb(self):
+        self.login_as_admin()
+        oversized = SimpleUploadedFile(
+            "large_pic.png",
+            b"\x89PNG\r\n\x1a\n" + b"x" * (5 * 1024 * 1024 + 100),
+            content_type="image/png",
+        )
+        url = reverse("kolibri:core:exam-upload-image")
+        response = self.client.post(url, {"file": oversized}, format="multipart")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("exceeds the 5MB maximum limit", response.data.get("detail", ""))
+
+    def test_custom_quiz_progress_tracking_and_status(self):
+        if self.draft:
+            return
+        self.login_as_admin()
+        exam_data = self.make_basic_exam()
+        ex_id = uuid.uuid4().hex
+        q_id = uuid.uuid4().hex
+        custom_question = {
+            "exercise_id": ex_id,
+            "question_id": q_id,
+            "title": "Custom Question 1",
+            "counter_in_exercise": 1,
+            "is_custom": True,
+            "question_type": "multiple_choice",
+            "prompt": "What is 2 + 2?",
+            "options": [
+                {"id": "opt_1", "text": "4"},
+                {"id": "opt_2", "text": "5"},
+            ],
+            "answer_key": ["opt_1"],
+            "point_value": 1,
+        }
+        exam_data["question_sources"] = [
+            {
+                "section_title": "Section 1",
+                "questions": [custom_question],
+                "learners_see_fixed_order": True,
+            }
+        ]
+        exam_data["active"] = True
+        response = self.post_new_exam(exam_data)
+        self.assertEqual(response.status_code, 201)
+        created_exam_id = response.data["id"]
+
+        # Learner takes the quiz
+        self.login_as_learner()
+        summary_log = ContentSummaryLog.objects.create(
+            user=self.learner,
+            content_id=created_exam_id,
+            start_timestamp=now(),
+            completion_timestamp=now(),
+            progress=1.0,
+            kind="quiz",
+        )
+        session_log = ContentSessionLog.objects.create(
+            user=self.learner,
+            content_id=created_exam_id,
+            start_timestamp=now(),
+            end_timestamp=now(),
+            kind="quiz",
+        )
+        mastery_log = MasteryLog.objects.create(
+            user=self.learner,
+            summarylog=summary_log,
+            start_timestamp=now(),
+            end_timestamp=now(),
+            mastery_level=-1,
+            complete=True,
+        )
+        AttemptLog.objects.create(
+            user=self.learner,
+            masterylog=mastery_log,
+            sessionlog=session_log,
+            item=f"{ex_id}:{q_id}",
+            start_timestamp=now(),
+            end_timestamp=now(),
+            correct=1,
+            answer="opt_1",
+            simple_answer="4",
+        )
+
+        # 1. Coach assigned quiz status check
+        coach_status = serialize_coach_assigned_quiz_status([{"id": created_exam_id}])
+        self.assertEqual(len(coach_status), 1)
+        self.assertEqual(coach_status[0]["status"], "Completed")
+        self.assertEqual(coach_status[0]["num_correct"], 1)
+        self.assertEqual(coach_status[0]["num_answered"], 1)
+        self.assertEqual(coach_status[0]["learner_id"], self.learner.id)
+
+        # 2. Learner classroom exam progress check
+        classroom_url = reverse("kolibri:kolibri.plugins.learn:learnerclassroom-list")
+        res = self.client.get(classroom_url)
+        self.assertEqual(res.status_code, 200)
+        classroom_data = res.data[0]
+        matching_exam = next(
+            e for e in classroom_data["exams"] if e["id"] == created_exam_id
+        )
+        self.assertTrue(matching_exam["progress"]["started"])
+        self.assertTrue(matching_exam["progress"]["closed"])
+        self.assertEqual(matching_exam["progress"]["score"], 1)
+        self.assertEqual(matching_exam["progress"]["answer_count"], 1)
+        self.assertFalse(matching_exam["missing_resource"])

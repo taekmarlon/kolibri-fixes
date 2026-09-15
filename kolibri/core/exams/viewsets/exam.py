@@ -724,9 +724,11 @@ class ExamViewset(ValuesViewset):
                 {"detail": f"Unsupported image file extension: {ext}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if file_obj.size > 10 * 1024 * 1024:
+        if file_obj.size > 5 * 1024 * 1024:
             return Response(
-                {"detail": "Image file size exceeds maximum limit of 10MB."},
+                {
+                    "detail": "Image file size exceeds the 5MB maximum limit. Please choose an image smaller than 5MB."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         save_dir = os.path.join(settings.MEDIA_ROOT, "custom_quiz", "images")

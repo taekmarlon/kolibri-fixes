@@ -60,6 +60,7 @@ export default [
     path: '/live-meeting',
     component: LiveMeetingPage,
     handler(to, from, next) {
+      store.commit('SET_PAGE_NAME', PageNames.LIVE_MEETING);
       clearError();
       pageLoading.value = false;
       next();
@@ -70,6 +71,7 @@ export default [
     path: '/ai-tutor',
     component: LearnerAiTutorPage,
     handler(to, from, next) {
+      store.commit('SET_PAGE_NAME', PageNames.AI_TUTOR);
       clearError();
       pageLoading.value = false;
       next();
@@ -80,6 +82,7 @@ export default [
     path: '/announcements',
     component: LearnerAnnouncementsPage,
     handler(to, from, next) {
+      store.commit('SET_PAGE_NAME', PageNames.ANNOUNCEMENTS);
       clearError();
       pageLoading.value = false;
       next();

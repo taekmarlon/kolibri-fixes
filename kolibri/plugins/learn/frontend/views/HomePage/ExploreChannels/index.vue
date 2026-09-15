@@ -14,24 +14,34 @@
         :span="1"
         alignment="right"
       >
-        <KRouterLink
-          v-if="displayAllChannelsLink"
-          :text="coreString('viewAll')"
-          :to="allChannelsLink"
-          data-testid="viewAllLink"
-        />
+        <div class="explore-header-actions">
+          <KRouterLink
+            v-if="displayAllChannelsLink"
+            :text="coreString('viewAll')"
+            :to="allChannelsLink"
+            data-testid="viewAllLink"
+          />
+          <SectionToggleButton
+            :isExpanded="isExpanded"
+            @click="toggleExpand"
+          />
+        </div>
       </KFixedGridItem>
     </KFixedGrid>
 
-    <CardGrid :gridType="1">
-      <BaseChannelCard
-        v-for="(channel, idx) in visibleChannels"
-        :key="idx"
-        data-testid="channelLink"
-        :channel="channel"
-        :to="getChannelLink(channel)"
-      />
-    </CardGrid>
+    <transition name="section-collapse">
+      <div v-show="isExpanded">
+        <CardGrid :gridType="1">
+          <BaseChannelCard
+            v-for="(channel, idx) in visibleChannels"
+            :key="idx"
+            data-testid="channelLink"
+            :channel="channel"
+            :to="getChannelLink(channel)"
+          />
+        </CardGrid>
+      </div>
+    </transition>
   </section>
 
 </template>
@@ -40,6 +50,8 @@
 <script>
 
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
+  import SectionToggleButton from 'kolibri-common/components/SectionToggleButton';
+  import useCollapsible from 'kolibri-common/composables/useCollapsible';
   import { PageNames } from '../../../constants';
   import CardGrid from '../../cards/CardGrid';
   import BaseChannelCard from '../../cards/BaseChannelCard';
@@ -49,8 +61,16 @@
     components: {
       CardGrid,
       BaseChannelCard,
+      SectionToggleButton,
     },
     mixins: [commonCoreStrings],
+    setup() {
+      const { isExpanded, toggleExpand } = useCollapsible('learn_explore_channels', true);
+      return {
+        isExpanded,
+        toggleExpand,
+      };
+    },
     props: {
       channels: {
         type: Array,
@@ -105,3 +125,28 @@
   };
 
 </script>
+
+
+<style lang="scss" scoped>
+
+  .explore-header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .section-collapse-enter-active,
+  .section-collapse-leave-active {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .section-collapse-enter,
+  .section-collapse-enter-from,
+  .section-collapse-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+</style>

@@ -16,9 +16,10 @@
     "watch-hot": "pnpm run watch --hot",
     "python-devserver": "kolibri start --debug --foreground --port=8000 --settings=kolibri.deployment.default.settings.dev",
     "python-devserver-no-update": "kolibri start --debug --skip-update --foreground --port=8000 --settings=kolibri.deployment.default.settings.dev",
+    "h5p-server": "node ../Lumieducation-server/packages/h5p-examples/build/express.js",
     "frontend-devserver": "concurrently --passthrough-arguments --kill-others \"pnpm run watch --watchonly {1}\" \"pnpm run sandbox-dev\" --",
-    "devserver": "concurrently --passthrough-arguments --kill-others \"pnpm run watch --watchonly {1}\" \"pnpm run python-devserver\" \"pnpm run sandbox-dev\" --",
-    "devserver-hot": "concurrently --passthrough-arguments --kill-others \"pnpm run watch-hot --watchonly {1}\" \"pnpm run python-devserver\" \"pnpm run sandbox-dev\" --",
+    "devserver": "concurrently --passthrough-arguments --kill-others \"pnpm run watch --watchonly {1}\" \"pnpm run python-devserver\" \"pnpm run sandbox-dev\" \"pnpm run h5p-server\" --",
+    "devserver-hot": "concurrently --passthrough-arguments --kill-others \"pnpm run watch-hot --watchonly {1}\" \"pnpm run python-devserver\" \"pnpm run sandbox-dev\" \"pnpm run h5p-server\" --",
     "devserver-with-kds": "concurrently --passthrough-arguments --kill-others \"pnpm run watch --watchonly={2} --require-kds-path --kds-path={1}\" \"pnpm run python-devserver\" \"pnpm run sandbox-dev\" --",
     "bundle-stats": "kolibri-build prod --file ./build_tools/build_plugins.txt --transpile --json",
     "clean": "rm -fr kolibri/core/content/static/sandbox/ && kolibri-build clean --file ./build_tools/build_plugins.txt",
@@ -59,6 +60,7 @@
     "kolibri-i18n": "workspace:*",
     "kolibri-logging": "workspace:*",
     "kolibri-plugin-data": "workspace:*",
+    "puppeteer": "^25.6.0",
     "rewire": "^6.0.0",
     "vue-jest": "^3.0.0",
     "vue-template-compiler": "2.7.16",
@@ -110,7 +112,6 @@
     }
   },
   "dependencies": {
-    "puppeteer": "^25.6.0",
     "sass": "^1.32.13"
   }
 }

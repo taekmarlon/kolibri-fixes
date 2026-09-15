@@ -440,8 +440,8 @@
 
   const editorStrings = createTranslator('GoogleFormsQuizEditorStrings', {
     authorCustomQuestionsTitle: {
-      message: 'Custom Question Builder (Google Forms Style)',
-      context: 'Header title of Google Forms quiz builder',
+      message: 'Custom Question Builder',
+      context: 'Header title of custom quiz builder',
     },
     authorCustomQuestionsSubtitle: {
       message:
@@ -573,8 +573,12 @@
       context: 'Snackbar success message',
     },
     imageUploadError: {
-      message: 'Could not upload image. Please ensure it is a valid image under 10MB.',
+      message: 'Could not upload image. Please ensure it is a valid image under 5MB.',
       context: 'Snackbar error message',
+    },
+    imageSizeExceededWarning: {
+      message: '⚠️ Image file size exceeds the 5MB maximum limit. Please choose an image smaller than 5MB.',
+      context: 'Warning message when chosen image exceeds 5MB',
     },
   });
 
@@ -802,6 +806,10 @@
         input.onchange = e => {
           const file = e.target.files && e.target.files[0];
           if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+              createSnackbar(editorStrings.imageSizeExceededWarning$());
+              return;
+            }
             onSelected(file);
           }
         };
@@ -829,7 +837,8 @@
             syncToSection();
             createSnackbar(editorStrings.imageUploadSuccess$());
           } catch (err) {
-            createSnackbar(editorStrings.imageUploadError$());
+            const detailMsg = err.response && err.response.data && err.response.data.detail;
+            createSnackbar(detailMsg || editorStrings.imageUploadError$());
           } finally {
             isUploadingImage.value = false;
           }
@@ -850,7 +859,8 @@
             syncToSection();
             createSnackbar(editorStrings.imageUploadSuccess$());
           } catch (err) {
-            createSnackbar(editorStrings.imageUploadError$());
+            const detailMsg = err.response && err.response.data && err.response.data.detail;
+            createSnackbar(detailMsg || editorStrings.imageUploadError$());
           } finally {
             isUploadingImage.value = false;
           }

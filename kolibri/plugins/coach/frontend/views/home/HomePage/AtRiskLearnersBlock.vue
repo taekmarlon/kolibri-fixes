@@ -27,17 +27,23 @@
 
       <div class="header-actions">
         <KButton
-          v-if="learners.length > 0"
+          v-if="learners.length > 0 && isExpanded"
           :text="exportAllDorpCsv$()"
           icon="download"
           appearance="flat-button"
           @click="exportClassDorpCSV"
         />
+        <SectionToggleButton
+          :isExpanded="isExpanded"
+          @click="toggleExpand"
+        />
       </div>
     </div>
 
-    <!-- Metrics Summary & Filter Pills -->
-    <div class="metrics-row">
+    <transition name="section-collapse">
+      <div v-show="isExpanded">
+        <!-- Metrics Summary & Filter Pills -->
+        <div class="metrics-row">
       <button
         type="button"
         class="metric-pill pill-high"
@@ -208,6 +214,8 @@
         />
       </div>
     </div>
+  </div>
+</transition>
 
     <!-- Diagnostics & Intervention Modal -->
     <AtRiskDiagnosticsModal
@@ -226,6 +234,8 @@ import { ref, computed, onMounted } from 'vue';
 import { createTranslator } from 'kolibri/utils/i18n';
 import useChat from 'kolibri/composables/useChat';
 import AtRiskAnalyticsResource from 'kolibri-common/apiResources/AtRiskAnalyticsResource';
+import SectionToggleButton from 'kolibri-common/components/SectionToggleButton';
+import useCollapsible from 'kolibri-common/composables/useCollapsible';
 import useCoreCoach from '../../../composables/useCoreCoach';
 import AtRiskDiagnosticsModal from './AtRiskDiagnosticsModal.vue';
 
@@ -262,8 +272,10 @@ export default {
   name: 'AtRiskLearnersBlock',
   components: {
     AtRiskDiagnosticsModal,
+    SectionToggleButton,
   },
   setup() {
+    const { isExpanded, toggleExpand } = useCollapsible('coach_at_risk', true);
     const { classId, className } = useCoreCoach();
     const { startDirectChat } = useChat();
 
@@ -444,6 +456,8 @@ export default {
       openDiagnostics,
       handleMessageLearner,
       exportClassDorpCSV,
+      isExpanded,
+      toggleExpand,
       ...strings,
     };
   },
@@ -772,5 +786,17 @@ export default {
   display: flex;
   justify-content: center;
   padding-top: 6px;
+}
+
+.section-collapse-enter-active,
+.section-collapse-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.section-collapse-enter-from,
+.section-collapse-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 </style>

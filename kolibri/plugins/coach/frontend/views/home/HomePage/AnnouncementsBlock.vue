@@ -10,19 +10,27 @@
           📢 {{ blockTitle$() }}
         </span>
       </div>
-      <KButton
-        :text="newAnnouncementBtn$()"
-        :primary="true"
-        appearance="raised-button"
-        icon="plus"
-        size="small"
-        @click="openCreateModal"
-      />
+      <div class="header-right">
+        <KButton
+          :text="newAnnouncementBtn$()"
+          :primary="true"
+          appearance="raised-button"
+          icon="plus"
+          size="small"
+          @click="openCreateModal"
+        />
+        <SectionToggleButton
+          :isExpanded="isExpanded"
+          @click="toggleExpand"
+        />
+      </div>
     </div>
 
-    <h2 class="block-title" :style="{ color: $themeTokens.text }">
-      {{ blockSubtitle$() }}
-    </h2>
+    <transition name="section-collapse">
+      <div v-show="isExpanded" class="block-body">
+        <h2 class="block-title" :style="{ color: $themeTokens.text }">
+          {{ blockSubtitle$() }}
+        </h2>
 
     <!-- Filter tabs -->
     <div class="filter-row">
@@ -123,6 +131,8 @@
         </div>
       </div>
     </div>
+  </div>
+</transition>
 
     <!-- Create/Edit Modal -->
     <AnnouncementFormModal
@@ -152,6 +162,8 @@
   import { ref, computed, onMounted } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
   import AnnouncementResource from 'kolibri-common/apiResources/AnnouncementResource';
+  import SectionToggleButton from 'kolibri-common/components/SectionToggleButton';
+  import useCollapsible from 'kolibri-common/composables/useCollapsible';
   import useCoreCoach from '../../../composables/useCoreCoach';
   import AnnouncementFormModal from './AnnouncementFormModal';
 
@@ -179,8 +191,12 @@
 
   export default {
     name: 'AnnouncementsBlock',
-    components: { AnnouncementFormModal },
+    components: {
+      AnnouncementFormModal,
+      SectionToggleButton,
+    },
     setup() {
+      const { isExpanded, toggleExpand } = useCollapsible('coach_announcements', true);
       const { classId } = useCoreCoach();
       const facilityId = ref(null);
       const announcements = ref([]);
@@ -350,6 +366,8 @@
         confirmDelete,
         doDelete,
         onAnnouncementSaved,
+        isExpanded,
+        toggleExpand,
         blockTitle$,
         blockSubtitle$,
         newAnnouncementBtn$,
@@ -510,6 +528,24 @@
   .ann-actions {
     display: flex;
     gap: 4px;
+  }
+
+  .header-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-collapse-enter-active,
+  .section-collapse-leave-active {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .section-collapse-enter-from,
+  .section-collapse-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
   }
 
 </style>

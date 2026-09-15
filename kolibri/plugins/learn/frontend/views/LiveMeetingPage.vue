@@ -94,7 +94,7 @@
                 </div>
               </div>
               <KButton
-                :text="isClassLive(classroom.id) ? 'Join Live Class Now ➔' : `Join ${classroom.name} (Unlimited)`"
+                :text="isClassLive(classroom.id) ? 'Join Live Class Now ➔' : `Join ${classroom.name}`"
                 :primary="true"
                 appearance="raised-button"
                 icon="openNewTab"
@@ -289,7 +289,7 @@
       context: 'Label indicating the user display name',
     },
     joinMeetingButton: {
-      message: 'Join Meeting (Unlimited)',
+      message: 'Join Meeting',
       context: 'Button to join meeting',
     },
     generateRandomButton: {

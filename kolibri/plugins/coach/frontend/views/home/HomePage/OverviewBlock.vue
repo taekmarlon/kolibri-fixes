@@ -39,44 +39,54 @@
       </KGridItem>
     </KGrid>
 
-    <h1>
-      <KLabeledIcon
-        icon="classes"
-        :label="$store.state.classSummary.name"
+    <div class="overview-title-row">
+      <h1 class="overview-title">
+        <KLabeledIcon
+          icon="classes"
+          :label="$store.state.classSummary.name"
+        />
+      </h1>
+      <SectionToggleButton
+        :isExpanded="isExpanded"
+        @click="toggleExpand"
       />
-    </h1>
-    <HeaderTable>
-      <HeaderTableRow>
-        <template #key>
-          <KLabeledIcon
-            icon="coach"
-            :label="$tr('coach', { count: coachNames.length })"
-          />
-        </template>
-        <template #value>
-          <TruncatedItemList :items="coachNames" />
-        </template>
-      </HeaderTableRow>
-      <HeaderTableRow>
-        <template #key>
-          <KLabeledIcon
-            icon="people"
-            :label="$tr('learner', { count: learnerNames.length })"
-          />
-        </template>
-        <template #value>
-          {{ $formatNumber(learnerNames.length) }}
-          <template v-if="Object.keys(filteredLearnMap).length > 0">
-            <KRouterLink
-              :text="coachString('viewLearners')"
-              appearance="basic-link"
-              :to="classLearnersListRoute"
-              class="view-learners-link"
-            />
-          </template>
-        </template>
-      </HeaderTableRow>
-    </HeaderTable>
+    </div>
+    <transition name="section-collapse">
+      <div v-show="isExpanded">
+        <HeaderTable>
+          <HeaderTableRow>
+            <template #key>
+              <KLabeledIcon
+                icon="coach"
+                :label="$tr('coach', { count: coachNames.length })"
+              />
+            </template>
+            <template #value>
+              <TruncatedItemList :items="coachNames" />
+            </template>
+          </HeaderTableRow>
+          <HeaderTableRow>
+            <template #key>
+              <KLabeledIcon
+                icon="people"
+                :label="$tr('learner', { count: learnerNames.length })"
+              />
+            </template>
+            <template #value>
+              {{ $formatNumber(learnerNames.length) }}
+              <template v-if="Object.keys(filteredLearnMap).length > 0">
+                <KRouterLink
+                  :text="coachString('viewLearners')"
+                  appearance="basic-link"
+                  :to="classLearnersListRoute"
+                  class="view-learners-link"
+                />
+              </template>
+            </template>
+          </HeaderTableRow>
+        </HeaderTable>
+      </div>
+    </transition>
   </KPageContainer>
 
 </template>
@@ -91,6 +101,8 @@
   import { picturePasswordStrings } from 'kolibri-common/strings/picturePasswords';
   import { ref } from 'vue';
   import { ClassesPageNames } from '../../../../../learn/frontend/constants';
+  import SectionToggleButton from 'kolibri-common/components/SectionToggleButton';
+  import useCollapsible from 'kolibri-common/composables/useCollapsible';
   import commonCoach from '../../common';
   import { fetchClassSyncStatus } from '../../../composables/fetchClassSyncStatus';
   import { LastPages } from '../../../constants/lastPagesConstants';
@@ -98,12 +110,18 @@
 
   export default {
     name: 'OverviewBlock',
+    components: {
+      SectionToggleButton,
+    },
     mixins: [commonCoach, commonCoreStrings],
     setup() {
+      const { isExpanded, toggleExpand } = useCollapsible('coach_overview', true);
       const { userIsMultiFacilityAdmin } = useFacilities();
       const { viewPasswordsAction$ } = picturePasswordStrings;
       const userList = ref([]);
       return {
+        isExpanded,
+        toggleExpand,
         userIsMultiFacilityAdmin,
         viewPasswordsAction$,
         userList,
@@ -182,12 +200,35 @@
 
 <style lang="scss" scoped>
 
+  .overview-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .overview-title {
+    margin: 0;
+  }
+
   .view-learners-link {
     margin-left: 24px;
   }
 
   .view-passwords-link {
     margin-top: 16px;
+  }
+
+  .section-collapse-enter-active,
+  .section-collapse-leave-active {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .section-collapse-enter-from,
+  .section-collapse-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
   }
 
 </style>

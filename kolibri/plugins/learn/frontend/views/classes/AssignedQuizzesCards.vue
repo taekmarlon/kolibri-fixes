@@ -1,29 +1,39 @@
 <template>
 
   <div>
-    <h2>
-      <KLabeledIcon
-        icon="quiz"
-        :label="header"
+    <div class="section-header">
+      <h2 :style="{ margin: 0 }">
+        <KLabeledIcon
+          icon="quiz"
+          :label="header"
+        />
+      </h2>
+      <SectionToggleButton
+        :isExpanded="isExpanded"
+        @click="toggleExpand"
       />
-    </h2>
+    </div>
 
-    <KCardGrid
-      v-if="visibleQuizzes.length > 0"
-      layout="1-2-3"
-      :layoutOverride="[{ columnGap: '16px', rowGap: '16px' }]"
-    >
-      <AssignmentCard
-        v-for="quiz in visibleQuizzes"
-        :key="quiz.id"
-        :quiz="quiz"
-        :to="getClassQuizLink(quiz)"
-        :collectionTitle="displayClassName ? getQuizClassName(quiz) : ''"
-      />
-    </KCardGrid>
-    <p v-else>
-      {{ $tr('noQuizzesMessage') }}
-    </p>
+    <transition name="section-collapse">
+      <div v-show="isExpanded" class="section-content">
+        <KCardGrid
+          v-if="visibleQuizzes.length > 0"
+          layout="1-2-3"
+          :layoutOverride="[{ columnGap: '16px', rowGap: '16px' }]"
+        >
+          <AssignmentCard
+            v-for="quiz in visibleQuizzes"
+            :key="quiz.id"
+            :quiz="quiz"
+            :to="getClassQuizLink(quiz)"
+            :collectionTitle="displayClassName ? getQuizClassName(quiz) : ''"
+          />
+        </KCardGrid>
+        <p v-else>
+          {{ $tr('noQuizzesMessage') }}
+        </p>
+      </div>
+    </transition>
   </div>
 
 </template>
@@ -32,6 +42,8 @@
 <script>
 
   import { computed } from 'vue';
+  import SectionToggleButton from 'kolibri-common/components/SectionToggleButton';
+  import useCollapsible from 'kolibri-common/composables/useCollapsible';
   import useLearnerResources from '../../composables/useLearnerResources';
   import AssignmentCard from '../cards/AssignmentCard';
 
@@ -39,8 +51,10 @@
     name: 'AssignedQuizzesCards',
     components: {
       AssignmentCard,
+      SectionToggleButton,
     },
     setup(props) {
+      const { isExpanded, toggleExpand } = useCollapsible('learn_quizzes', true);
       const { getClass, getClassQuizLink } = useLearnerResources();
 
       const visibleQuizzes = computed(() => {
@@ -68,6 +82,8 @@
         visibleQuizzes,
         getQuizClassName,
         getClassQuizLink,
+        isExpanded,
+        toggleExpand,
       };
     },
     props: {
@@ -122,4 +138,25 @@
 </script>
 
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .section-collapse-enter-active,
+  .section-collapse-leave-active {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .section-collapse-enter-from,
+  .section-collapse-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+</style>

@@ -1,50 +1,60 @@
 <template>
 
   <section>
-    <h2>
-      <KLabeledIcon
-        icon="forward"
-        :label="header"
+    <div class="section-header">
+      <h2 :style="{ margin: 0 }">
+        <KLabeledIcon
+          icon="forward"
+          :label="header"
+        />
+      </h2>
+      <SectionToggleButton
+        :isExpanded="isExpanded"
+        @click="toggleExpand"
       />
-    </h2>
+    </div>
 
-    <KCardGrid layout="1-2-3">
-      <template v-if="fromClasses">
-        <ResourceCard
-          v-for="(resource, idx) in uniqueResumableClassesResources"
-          :key="`resource-${idx}`"
-          :contentNode="resource.contentNode"
-          :to="genContentLinkBackLinkCurrentPage(resource.contentNode.id, true)"
-          :collectionTitle="getResourceClassName(resource)"
-        />
-        <AssignmentCard
-          v-for="(quiz, idx) in resumableClassesQuizzes"
-          :key="`quiz-${idx}`"
-          :quiz="quiz"
-          :to="getClassQuizLink(quiz)"
-          :collectionTitle="getQuizClassName(quiz)"
-          showThumbnail
-        />
-      </template>
-      <template v-else>
-        <ResourceCard
-          v-for="(contentNode, idx) in resumableContentNodes"
-          :key="idx"
-          :contentNode="contentNode"
-          :to="genContentLinkBackLinkCurrentPage(contentNode.id, true)"
-          :collectionTitle="getContentNodeTopicName(contentNode)"
-          @openCopiesModal="openCopiesModal"
-        />
-      </template>
-    </KCardGrid>
-    <KButton
-      v-if="moreResumableContentNodes"
-      style="margin-top: 16px"
-      appearance="basic-link"
-      @click="fetchMoreResumableContentNodes"
-    >
-      {{ coreString('viewMoreAction') }}
-    </KButton>
+    <transition name="section-collapse">
+      <div v-show="isExpanded" class="section-content">
+        <KCardGrid layout="1-2-3">
+          <template v-if="fromClasses">
+            <ResourceCard
+              v-for="(resource, idx) in uniqueResumableClassesResources"
+              :key="`resource-${idx}`"
+              :contentNode="resource.contentNode"
+              :to="genContentLinkBackLinkCurrentPage(resource.contentNode.id, true)"
+              :collectionTitle="getResourceClassName(resource)"
+            />
+            <AssignmentCard
+              v-for="(quiz, idx) in resumableClassesQuizzes"
+              :key="`quiz-${idx}`"
+              :quiz="quiz"
+              :to="getClassQuizLink(quiz)"
+              :collectionTitle="getQuizClassName(quiz)"
+              showThumbnail
+            />
+          </template>
+          <template v-else>
+            <ResourceCard
+              v-for="(contentNode, idx) in resumableContentNodes"
+              :key="idx"
+              :contentNode="contentNode"
+              :to="genContentLinkBackLinkCurrentPage(contentNode.id, true)"
+              :collectionTitle="getContentNodeTopicName(contentNode)"
+              @openCopiesModal="openCopiesModal"
+            />
+          </template>
+        </KCardGrid>
+        <KButton
+          v-if="moreResumableContentNodes"
+          style="margin-top: 16px"
+          appearance="basic-link"
+          @click="fetchMoreResumableContentNodes"
+        >
+          {{ coreString('viewMoreAction') }}
+        </KButton>
+      </div>
+    </transition>
     <CopiesModal
       v-if="displayedCopies.length"
       :copies="displayedCopies"
@@ -65,6 +75,8 @@
   import AssignmentCard from '../cards/AssignmentCard';
   import ResourceCard from '../cards/ResourceCard';
   import CopiesModal from '../CopiesModal';
+  import SectionToggleButton from 'kolibri-common/components/SectionToggleButton';
+  import useCollapsible from 'kolibri-common/composables/useCollapsible';
   import useLearnerResources from '../../composables/useLearnerResources';
   import useContentLink from '../../composables/useContentLink';
 
@@ -77,9 +89,11 @@
       ResourceCard,
       AssignmentCard,
       CopiesModal,
+      SectionToggleButton,
     },
     mixins: [commonCoreStrings],
     setup() {
+      const { isExpanded, toggleExpand } = useCollapsible('learn_continue_learning', true);
       const {
         resumableClassesQuizzes,
         resumableClassesResources,
@@ -128,6 +142,8 @@
         getResourceClassName,
         getContentNodeTopicName,
         genContentLinkBackLinkCurrentPage,
+        isExpanded,
+        toggleExpand,
       };
     },
     props: {
@@ -173,3 +189,27 @@
   };
 
 </script>
+
+
+<style lang="scss" scoped>
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .section-collapse-enter-active,
+  .section-collapse-leave-active {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .section-collapse-enter-from,
+  .section-collapse-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+</style>

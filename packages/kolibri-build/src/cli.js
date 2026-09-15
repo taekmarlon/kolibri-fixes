@@ -81,7 +81,7 @@ function startDevServer(compiler, options) {
         runtimeErrors: false,
       },
     },
-    allowedHosts: [options.host, 'localhost'],
+    allowedHosts: 'all',
     headers: {
       'Access-Control-Allow-Origin': '*',
     },

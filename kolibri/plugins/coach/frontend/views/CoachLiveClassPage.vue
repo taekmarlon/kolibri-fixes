@@ -91,7 +91,7 @@
 
               <div class="room-actions" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px;">
                 <KButton
-                  :text="isLiveNow ? 'Re-Join Live Class (Unlimited)' : launchWindowButton$()"
+                  :text="isLiveNow ? 'Re-Join Live Class' : launchWindowButton$()"
                   :primary="true"
                   appearance="raised-button"
                   icon="openNewTab"
@@ -205,8 +205,8 @@
       context: 'List of features in Jitsi meeting',
     },
     launchWindowButton: {
-      message: 'Launch Live Class (Unlimited)',
-      context: 'Button to open video meeting in external window with no limits',
+      message: 'Launch Live Class',
+      context: 'Button to open video meeting in external window',
     },
     startClassMeetingButton: {
       message: 'Start Live Class Now',
@@ -229,7 +229,7 @@
       context: 'Placeholder for room name',
     },
     startCustomMeetingButton: {
-      message: 'Start Custom Meeting (Unlimited)',
+      message: 'Start Custom Meeting',
       context: 'Button to start meeting with custom room name',
     },
     enterRoomNameError: {

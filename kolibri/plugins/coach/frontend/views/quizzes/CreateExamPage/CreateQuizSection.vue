@@ -303,12 +303,12 @@
 
   const customSectionStrings = createTranslator('CreateQuizSectionCustomStrings', {
     addCustomQuestionAction: {
-      message: 'Create Custom Question (Google Forms)',
+      message: 'Create Custom Question',
       context: 'Button label to open custom question builder',
     },
     editCustomQuestions: {
-      message: 'Google Forms Editor',
-      context: 'Button to switch to Google Forms builder',
+      message: 'Question Editor',
+      context: 'Button to switch to custom question builder',
     },
     viewQuestionsList: {
       message: 'View Questions List',
