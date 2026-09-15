@@ -3,6 +3,7 @@ import logging
 import os
 
 import requests
+from csp.decorators import csp_exempt
 from django.conf import settings
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
@@ -53,6 +54,14 @@ body {
     border: 1px solid #e2e8f0 !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
 }
+.h5p-editor-iframe {
+    min-height: 680px !important;
+    width: 100% !important;
+    display: block !important;
+}
+.h5p-editor, .h5peditor {
+    min-height: 680px !important;
+}
 #save-h5p {
     display: none !important;
 }
@@ -72,9 +81,14 @@ body {
         var editorIframe = document.querySelector('.h5p-editor-iframe');
         if (editorIframe && editorIframe.contentDocument) {
             var doc = editorIframe.contentDocument;
-            var isReady = doc.querySelector('.h5p-hub-content-type-list, .h5p-hub, .h5peditor-form');
+            var isReady = doc.querySelector('.h5p-hub-content-type-list, .h5p-hub-client-drop-down, .h5p-hub, .h5peditor-form');
             if (isReady) {
                 notifyParent({ type: 'KOLIBRI_H5P_READY' });
+                try {
+                    if (editorIframe.contentWindow) {
+                        editorIframe.contentWindow.dispatchEvent(new Event('resize'));
+                    }
+                } catch (e) {}
                 return;
             }
         }
@@ -171,6 +185,7 @@ body {
 
 @method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(xframe_options_exempt, name="dispatch")
+@method_decorator(csp_exempt, name="dispatch")
 class H5PProxyView(View):
     """
     Reverse proxy view that forwards /h5p/* requests to the local Node.js H5P authoring and playback engine.
@@ -295,12 +310,15 @@ class H5PProxyView(View):
                 "content-type",
                 "content-encoding",
                 "x-frame-options",
+                "content-security-policy",
+                "content-security-policy-report-only",
                 "etag",
                 "last-modified",
             ):
                 django_response[key] = value
 
         django_response.xframe_options_exempt = True
+        django_response._csp_exempt = True
         django_response["X-Frame-Options"] = "SAMEORIGIN"
 
         if "text/html" in content_type:

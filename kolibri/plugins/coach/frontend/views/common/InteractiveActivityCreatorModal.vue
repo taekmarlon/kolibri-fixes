@@ -134,35 +134,43 @@
         </div>
 
         <div
-          v-if="isIframeLoading"
-          class="h5p-loading-banner"
-          :style="{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '420px',
-            backgroundColor: $themeTokens.surface,
-            borderRadius: '8px',
-            border: `1px solid ${$themeTokens.fineLine}`,
-            marginBottom: '12px',
-          }"
+          class="h5p-studio-container"
+          style="position: relative; width: 100%; min-height: 720px;"
         >
-          <KCircularLoader :delay="false" />
-          <p :style="{ marginTop: '16px', fontWeight: '500', color: $themeTokens.annotation }">
-            {{ h5pLoadingNotice$() }}
-          </p>
-        </div>
+          <div
+            v-if="isIframeLoading"
+            class="h5p-loading-banner"
+            :style="{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: $themeTokens.surface,
+              borderRadius: '8px',
+              border: `1px solid ${$themeTokens.fineLine}`,
+            }"
+          >
+            <KCircularLoader :delay="false" />
+            <p :style="{ marginTop: '16px', fontWeight: '500', color: $themeTokens.annotation }">
+              {{ h5pLoadingNotice$() }}
+            </p>
+          </div>
 
-        <iframe
-          v-show="!isIframeLoading"
-          ref="h5pEditorIframe"
-          :src="h5pEditorUrl"
-          class="h5p-hub-iframe"
-          style="width: 100%; height: 720px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
-          allow="fullscreen; geolocation; microphone; camera; midi"
-          @load="onIframeLoaded"
-        ></iframe>
+          <iframe
+            ref="h5pEditorIframe"
+            :src="h5pEditorUrl"
+            class="h5p-hub-iframe"
+            style="width: 100%; height: 720px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
+            allow="fullscreen; geolocation; microphone; camera; midi"
+            @load="onIframeLoaded"
+          ></iframe>
+        </div>
       </div>
 
       <!-- Mode B: Quick Activity Builder -->
@@ -474,6 +482,11 @@
         if (event.data) {
           if (event.data.type === 'KOLIBRI_H5P_READY') {
             isIframeLoading.value = false;
+            try {
+              if (h5pEditorIframe.value && h5pEditorIframe.value.contentWindow) {
+                h5pEditorIframe.value.contentWindow.dispatchEvent(new Event('resize'));
+              }
+            } catch (e) {}
           } else if (event.data.type === 'KOLIBRI_H5P_SAVED') {
             handleH5PContentSaved(event.data.contentId, event.data.title);
           } else if (event.data.type === 'KOLIBRI_H5P_VALIDATION_ERROR') {
