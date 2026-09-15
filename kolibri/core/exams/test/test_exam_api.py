@@ -1025,3 +1025,65 @@ class ExamDraftAPITestCase(BaseExamTest, APITestCase):
         self.assertEqual(matching_exam["progress"]["score"], 1)
         self.assertEqual(matching_exam["progress"]["answer_count"], 1)
         self.assertFalse(matching_exam["missing_resource"])
+
+    def test_create_exam_with_interactive_h5p_question(self):
+        if self.draft:
+            return
+        self.login_as_admin()
+        exam_data = self.make_basic_exam()
+        ex_id = uuid.uuid4().hex
+        q_id = uuid.uuid4().hex
+        h5p_question = {
+            "exercise_id": ex_id,
+            "question_id": q_id,
+            "title": "Interactive H5P Question",
+            "counter_in_exercise": 1,
+            "is_custom": True,
+            "question_type": "h5p",
+            "h5p_content_id": "42",
+            "h5p_url": "/h5p/play/42",
+            "prompt": "Complete the interactive exercise below",
+            "options": [],
+            "answer_key": [],
+            "point_value": 10,
+        }
+        exam_data["question_sources"] = [
+            {
+                "section_title": "Interactive Section",
+                "questions": [h5p_question],
+                "learners_see_fixed_order": True,
+            }
+        ]
+        exam_data["active"] = True
+        response = self.post_new_exam(exam_data)
+        self.assertEqual(response.status_code, 201)
+        created_exam = response.data
+        self.assertEqual(created_exam["title"], exam_data["title"])
+        q = created_exam["question_sources"][0]["questions"][0]
+        self.assertEqual(q["question_type"], "h5p")
+        self.assertEqual(q["h5p_content_id"], "42")
+        self.assertEqual(q["h5p_url"], "/h5p/play/42")
+
+    def test_upload_h5p_file_for_exam(self):
+        import io
+        import zipfile
+
+        self.login_as_admin()
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr(
+                "h5p.json",
+                '{"title": "Test H5P", "mainLibrary": "H5P.TrueFalse"}',
+            )
+            zf.writestr("content/content.json", '{"question": "Is Kolibri great?"}')
+        zip_buffer.seek(0)
+        h5p_file = SimpleUploadedFile(
+            "activity.h5p",
+            zip_buffer.getvalue(),
+            content_type="application/zip",
+        )
+        url = reverse("kolibri:core:exam-upload-h5p")
+        response = self.client.post(url, {"file": h5p_file}, format="multipart")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertIn("file_url", response.data)
+        self.assertIn("resource_id", response.data)

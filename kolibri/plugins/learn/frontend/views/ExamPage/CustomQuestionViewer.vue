@@ -112,6 +112,52 @@
         @input="onShortAnswerChange"
       />
     </div>
+
+    <!-- H5P / Interactive Activity -->
+    <div
+      v-else-if="question.question_type === 'h5p' || question.question_type === 'interactive'"
+      class="interactive-question-container mt-16"
+    >
+      <iframe
+        v-if="question.question_type === 'h5p' && question.h5p_content_id"
+        :src="question.h5p_url || `/h5p/play/${question.h5p_content_id}`"
+        class="h5p-player-iframe"
+        style="width: 100%; min-height: 560px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
+        allow="fullscreen; geolocation; microphone; camera; midi"
+      ></iframe>
+      <iframe
+        v-else-if="question.file_url"
+        :src="question.file_url"
+        class="interactive-file-iframe"
+        style="width: 100%; min-height: 560px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
+        allow="fullscreen; geolocation; microphone; camera; midi"
+      ></iframe>
+      <iframe
+        v-else-if="question.content"
+        :srcdoc="question.content"
+        class="interactive-srcdoc-iframe"
+        sandbox="allow-scripts allow-same-origin"
+        style="width: 100%; min-height: 560px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
+      ></iframe>
+      <div
+        v-if="interactiveCompleted"
+        class="completion-badge mt-12"
+        :style="{
+          padding: '10px 16px',
+          backgroundColor: '#f0fdf4',
+          border: '1px solid #bbf7d0',
+          color: '#15803d',
+          borderRadius: '6px',
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }"
+      >
+        <KIcon icon="check" />
+        <span>{{ activityCompletedLabel$() }}</span>
+      </div>
+    </div>
   </div>
 
 </template>
@@ -119,7 +165,7 @@
 
 <script>
 
-  import { ref, watch } from 'vue';
+  import { ref, watch, onMounted, onUnmounted } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
 
   const viewerStrings = createTranslator('CustomQuestionViewerStrings', {
@@ -139,6 +185,10 @@
       message: 'Type your answer here...',
       context: 'Textbox placeholder',
     },
+    activityCompletedLabel: {
+      message: 'Interactive Activity Completed!',
+      context: 'Status badge when learner finishes interactive task',
+    },
   });
 
   export default {
@@ -156,6 +206,34 @@
         typeof props.answerState === 'string' ? props.answerState : '',
       );
 
+      const interactiveCompleted = ref(
+        props.answerState === 'completed' || Boolean(props.answerState),
+      );
+
+      function onWindowMessage(event) {
+        if (!event.data) return;
+        const msg = event.data;
+        if (
+          msg.type === 'H5P_COMPLETE' ||
+          msg.type === 'H5P_SCORE' ||
+          (msg.verb &&
+            (msg.verb.includes('completed') ||
+              msg.verb.includes('passed') ||
+              msg.verb.includes('answered')))
+        ) {
+          interactiveCompleted.value = true;
+          emit('interaction');
+        }
+      }
+
+      onMounted(() => {
+        window.addEventListener('message', onWindowMessage);
+      });
+
+      onUnmounted(() => {
+        window.removeEventListener('message', onWindowMessage);
+      });
+
       watch(
         () => props.answerState,
         newVal => {
@@ -168,6 +246,11 @@
             selectedOptions.value = Array.isArray(newVal) ? [...newVal] : [];
           } else if (props.question.question_type === 'short_answer') {
             shortAnswerText.value = typeof newVal === 'string' ? newVal : '';
+          } else if (
+            props.question.question_type === 'h5p' ||
+            props.question.question_type === 'interactive'
+          ) {
+            interactiveCompleted.value = newVal === 'completed' || Boolean(newVal);
           }
         },
       );
@@ -230,6 +313,11 @@
             const lowerAnswer = simpleAnswer.toLowerCase();
             isCorrect = expected.map(s => s.toLowerCase()).includes(lowerAnswer);
           }
+        } else if (type === 'h5p' || type === 'interactive') {
+          const isDone = Boolean(interactiveCompleted.value);
+          answerState = isDone ? 'completed' : null;
+          simpleAnswer = isDone ? 'Completed' : 'In progress';
+          isCorrect = isDone;
         }
 
         return {
@@ -243,6 +331,7 @@
         selectedOption,
         selectedOptions,
         shortAnswerText,
+        interactiveCompleted,
         selectSingleChoice,
         toggleMultiChoice,
         isChoiceChecked,

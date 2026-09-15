@@ -7,6 +7,13 @@
       <CoachHeader :title="quizzesLabel$()">
         <template #actions>
           <KButton
+            appearance="raised-button"
+            icon="html5"
+            :text="interactiveActivitiesAction$()"
+            style="margin-right: 8px"
+            @click="showInteractiveModal = true"
+          />
+          <KButton
             v-if="isAiEnabled"
             appearance="raised-button"
             icon="generate"
@@ -214,6 +221,14 @@
         v-if="showAiQuizModal"
         @close="showAiQuizModal = false"
       />
+      <InteractiveActivityCreatorModal
+        v-if="showInteractiveModal"
+        :classId="classId"
+        :isQuizMode="true"
+        :quizzes="quizzes"
+        @close="showInteractiveModal = false"
+        @created="handleInteractiveCreated"
+      />
     </KPageContainer>
   </CoachAppBarPage>
 
@@ -251,6 +266,7 @@
   import StatusSummary from '../common/status/StatusSummary';
   import CoachHeader from '../common/CoachHeader.vue';
   import AiQuizGeneratorModal from '../common/AiQuizGeneratorModal.vue';
+  import InteractiveActivityCreatorModal from '../common/InteractiveActivityCreatorModal.vue';
   import {
     getItemTerm,
     DEPED_TERM_CONFIG,
@@ -263,6 +279,13 @@
     generateWithAi: {
       message: 'Generate with AI',
       context: 'Button label for AI quiz generator',
+    },
+  });
+
+  const interactiveStrings = createTranslator('InteractiveActivityRootStrings', {
+    interactiveActivitiesAction: {
+      message: 'Interactive Activities',
+      context: 'Button label on quizzes page to create an interactive activity',
     },
   });
 
@@ -280,6 +303,7 @@
       CoachHeader,
       NoResourceAlert,
       AiQuizGeneratorModal,
+      InteractiveActivityCreatorModal,
     },
     mixins: [commonCoreStrings],
     setup() {
@@ -288,11 +312,17 @@
       const { quizzes, fetchQuizSizes } = useQuizzes();
       const { isAiEnabled } = useAiTutor();
       const { generateWithAi$ } = aiCoachStrings;
+      const { interactiveActivitiesAction$ } = interactiveStrings;
       const showAiQuizModal = ref(false);
+      const showInteractiveModal = ref(false);
       const showOpenConfirmationModal = ref(false);
       const showCloseConfirmationModal = ref(false);
       const activeQuiz = ref(null);
       const learnOnlyDevicesExist = ref(false);
+
+      function handleInteractiveCreated() {
+        refreshClassSummary();
+      }
 
       initClassInfo().then(() => (pageLoading.value = false));
 
@@ -396,6 +426,9 @@
         isAiEnabled,
         showAiQuizModal,
         generateWithAi$,
+        interactiveActivitiesAction$,
+        showInteractiveModal,
+        handleInteractiveCreated,
       };
     },
     data() {

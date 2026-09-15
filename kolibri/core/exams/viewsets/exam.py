@@ -73,6 +73,11 @@ class QuestionSourceSerializer(Serializer):
     point_value = IntegerField(default=1, required=False)
     explanation = CharField(default="", allow_blank=True, required=False)
     case_sensitive = BooleanField(default=False, required=False)
+    h5p_content_id = CharField(default="", allow_blank=True, required=False)
+    content = CharField(default="", allow_blank=True, required=False)
+    file_url = CharField(default="", allow_blank=True, required=False)
+    h5p_url = CharField(default="", allow_blank=True, required=False)
+    description = CharField(default="", allow_blank=True, required=False)
 
     def validate(self, attrs):
         if not attrs.get("is_custom") and "counter_in_exercise" not in attrs:
@@ -454,7 +459,7 @@ class DraftExamFilter(FilterSet):
 
 class ExamPermissions(KolibriAuthPermissions):
     def has_permission(self, request, view):
-        if getattr(view, "action", None) in ("upload_image", "size"):
+        if getattr(view, "action", None) in ("upload_image", "upload_h5p", "size"):
             return request.user.is_authenticated
         return super().has_permission(request, view)
 
@@ -742,4 +747,46 @@ class ExamViewset(ValuesViewset):
         url = f"/media/custom_quiz/images/{safe_name}"
         return Response(
             {"url": url, "file_name": file_obj.name}, status=status.HTTP_200_OK
+        )
+
+    @action(
+        detail=False,
+        methods=["post"],
+        parser_classes=(MultiPartParser, FormParser),
+    )
+    def upload_h5p(self, request, **kwargs):
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        file_obj = request.FILES.get("file")
+        if not file_obj:
+            return Response(
+                {"detail": "No file provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        resource_id = uuid.uuid4().hex
+        from kolibri.core.lessons.viewsets.lesson import _process_custom_resource_file
+
+        try:
+            (
+                detected_type,
+                file_name,
+                file_size,
+                file_url,
+            ) = _process_custom_resource_file(file_obj, resource_id, "h5p")
+        except ValidationError as e:
+            msg = e.detail[0] if isinstance(e.detail, list) else e.detail
+            return Response({"detail": str(msg)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "resource_id": resource_id,
+                "file_url": file_url,
+                "file_name": file_name,
+                "file_size": file_size,
+                "resource_type": detected_type,
+            },
+            status=status.HTTP_200_OK,
         )

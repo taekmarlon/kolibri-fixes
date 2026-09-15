@@ -1,8 +1,8 @@
 <template>
 
   <KModal
-    :title="modalTitle$()"
-    :submitText="saveAction$()"
+    :title="isQuizMode ? modalQuizTitle$() : modalTitle$()"
+    :submitText="isQuizMode ? saveQuizAction$() : saveAction$()"
     :cancelText="cancelAction$()"
     :submitDisabled="isSubmitDisabled || isSubmitting"
     size="large"
@@ -10,7 +10,7 @@
     @cancel="$emit('close')"
   >
     <div class="interactive-activity-creator-modal">
-      <!-- Target Lesson Selection -->
+      <!-- Target Assignment Selection -->
       <div
         class="lesson-target-bar mb-16"
         :style="{
@@ -21,29 +21,29 @@
         }"
       >
         <h3 :style="{ margin: '0 0 8px', color: $themeTokens.text }">
-          {{ assignmentTargetTitle$() }}
+          {{ isQuizMode ? assignmentTargetQuizTitle$() : assignmentTargetTitle$() }}
         </h3>
         <p :style="{ margin: '0 0 12px', color: $themeTokens.annotation, fontSize: '0.9rem' }">
-          {{ assignmentTargetSubtitle$() }}
+          {{ isQuizMode ? assignmentTargetQuizSubtitle$() : assignmentTargetSubtitle$() }}
         </p>
 
         <div class="target-select-row">
           <KSelect
-            v-model="selectedLessonOption"
+            v-model="selectedTargetOption"
             :label="targetLessonLabel$()"
-            :options="lessonOptions"
+            :options="targetOptions"
             :inline="true"
           />
         </div>
 
         <div
-          v-if="isCreatingNewLesson"
+          v-if="isCreatingNewTarget"
           class="mt-12"
         >
           <KTextbox
-            v-model="newLessonTitle"
-            :label="newLessonTitleLabel$()"
-            :placeholder="newLessonTitlePlaceholder$()"
+            v-model="newTargetTitle"
+            :label="isQuizMode ? newQuizTitleLabel$() : newLessonTitleLabel$()"
+            :placeholder="isQuizMode ? newQuizTitlePlaceholder$() : newLessonTitlePlaceholder$()"
           />
         </div>
       </div>
@@ -265,6 +265,7 @@
   import { createTranslator } from 'kolibri/utils/i18n';
   import useSnackbar from 'kolibri/composables/useSnackbar';
   import LessonResource from 'kolibri-common/apiResources/LessonResource';
+  import ExamResource from 'kolibri-common/apiResources/ExamResource';
   import H5PActivityBuilder from '../lessons/LessonSummaryPage/H5PActivityBuilder';
   import { PageNames } from '../../constants';
 
@@ -273,9 +274,17 @@
       message: 'Create Interactive Activity',
       context: 'Modal header title',
     },
+    modalQuizTitle: {
+      message: 'Create Interactive Quiz Activity',
+      context: 'Modal header title when creating a quiz',
+    },
     saveAction: {
       message: 'Save & Assign Activity',
       context: 'Submit button',
+    },
+    saveQuizAction: {
+      message: 'Save & Assign Quiz',
+      context: 'Submit button when creating a quiz',
     },
     cancelAction: {
       message: 'Cancel',
@@ -285,9 +294,17 @@
       message: 'Lesson Assignment',
       context: 'Section title',
     },
+    assignmentTargetQuizTitle: {
+      message: 'Quiz Assignment',
+      context: 'Section title when assigning to quiz',
+    },
     assignmentTargetSubtitle: {
       message: 'Choose whether to assign this interactive activity to an existing lesson or create a new lesson.',
       context: 'Section subtitle',
+    },
+    assignmentTargetQuizSubtitle: {
+      message: 'Choose whether to assign this interactive activity as a new quiz or add to an existing quiz.',
+      context: 'Section subtitle when assigning to quiz',
     },
     targetLessonLabel: {
       message: 'Assign To',
@@ -297,13 +314,25 @@
       message: '+ Create as New Lesson',
       context: 'Dropdown option to create a new lesson',
     },
+    newQuizOptionLabel: {
+      message: '+ Create as New Quiz',
+      context: 'Dropdown option to create a new quiz',
+    },
     newLessonTitleLabel: {
       message: 'New Lesson Title (Optional)',
       context: 'Textbox label',
     },
+    newQuizTitleLabel: {
+      message: 'New Quiz Title (Optional)',
+      context: 'Textbox label for new quiz title',
+    },
     newLessonTitlePlaceholder: {
       message: 'Leave blank to use the activity title',
       context: 'Textbox placeholder',
+    },
+    newQuizTitlePlaceholder: {
+      message: 'Leave blank to use the activity title',
+      context: 'Textbox placeholder for new quiz title',
     },
     h5pStudioModeLabel: {
       message: 'H5P Interactive Studio',
@@ -365,6 +394,10 @@
       message: 'Interactive activity successfully created and assigned!',
       context: 'Snackbar success message',
     },
+    quizSuccessNotice: {
+      message: 'Interactive quiz successfully created and assigned!',
+      context: 'Snackbar success message for quiz',
+    },
     errorNotice: {
       message: 'Could not create activity. Please check inputs and try again.',
       context: 'Snackbar error message',
@@ -388,6 +421,14 @@
       lessons: {
         type: Array,
         default: () => [],
+      },
+      quizzes: {
+        type: Array,
+        default: () => [],
+      },
+      isQuizMode: {
+        type: Boolean,
+        default: false,
       },
     },
     emits: ['close', 'created'],
@@ -422,15 +463,109 @@
         }, 3000);
       }
 
+      function generateHexId() {
+        return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, c => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+      }
+
+      // Target selection (Lesson vs Quiz)
+      const newTargetTitle = ref('');
+      const targetOptions = computed(() => {
+        if (props.isQuizMode) {
+          const list = [{ label: strings.newQuizOptionLabel$(), value: '__new__' }];
+          if (props.quizzes && props.quizzes.length) {
+            props.quizzes.forEach(q => {
+              list.push({ label: q.title, value: q.id });
+            });
+          }
+          return list;
+        }
+        const list = [{ label: strings.newLessonOptionLabel$(), value: '__new__' }];
+        if (props.lessons && props.lessons.length) {
+          props.lessons.forEach(l => {
+            list.push({ label: l.title, value: l.id });
+          });
+        }
+        return list;
+      });
+
+      const selectedTargetOption = ref(targetOptions.value[0]);
+
+      const isCreatingNewTarget = computed(() => {
+        return (
+          selectedTargetOption.value && selectedTargetOption.value.value === '__new__'
+        );
+      });
+
+      async function saveQuizFromQuestions(quizTitle, questions) {
+        const finalTitle = newTargetTitle.value.trim() || quizTitle || 'Interactive Quiz';
+        const newExam = await ExamResource.saveModel({
+          data: {
+            title: finalTitle,
+            collection: props.classId,
+            assignments: [props.classId],
+            active: true,
+            draft: false,
+            data_model_version: 3,
+            question_sources: [
+              {
+                section_title: 'Section 1',
+                description: '',
+                questions,
+              },
+            ],
+          },
+        });
+
+        createSnackbar(strings.quizSuccessNotice$());
+        emit('created', { quizId: newExam.id });
+        emit('close');
+
+        if (router) {
+          router.push({
+            name: PageNames.EXAM_SUMMARY,
+            params: {
+              classId: props.classId,
+              quizId: newExam.id,
+            },
+          });
+        }
+      }
+
       async function handleH5PContentSaved(contentId, title) {
         isSavingH5P.value = true;
         try {
-          let targetLessonId;
           const activityTitle = title ? title.trim() : 'H5P Interactive Activity';
 
-          if (isCreatingNewLesson.value) {
+          if (props.isQuizMode) {
+            const exerciseId = generateHexId();
+            const qId = generateHexId();
+            const q = {
+              item: `${exerciseId}:${qId}`,
+              exercise_id: exerciseId,
+              question_id: qId,
+              title: activityTitle,
+              counter_in_exercise: 1,
+              is_custom: true,
+              question_type: 'h5p',
+              h5p_content_id: String(contentId),
+              h5p_url: `/h5p/play/${contentId}`,
+              prompt: activityTitle,
+              options: [],
+              answer_key: [],
+              point_value: 10,
+            };
+            await saveQuizFromQuestions(activityTitle, [q]);
+            return;
+          }
+
+          let targetLessonId;
+          if (isCreatingNewTarget.value) {
             const finalLessonTitle =
-              newLessonTitle.value.trim() || activityTitle || 'Interactive Lesson';
+              newTargetTitle.value.trim() || activityTitle || 'Interactive Lesson';
 
             const newLesson = await LessonResource.saveModel({
               data: {
@@ -443,7 +578,7 @@
             });
             targetLessonId = newLesson.id;
           } else {
-            targetLessonId = selectedLessonOption.value.value;
+            targetLessonId = selectedTargetOption.value.value;
           }
 
           const endpointUrl = `/api/lessons/lesson/${targetLessonId}/custom_resource/`;
@@ -461,7 +596,7 @@
           emit('created', { lessonId: targetLessonId });
           emit('close');
 
-          if (isCreatingNewLesson.value && router) {
+          if (isCreatingNewTarget.value && router) {
             router.push({
               name: PageNames.LESSON_SUMMARY,
               params: {
@@ -504,26 +639,6 @@
 
       onUnmounted(() => {
         window.removeEventListener('message', onWindowMessage);
-      });
-
-      // Lesson target selection
-      const newLessonTitle = ref('');
-      const lessonOptions = computed(() => {
-        const list = [
-          { label: strings.newLessonOptionLabel$(), value: '__new__' },
-        ];
-        if (props.lessons && props.lessons.length) {
-          props.lessons.forEach(l => {
-            list.push({ label: l.title, value: l.id });
-          });
-        }
-        return list;
-      });
-
-      const selectedLessonOption = ref(lessonOptions.value[0]);
-
-      const isCreatingNewLesson = computed(() => {
-        return selectedLessonOption.value && selectedLessonOption.value.value === '__new__';
       });
 
       const isSubmitDisabled = computed(() => {
@@ -605,15 +720,147 @@
 
         isSubmitting.value = true;
         try {
-          let targetLessonId;
           const activityTitle =
             h5pMode.value === 'create'
               ? activityBuilderRef.value.title.trim()
               : h5pTitle.value.trim();
 
-          if (isCreatingNewLesson.value) {
+          if (props.isQuizMode) {
+            if (h5pMode.value === 'create') {
+              const builder = activityBuilderRef.value;
+              let questions = [];
+
+              if (builder.selectedType.value === 'quiz') {
+                questions = (builder.questions || []).map((bq, idx) => {
+                  const exerciseId = generateHexId();
+                  const qId = generateHexId();
+                  if (bq.type.value === 'true_false') {
+                    const optTrueId = `opt_${generateHexId().substring(0, 8)}`;
+                    const optFalseId = `opt_${generateHexId().substring(0, 8)}`;
+                    return {
+                      item: `${exerciseId}:${qId}`,
+                      exercise_id: exerciseId,
+                      question_id: qId,
+                      title: `Question ${idx + 1}`,
+                      counter_in_exercise: 1,
+                      is_custom: true,
+                      question_type: 'true_false',
+                      prompt: bq.prompt || `True or False Question ${idx + 1}`,
+                      options: [
+                        { id: optTrueId, text: 'True', image: '' },
+                        { id: optFalseId, text: 'False', image: '' },
+                      ],
+                      answer_key: [bq.tfAnswer === true ? optTrueId : optFalseId],
+                      point_value: 1,
+                      explanation: bq.explanation || '',
+                      case_sensitive: false,
+                    };
+                  } else if (bq.type.value === 'fill_blank') {
+                    return {
+                      item: `${exerciseId}:${qId}`,
+                      exercise_id: exerciseId,
+                      question_id: qId,
+                      title: `Question ${idx + 1}`,
+                      counter_in_exercise: 1,
+                      is_custom: true,
+                      question_type: 'short_answer',
+                      prompt: bq.prompt || bq.blankText || `Fill in the blank ${idx + 1}`,
+                      options: [],
+                      answer_key: [bq.blankAnswer || ''],
+                      point_value: 1,
+                      explanation: bq.explanation || '',
+                      case_sensitive: false,
+                    };
+                  } else {
+                    const opts = (bq.options || []).map((opt, oIdx) => ({
+                      id: `opt_${generateHexId().substring(0, 8)}`,
+                      text: opt.text || `Option ${oIdx + 1}`,
+                      image: '',
+                      _isCorrect: opt.isCorrect,
+                    }));
+                    const answerKey = opts.filter(o => o._isCorrect).map(o => o.id);
+                    return {
+                      item: `${exerciseId}:${qId}`,
+                      exercise_id: exerciseId,
+                      question_id: qId,
+                      title: `Question ${idx + 1}`,
+                      counter_in_exercise: 1,
+                      is_custom: true,
+                      question_type: 'multiple_choice',
+                      prompt: bq.prompt || `Question ${idx + 1}`,
+                      options: opts.map(({ id, text, image }) => ({ id, text, image })),
+                      answer_key: answerKey.length > 0 ? answerKey : (opts[0] ? [opts[0].id] : []),
+                      point_value: 1,
+                      explanation: bq.explanation || '',
+                      case_sensitive: false,
+                    };
+                  }
+                });
+              } else {
+                const exerciseId = generateHexId();
+                const qId = generateHexId();
+                questions = [
+                  {
+                    item: `${exerciseId}:${qId}`,
+                    exercise_id: exerciseId,
+                    question_id: qId,
+                    title: activityTitle,
+                    counter_in_exercise: 1,
+                    is_custom: true,
+                    question_type: 'interactive',
+                    content: builder.compiledHtml,
+                    prompt: activityTitle,
+                    options: [],
+                    answer_key: [],
+                    point_value: 10,
+                  },
+                ];
+              }
+
+              await saveQuizFromQuestions(activityTitle, questions);
+              return;
+            } else {
+              // Upload .h5p file for quiz
+              const formData = new FormData();
+              formData.append('file', selectedH5PFile.value);
+
+              const resp = await client({
+                url: '/api/exams/exam/upload_h5p/',
+                method: 'POST',
+                data: formData,
+                headers: { 'Content-Type': 'multipart/form-data' },
+              });
+
+              const { file_url } = resp.data;
+              const exerciseId = generateHexId();
+              const qId = generateHexId();
+              const questions = [
+                {
+                  item: `${exerciseId}:${qId}`,
+                  exercise_id: exerciseId,
+                  question_id: qId,
+                  title: activityTitle,
+                  counter_in_exercise: 1,
+                  is_custom: true,
+                  question_type: 'interactive',
+                  file_url: file_url,
+                  prompt: activityTitle,
+                  description: h5pDescription.value.trim(),
+                  options: [],
+                  answer_key: [],
+                  point_value: 10,
+                },
+              ];
+
+              await saveQuizFromQuestions(activityTitle, questions);
+              return;
+            }
+          }
+
+          let targetLessonId;
+          if (isCreatingNewTarget.value) {
             const finalLessonTitle =
-              newLessonTitle.value.trim() || activityTitle || 'Interactive Lesson';
+              newTargetTitle.value.trim() || activityTitle || 'Interactive Lesson';
 
             const newLesson = await LessonResource.saveModel({
               data: {
@@ -626,7 +873,7 @@
             });
             targetLessonId = newLesson.id;
           } else {
-            targetLessonId = selectedLessonOption.value.value;
+            targetLessonId = selectedTargetOption.value.value;
           }
 
           const endpointUrl = `/api/lessons/lesson/${targetLessonId}/custom_resource/`;
@@ -662,7 +909,7 @@
           emit('created', { lessonId: targetLessonId });
           emit('close');
 
-          if (isCreatingNewLesson.value && router) {
+          if (isCreatingNewTarget.value && router) {
             router.push({
               name: PageNames.LESSON_SUMMARY,
               params: {
@@ -693,10 +940,10 @@
         onIframeLoaded,
         h5pEditorUrl,
         reloadH5PEditor,
-        newLessonTitle,
-        lessonOptions,
-        selectedLessonOption,
-        isCreatingNewLesson,
+        newTargetTitle,
+        targetOptions,
+        selectedTargetOption,
+        isCreatingNewTarget,
         isSubmitDisabled,
         formatFileSize,
         triggerFileInput,
