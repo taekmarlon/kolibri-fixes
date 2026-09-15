@@ -39,6 +39,7 @@ export const Modals = {
   RESET_USER_PASSWORD: 'RESET_USER_PASSWORD',
   DELETE_USER: 'DELETE_USER',
   COPY_CLASS: 'COPY_CLASS',
+  CHANGE_USER_PHOTO: 'CHANGE_USER_PHOTO',
 };
 
 export const pageNameToModuleMap = {

@@ -682,6 +682,7 @@ class KolibriAnonymousUser(AnonymousUser, KolibriBaseUserMixin):
             "facility_name": getattr(Facility.get_default_facility(), "name", ""),
             "kind": [user_kinds.ANONYMOUS],
             "full_facility_import": self.full_facility_import,
+            "picture": None,
         }
 
     @property
@@ -983,6 +984,7 @@ class FacilityUser(AbstractBaseUser, KolibriBaseUserMixin, AbstractFacilityDataM
     picture_password = models.CharField(
         max_length=8, null=True, blank=True, default=None
     )
+    picture = models.CharField(max_length=255, null=True, blank=True, default=None)
 
     class Meta:
         unique_together = (("dataset", "picture_password"),)
@@ -1080,6 +1082,7 @@ class FacilityUser(AbstractBaseUser, KolibriBaseUserMixin, AbstractFacilityDataM
             "facility_name": self.facility.name if self.facility else "",
             # Is this user a member of a facility that has been fully imported?
             "full_facility_import": self.full_facility_import,
+            "picture": self.picture,
         }
 
     @cached_property

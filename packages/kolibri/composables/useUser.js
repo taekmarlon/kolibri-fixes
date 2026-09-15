@@ -22,6 +22,7 @@ const baseSessionState = {
   user_id: undefined,
   username: '',
   full_facility_import: true,
+  picture: null,
 };
 
 // Module-level state
@@ -75,6 +76,7 @@ export default function useUser() {
   const sessionId = computed(() => sessionState.value.id);
   const kind = computed(() => sessionState.value.kind);
   const username = computed(() => sessionState.value.username);
+  const userPicture = computed(() => sessionState.value.picture || null);
 
   // Derived state
   const isUserLoggedIn = computed(() => !kind.value.includes(UserKinds.ANONYMOUS));
@@ -208,6 +210,7 @@ export default function useUser() {
     sessionId,
     kind,
     username,
+    userPicture,
 
     // Actions
     login,

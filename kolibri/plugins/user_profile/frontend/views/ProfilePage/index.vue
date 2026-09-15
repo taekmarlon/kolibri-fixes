@@ -89,6 +89,19 @@
           </tr>
 
           <tr>
+            <th style="vertical-align: middle">
+              {{ photoLabel$() }}
+            </th>
+            <td>
+              <UserAvatar
+                :picture="currentUser.picture"
+                :name="currentUser.full_name || currentUser.username"
+                :size="56"
+              />
+            </td>
+          </tr>
+
+          <tr>
             <th>{{ coreString('fullNameLabel') }}</th>
             <td>{{ currentUser.full_name }}</td>
           </tr>
@@ -225,6 +238,15 @@
   import useCurrentUser from '../../composables/useCurrentUser';
   import useOnMyOwnSetup from '../../composables/useOnMyOwnSetup';
   import ChangeUserPasswordModal from './ChangeUserPasswordModal';
+  import { createTranslator } from 'kolibri/utils/i18n';
+  import UserAvatar from 'kolibri-common/components/userAccounts/UserAvatar';
+
+  const profileStrings = createTranslator('ProfilePageStrings', {
+    photoLabel: {
+      message: 'Profile picture',
+      context: 'Label for profile picture row in user profile view',
+    },
+  });
 
   export default {
     name: 'ProfilePage',
@@ -242,10 +264,12 @@
       PermissionsIcon,
       UserPicturePassword,
       UserTypeDisplay,
+      UserAvatar,
     },
     mixins: [commonCoreStrings],
     setup() {
       useFacilityTheme();
+      const { photoLabel$ } = profileStrings;
       const showPasswordModal = ref(false);
       const showLearnModal = ref(false);
       const { currentUser } = useCurrentUser();
@@ -287,6 +311,7 @@
         facilities,
         fetchFacilities,
         updateFacilityConfig,
+        photoLabel$,
       };
     },
     computed: {

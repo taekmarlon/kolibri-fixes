@@ -38,9 +38,11 @@ const session = {
   sessionId: undefined,
   kind: [UserKinds.ANONYMOUS],
   username: '',
+  picture: null,
 };
 
 const MOCK_DEFAULTS = {
+  userPicture: null,
   isLearnerOnlyImport: false,
   isUserLoggedIn: false,
   currentUserId: null,

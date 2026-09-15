@@ -77,3 +77,21 @@ class FacilityDatasetThemeUploadTestCase(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_upload_theme_image_exceeding_5mb_fails(self):
+        self.client.force_authenticate(user=self.superuser)
+        url = reverse("kolibri:core:facilitydataset-upload-theme-image")
+
+        fake_image = io.BytesIO(b"x" * (5 * 1024 * 1024 + 100))
+        uploaded_file = SimpleUploadedFile(
+            "oversized_bg.png", fake_image.read(), content_type="image/png"
+        )
+
+        response = self.client.post(
+            url,
+            {"file": uploaded_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("exceeds the 5MB maximum limit", response.data.get("detail", ""))

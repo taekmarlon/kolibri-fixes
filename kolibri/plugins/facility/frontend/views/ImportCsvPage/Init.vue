@@ -45,6 +45,13 @@
         >
       </label>
     </p>
+    <p
+      v-if="csvSizeError"
+      class="caution"
+      :style="{ color: $themeTokens.error }"
+    >
+      {{ csvSizeError }}
+    </p>
     <!-- Temporarily remove this functionality for MVP -->
     <p v-if="false">
       <KCheckbox
@@ -96,13 +103,23 @@
         showInfoModal: false,
         fileToImport: null,
         deleteUsers: false,
+        csvSizeError: '',
       };
     },
     methods: {
       filesChanged() {
         if (this.$refs.fileInput && this.$refs.fileInput.files.length) {
-          this.fileToImport = this.$refs.fileInput.files[0];
+          const file = this.$refs.fileInput.files[0];
+          if (file.size > 5 * 1024 * 1024) {
+            this.csvSizeError = this.$tr('fileSizeExceededWarning');
+            this.fileToImport = null;
+            this.$refs.fileInput.value = '';
+            return;
+          }
+          this.csvSizeError = '';
+          this.fileToImport = file;
         } else {
+          this.csvSizeError = '';
           this.fileToImport = null;
         }
       },
@@ -168,6 +185,10 @@
         message: 'Also delete users and classes not in CSV',
         context:
           'Option to allow user to delete users and classes that are not referenced in the spreadsheet.',
+      },
+      fileSizeExceededWarning: {
+        message: '⚠️ CSV file size exceeds the 5MB maximum limit. Please choose a file smaller than 5MB.',
+        context: 'Warning message when selected CSV file exceeds 5MB',
       },
     },
   };

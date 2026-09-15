@@ -303,6 +303,8 @@ class StreamingStaticFile(EndRangeStaticFile):
 
 def add_headers_function(headers, path, url):
     headers["Accept-Ranges"] = "bytes"
+    if "lessons/interactive" in url or "lessons/interactive" in path:
+        headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
 
 
 class DynamicWhiteNoise(WhiteNoise):

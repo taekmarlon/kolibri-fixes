@@ -143,6 +143,10 @@ class ImportUsersFromCSVValidator(JobValidator):
             raise serializers.ValidationError("Facility must be specified")
 
         if "csvfile" in data:
+            if data["csvfile"].size > 5 * 1024 * 1024:
+                raise serializers.ValidationError(
+                    "CSV file size exceeds the 5MB maximum limit. Please upload a file smaller than 5MB."
+                )
             tmp_path = data["csvfile"].temporary_file_path()
             filename = ntpath.basename(tmp_path)
             filepath = default_storage.save("temp/{}".format(filename), data["csvfile"])

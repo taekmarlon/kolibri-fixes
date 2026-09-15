@@ -23,6 +23,7 @@ from kolibri.core.auth.tasks import cleanup_expired_deleted_users
 from kolibri.core.auth.tasks import cleanupsync
 from kolibri.core.auth.tasks import CleanUpSyncsValidator
 from kolibri.core.auth.tasks import enqueue_soud_sync_processing
+from kolibri.core.auth.tasks import ImportUsersFromCSVValidator
 from kolibri.core.auth.tasks import PeerFacilityImportJobValidator
 from kolibri.core.auth.tasks import PeerFacilitySyncJobValidator
 from kolibri.core.auth.tasks import soud_sync_processing
@@ -980,3 +981,31 @@ class CleanupExpiredDeletedUsersTaskTestCase(TestCase):
         cleanup_expired_deleted_users()
         self.assertFalse(FacilityUser.all_objects.filter(id=user.id).exists())
         mock_job.retry_in.assert_not_called()
+
+
+class ImportUsersFromCSVValidatorTestCase(TestCase):
+    def setUp(self):
+        self.facility = Facility.objects.create(name="CSV Test Facility")
+
+    def test_csv_file_exceeding_5mb_fails_validation(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        oversized_csv = SimpleUploadedFile(
+            "users.csv",
+            b"x" * (5 * 1024 * 1024 + 100),
+            content_type="text/csv",
+        )
+        validator = ImportUsersFromCSVValidator(
+            data={
+                "type": "kolibri.core.auth.tasks.importusersfromcsv",
+                "csvfile": oversized_csv,
+                "facility": self.facility.id,
+                "locale": "en",
+            }
+        )
+        self.assertFalse(validator.is_valid())
+        self.assertIn("non_field_errors", validator.errors)
+        self.assertIn(
+            "exceeds the 5MB maximum limit",
+            str(validator.errors["non_field_errors"]),
+        )

@@ -52,10 +52,25 @@
           <span v-else-if="colIndex === 1">
             <KLabeledIcon
               class="user-type-icon"
-              icon="person"
               :label="content"
               :style="{ color: $themeTokens.text }"
-            />
+            >
+              <template #icon>
+                <button
+                  type="button"
+                  class="avatar-trigger-button"
+                  :disabled="!userCanBeEdited(row[0]) || Boolean(row[0].date_deleted)"
+                  :title="changePhotoLabel$()"
+                  :aria-label="changePhotoLabel$()"
+                  @click.stop="openChangePhotoModal(row[0])"
+                >
+                  <UserAvatar
+                    :user="row[0]"
+                    :size="26"
+                  />
+                </button>
+              </template>
+            </KLabeledIcon>
             <UserTypeDisplay
               aria-hidden="true"
               :userType="row[0].kind"
@@ -122,6 +137,13 @@
       :onChange="event => $emit('change', event)"
       @close="closeModal"
     />
+
+    <ChangeUserPhotoModal
+      v-if="modalShown === Modals.CHANGE_USER_PHOTO"
+      :user="userToChange"
+      @updated="handlePhotoUpdated"
+      @close="closeModal"
+    />
   </div>
 
 </template>
@@ -148,12 +170,22 @@
   import useUser from 'kolibri/composables/useUser';
   import useKResponsiveWindow from 'kolibri-design-system/lib/composables/useKResponsiveWindow';
   import { themeTokens } from 'kolibri-design-system/lib/styles/theme';
+  import { createTranslator } from 'kolibri/utils/i18n';
+  import UserAvatar from 'kolibri-common/components/userAccounts/UserAvatar';
 
   import { Modals } from '../../../constants';
   import MoveToTrashModal from './MoveToTrashModal.vue';
   import ResetUserPasswordModal from './ResetUserPasswordModal';
+  import ChangeUserPhotoModal from './ChangeUserPhotoModal';
 
   const SELECTION_COLUMN_ID = 'selection';
+
+  const usersTableStrings = createTranslator('UsersTableStrings', {
+    changePhotoLabel: {
+      message: 'Change photo',
+      context: 'Label for button or menu item to change user profile picture',
+    },
+  });
 
   // Constant for the number of days until the user is permanently deleted
   const PERMANENT_DELETION_DAYS = 30;
@@ -169,6 +201,8 @@
       GenderDisplayText,
       BirthYearDisplayText,
       ResetUserPasswordModal,
+      UserAvatar,
+      ChangeUserPhotoModal,
     },
     setup(props, { emit }) {
       const route = useRoute();
@@ -184,6 +218,7 @@
       const activeRowId = ref(null);
 
       const { selectAllLabel$ } = enhancedQuizManagementStrings;
+      const { changePhotoLabel$ } = usersTableStrings;
       const {
         createdAt$,
         selectLabel$,
@@ -455,8 +490,27 @@
         userToChange.value = null;
       };
 
+      const openChangePhotoModal = user => {
+        if (!userCanBeEdited(user) || user.date_deleted) {
+          return;
+        }
+        userToChange.value = user;
+        modalShown.value = Modals.CHANGE_USER_PHOTO;
+      };
+
+      const handlePhotoUpdated = ({ userId, picture }) => {
+        const user = facilityUsers.value.find(u => u.id === userId);
+        if (user) {
+          user.picture = picture;
+        }
+        emit('change');
+      };
+
       const getManageUserOptions = user => {
         const options = [{ label: coreStrings.editDetailsAction$(), value: Modals.EDIT_USER }];
+        if (!user.date_deleted) {
+          options.push({ label: changePhotoLabel$(), value: Modals.CHANGE_USER_PHOTO });
+        }
         const hideResetPassword = props.pictureLoginEnabled && user.kind === UserKinds.LEARNER;
 
         if (!hideResetPassword) {
@@ -515,6 +569,8 @@
         getTranslatedSelectedArialabel,
         emptyMessage,
         closeModal,
+        openChangePhotoModal,
+        handlePhotoUpdated,
         getManageUserOptions,
         handleManageUserAction,
 
@@ -522,6 +578,7 @@
         coreStrings,
         selectLabel$,
         selectAllLabel$,
+        changePhotoLabel$,
       };
     },
     props: {
@@ -555,6 +612,29 @@
 
   .move-down {
     position: relative;
+  }
+
+  .avatar-trigger-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+    outline-offset: 2px;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+
+    &:hover:not(:disabled) {
+      transform: scale(1.08);
+      opacity: 0.85;
+    }
+
+    &:disabled {
+      cursor: default;
+    }
   }
 
   .role-badge {

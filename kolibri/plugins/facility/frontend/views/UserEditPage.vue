@@ -17,6 +17,23 @@
             {{ $tr('editUserDetailsHeader') }}
           </h1>
 
+          <div class="user-photo-section">
+            <UserAvatar
+              :picture="picture"
+              :name="fullName || username"
+              :size="72"
+            />
+            <div class="user-photo-details">
+              <KButton
+                appearance="basic-link"
+                :text="changePhotoLabel$()"
+                :disabled="formDisabled"
+                type="button"
+                @click="isChangePhotoModalOpen = true"
+              />
+            </div>
+          </div>
+
           <FullNameTextbox
             ref="fullNameTextbox"
             :autofocus="true"
@@ -165,6 +182,18 @@
         data-testid="learner-limit-modal"
         @close="isLearnerLimitModalOpen = false"
       />
+      <ChangeUserPhotoModal
+        v-if="isChangePhotoModalOpen"
+        :user="{
+          id: userId,
+          full_name: fullName,
+          username: username,
+          picture: picture,
+          kind: kind,
+        }"
+        @updated="handlePhotoUpdated"
+        @close="isChangePhotoModalOpen = false"
+      />
     </KPageContainer>
   </ImmersivePage>
 
@@ -195,8 +224,18 @@
   import useFacility from 'kolibri-common/composables/useFacility';
   import { picturePasswordStrings } from 'kolibri-common/strings/picturePasswords';
   import UserPicturePassword from 'kolibri-common/components/UserPicturePassword.vue';
+  import { createTranslator } from 'kolibri/utils/i18n';
+  import UserAvatar from 'kolibri-common/components/userAccounts/UserAvatar';
   import IdentifierTextbox from './users/sidePanels/UserCreate/IdentifierTextbox.vue';
   import LearnerLimitReachedModal from './LearnerLimitReachedModal.vue';
+  import ChangeUserPhotoModal from './users/common/ChangeUserPhotoModal';
+
+  const userEditStrings = createTranslator('UserEditStrings', {
+    changePhotoLabel: {
+      message: 'Change photo',
+      context: 'Label for button to change user profile picture',
+    },
+  });
 
   export default {
     name: 'UserEditPage',
@@ -216,6 +255,8 @@
       ExtraDemographics,
       LearnerLimitReachedModal,
       UserPicturePassword,
+      UserAvatar,
+      ChangeUserPhotoModal,
     },
     mixins: [commonCoreStrings],
     setup() {
@@ -223,6 +264,7 @@
       const { currentUserId, logout } = useUser();
       const { updateFacilityConfig, selectedFacility, facilityConfig } = useFacility();
       const { picturePassword$, learnerCreationDisabled$ } = picturePasswordStrings;
+      const { changePhotoLabel$ } = userEditStrings;
 
       return {
         // state
@@ -237,6 +279,7 @@
         // strings
         learnerCreationDisabled$,
         picturePassword$,
+        changePhotoLabel$,
       };
     },
     data() {
@@ -259,6 +302,8 @@
         status: '',
         userPicturePassword: null,
         isLearnerLimitModalOpen: false,
+        picture: null,
+        isChangePhotoModalOpen: false,
       };
     },
     computed: {
@@ -349,6 +394,7 @@
         this.birthYear = user.birth_year;
         this.extraDemographics = user.extra_demographics;
         this.userPicturePassword = user.picture_password;
+        this.picture = user.picture;
         this.setKind(user);
         this.makeCopyOfUser(user);
       });
@@ -492,6 +538,9 @@
           }
         });
       },
+      handlePhotoUpdated({ picture }) {
+        this.picture = picture;
+      },
     },
     $trs: {
       editUserDetailsHeader: {
@@ -519,6 +568,14 @@
 
 
 <style lang="scss" scoped>
+
+  .user-photo-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+    margin-bottom: 24px;
+  }
 
   .coach-selector {
     padding: 0;

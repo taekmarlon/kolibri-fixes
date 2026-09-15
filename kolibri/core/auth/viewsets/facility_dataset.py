@@ -282,9 +282,11 @@ class FacilityDatasetViewSet(ValuesViewset):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if file_obj.size > 15 * 1024 * 1024:
+        if file_obj.size > 5 * 1024 * 1024:
             return Response(
-                {"detail": "Image file size exceeds maximum limit of 15MB."},
+                {
+                    "detail": "Image file size exceeds the 5MB maximum limit. Please choose an image smaller than 5MB."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

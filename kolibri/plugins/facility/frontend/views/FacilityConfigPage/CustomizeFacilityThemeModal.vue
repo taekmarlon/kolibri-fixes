@@ -494,6 +494,10 @@
       message: 'Reset Theme to Defaults',
       context: 'Button to reset custom theme',
     },
+    fileSizeExceededWarning: {
+      message: 'Image file size exceeds the 5MB maximum limit. Please upload an image smaller than 5MB.',
+      context: 'Warning message when selected image exceeds 5MB',
+    },
   });
 
   export default {
@@ -545,6 +549,7 @@
         signInGreetingLabel$,
         signInGreetingPlaceholder$,
         resetToDefaultsButton$,
+        fileSizeExceededWarning$,
       } = themeModalStrings;
 
       const formTheme = reactive({
@@ -640,6 +645,11 @@
           const file = event.target.files && event.target.files[0];
           if (!file) return;
 
+          if (file.size > 5 * 1024 * 1024) {
+            alert(fileSizeExceededWarning$());
+            return;
+          }
+
           try {
             const formData = new FormData();
             formData.append('file', file);
@@ -657,7 +667,11 @@
               return;
             }
           } catch (err) {
-            // Fall back to local DataURL if server upload fails
+            if (err.response && err.response.data && err.response.data.detail) {
+              alert(err.response.data.detail);
+              return;
+            }
+            // Fall back to local DataURL if server upload fails for other non-validation reasons
           }
 
           const reader = new FileReader();
@@ -678,6 +692,11 @@
           const file = event.target.files && event.target.files[0];
           if (!file) return;
 
+          if (file.size > 5 * 1024 * 1024) {
+            alert(fileSizeExceededWarning$());
+            return;
+          }
+
           try {
             const formData = new FormData();
             formData.append('file', file);
@@ -695,7 +714,11 @@
               return;
             }
           } catch (err) {
-            // Fall back to local DataURL if server upload fails
+            if (err.response && err.response.data && err.response.data.detail) {
+              alert(err.response.data.detail);
+              return;
+            }
+            // Fall back to local DataURL if server upload fails for other non-validation reasons
           }
 
           const reader = new FileReader();

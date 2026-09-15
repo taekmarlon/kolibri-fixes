@@ -22,6 +22,7 @@ export default {
   'kolibri/components/PrivacyInfoModal': require('kolibri/components/PrivacyInfoModal'),
   'kolibri/components/SkipNavigationLink': require('kolibri/components/SkipNavigationLink'),
   'kolibri/components/SyncStatusDisplay': require('kolibri/components/SyncStatusDisplay'),
+  'kolibri/components/UserAvatar': require('kolibri/components/UserAvatar'),
   'kolibri/components/chat/ChatConversationsList': require('kolibri/components/chat/ChatConversationsList'),
   'kolibri/components/chat/ChatDock': require('kolibri/components/chat/ChatDock'),
   'kolibri/components/chat/ChatEmojiPicker': require('kolibri/components/chat/ChatEmojiPicker'),

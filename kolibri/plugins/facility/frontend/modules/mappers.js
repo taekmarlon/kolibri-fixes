@@ -22,5 +22,6 @@ export function _userState(facilityUser) {
     date_joined: facilityUser.date_joined,
     date_deleted: facilityUser.date_deleted,
     picture_password: facilityUser.picture_password,
+    picture: facilityUser.picture,
   };
 }

@@ -1,6 +1,9 @@
 import logging
+import os
+import uuid
 from uuid import UUID
 
+from django.conf import settings
 from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -21,7 +24,10 @@ from rest_framework import decorators
 from rest_framework import filters
 from rest_framework import serializers
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.mixins import DestroyModelMixin
+from rest_framework.parsers import FormParser
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -245,6 +251,7 @@ class FacilityUserSerializer(serializers.ModelSerializer):
             "birth_year",
             "extra_demographics",
             "picture_password",
+            "picture",
             "date_joined",
         )
         read_only_fields = ("is_superuser", "picture_password")
@@ -351,6 +358,7 @@ class PublicFacilityUserSerializer(serializers.ModelSerializer):
             "id_number",
             "gender",
             "birth_year",
+            "picture",
         )
 
 
@@ -437,6 +445,153 @@ class FacilityUserViewSet(ValuesViewset, BulkDeleteMixin):
         # if the user is updating their own password, ensure they don't get logged out
         if self.request.user == instance:
             update_session_auth_hash(self.request, instance)
+
+    def _check_picture_permission(self, request_user, target_user):
+        if not request_user or request_user.is_anonymous:
+            return False, "Authentication required."
+
+        if request_user.is_superuser:
+            return True, None
+
+        if request_user.id == target_user.id:
+            # Teachers/coaches and administrators can always upload their own picture
+            is_staff = request_user.roles.filter(
+                kind__in=[
+                    role_kinds.ADMIN,
+                    role_kinds.COACH,
+                    role_kinds.ASSIGNABLE_COACH,
+                ]
+            ).exists() or _user_is_admin_for_own_facility(request_user)
+            if is_staff:
+                return True, None
+
+            # Learners may only upload their picture if permitted by the administrator
+            facility = getattr(target_user, "facility", None)
+            dataset = getattr(facility, "dataset", None) if facility else None
+            learner_permitted = bool(
+                dataset
+                and (dataset.learner_can_edit_name or dataset.learner_can_edit_username)
+            )
+            if learner_permitted:
+                return True, None
+
+            return (
+                False,
+                "Learners are not permitted to change profile pictures in this facility.",
+            )
+
+        # Teachers and administrators can upload picture for their students / facility users
+        if request_user.has_role_for_user(
+            [role_kinds.ADMIN, role_kinds.COACH],
+            target_user,
+        ):
+            return True, None
+
+        return (
+            False,
+            "You do not have permission to manage this user's profile picture.",
+        )
+
+    @action(
+        methods=["POST"],
+        detail=True,
+        permission_classes=[IsAuthenticated],
+        parser_classes=(MultiPartParser, FormParser),
+    )
+    def upload_picture(self, request, pk=None):
+        target_user = self.get_object()
+        has_perm, err_msg = self._check_picture_permission(request.user, target_user)
+        if not has_perm:
+            return Response({"detail": err_msg}, status=status.HTTP_403_FORBIDDEN)
+
+        file_obj = (
+            request.FILES.get("file")
+            or request.FILES.get("picture")
+            or request.FILES.get("image")
+        )
+        if not file_obj:
+            return Response(
+                {"detail": "No image file provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext not in [".png", ".jpg", ".jpeg", ".gif", ".webp"]:
+            return Response(
+                {
+                    "detail": f"Unsupported image file extension: {ext}. Supported formats: PNG, JPEG, JPG, WEBP, GIF."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if file_obj.size > 5 * 1024 * 1024:
+            return Response(
+                {
+                    "detail": "Image file size exceeds the 5MB maximum limit. Please choose an image smaller than 5MB."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        save_dir = os.path.join(settings.MEDIA_ROOT, "user_photos")
+        os.makedirs(save_dir, exist_ok=True)
+
+        # Remove previous photo file if it exists in user_photos
+        if target_user.picture and target_user.picture.startswith(
+            "/media/user_photos/"
+        ):
+            old_rel_path = target_user.picture.replace("/media/", "", 1)
+            old_full_path = os.path.join(settings.MEDIA_ROOT, old_rel_path)
+            if os.path.exists(old_full_path):
+                try:
+                    os.remove(old_full_path)
+                except OSError:
+                    pass
+
+        file_id = uuid.uuid4().hex[:12]
+        safe_name = f"{target_user.id}_{file_id}{ext}"
+        full_path = os.path.join(save_dir, safe_name)
+        with open(full_path, "wb+") as destination:
+            for chunk in file_obj.chunks():
+                destination.write(chunk)
+
+        url = f"/media/user_photos/{safe_name}"
+        target_user.picture = url
+        target_user.save(update_fields=["picture"])
+
+        return Response(
+            {"picture": url, "detail": "Picture updated successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        methods=["POST", "DELETE"],
+        detail=True,
+        permission_classes=[IsAuthenticated],
+    )
+    def delete_picture(self, request, pk=None):
+        target_user = self.get_object()
+        has_perm, err_msg = self._check_picture_permission(request.user, target_user)
+        if not has_perm:
+            return Response({"detail": err_msg}, status=status.HTTP_403_FORBIDDEN)
+
+        if target_user.picture and target_user.picture.startswith(
+            "/media/user_photos/"
+        ):
+            old_rel_path = target_user.picture.replace("/media/", "", 1)
+            old_full_path = os.path.join(settings.MEDIA_ROOT, old_rel_path)
+            if os.path.exists(old_full_path):
+                try:
+                    os.remove(old_full_path)
+                except OSError:
+                    pass
+
+        target_user.picture = None
+        target_user.save(update_fields=["picture"])
+
+        return Response(
+            {"picture": None, "detail": "Picture removed successfully."},
+            status=status.HTTP_200_OK,
+        )
 
 
 class DeletedFacilityUserViewSet(

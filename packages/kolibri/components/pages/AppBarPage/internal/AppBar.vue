@@ -187,16 +187,12 @@
             <span
               v-if="isUserLoggedIn"
               tabindex="-1"
+              style="display: inline-flex; align-items: center; vertical-align: middle;"
             >
-              <KIcon
-                icon="person"
-                :style="{
-                  fill: themeConfig.appBar.textColor,
-                  height: '24px',
-                  width: '24px',
-                  margin: '4px',
-                  top: '8px',
-                }"
+              <UserAvatar
+                :picture="userPicture"
+                :name="usernameForDisplay"
+                :size="24"
               />
               <span class="username">
                 {{ usernameForDisplay }}
@@ -239,6 +235,7 @@
   import useNav from 'kolibri/composables/useNav';
   import useUser from 'kolibri/composables/useUser';
   import SkipNavigationLink from '../../../SkipNavigationLink';
+  import UserAvatar from '../../../UserAvatar';
   import Navbar from './Navbar';
 
   const hashedValuePattern = /^[a-f0-9]{30}$/;
@@ -249,6 +246,7 @@
       KToolbar,
       KIconButton,
       SkipNavigationLink,
+      UserAvatar,
       Navbar,
     },
     mixins: [commonCoreStrings],
@@ -265,6 +263,7 @@
         full_name,
         userFacilityName,
         userFacilityId,
+        userPicture,
       } = useUser();
       const { totalPoints, fetchPoints } = useTotalProgress();
       const links = computed(() => {
@@ -272,12 +271,21 @@
         if (!currentItem || !currentItem.routes) {
           return [];
         }
-        return currentItem.routes.map(route => ({
-          title: route.label,
-          link: { name: route.name, params: $route.params, query: $route.query },
-          icon: route.icon,
-          condition: route.condition,
-        }));
+        return currentItem.routes.map(route => {
+          const params = {};
+          if ($route.params?.facility_id) {
+            params.facility_id = $route.params.facility_id;
+          }
+          if ($route.params?.deviceId) {
+            params.deviceId = $route.params.deviceId;
+          }
+          return {
+            title: route.label,
+            link: { name: route.name, params, query: {} },
+            icon: route.icon,
+            condition: route.condition,
+          };
+        });
       });
 
       const facilities = ref([]);
@@ -293,17 +301,17 @@
         // Non-switchers (coaches, learners, single-facility admins) must always
         // display their own facility — never a stale value left in localStorage
         // by a previous super-admin session.
-        if (!isSuperuser.value && !isAdmin.value) {
-          return userFacilityName.value || (facilities.value.length > 0 ? facilities.value[0].name : '');
+        if (!isSuperuser?.value && !isAdmin?.value) {
+          return userFacilityName?.value || (facilities?.value?.length > 0 ? facilities.value[0].name : '');
         }
         // Super-admins / multi-facility admins may have a persisted selection.
-        if (selectedFacilityName.value) {
+        if (selectedFacilityName?.value) {
           return selectedFacilityName.value;
         }
-        if (userFacilityName.value) {
+        if (userFacilityName?.value) {
           return userFacilityName.value;
         }
-        if (facilities.value.length > 0) {
+        if (facilities?.value?.length > 0) {
           return facilities.value[0].name;
         }
         return '';
@@ -397,6 +405,7 @@
         facilityPillTitle,
         toggleFacilityDropdown,
         selectFacility,
+        userPicture,
       };
     },
     props: {

@@ -18,6 +18,26 @@
       >
         <h1>{{ $tr('editProfileHeader') }}</h1>
 
+        <div class="user-photo-section">
+          <UserAvatar
+            :picture="picture"
+            :name="fullName || username"
+            :size="72"
+          />
+          <div
+            v-if="canEditPicture"
+            class="user-photo-details"
+          >
+            <KButton
+              appearance="basic-link"
+              :text="changePhotoLabel$()"
+              :disabled="formDisabled"
+              type="button"
+              @click="isChangePhotoModalOpen = true"
+            />
+          </div>
+        </div>
+
         <FullNameTextbox
           ref="fullNameTextbox"
           :autofocus="true"
@@ -64,6 +84,18 @@
           />
         </KButtonGroup>
       </form>
+      <ChangeUserPhotoModal
+        v-if="isChangePhotoModalOpen"
+        :user="{
+          id: currentUserId,
+          full_name: fullName,
+          username: username,
+          picture: picture,
+          kind: kind,
+        }"
+        @updated="handlePhotoUpdated"
+        @close="isChangePhotoModalOpen = false"
+      />
     </KPageContainer>
   </ImmersivePage>
 
@@ -89,7 +121,17 @@
   import useFacilityTheme from 'kolibri-common/composables/useFacilityTheme';
   import { handleApiError } from 'kolibri/utils/appError';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
+  import { createTranslator } from 'kolibri/utils/i18n';
+  import UserAvatar from 'kolibri-common/components/userAccounts/UserAvatar';
+  import ChangeUserPhotoModal from 'kolibri-common/components/userAccounts/ChangeUserPhotoModal';
   import { RoutesMap } from '../constants';
+
+  const profileEditStrings = createTranslator('ProfileEditStrings', {
+    changePhotoLabel: {
+      message: 'Change photo',
+      context: 'Label for button to change user profile picture',
+    },
+  });
 
   export default {
     name: 'ProfileEditPage',
@@ -104,12 +146,15 @@
       FullNameTextbox,
       UsernameTextbox,
       ImmersivePage,
+      UserAvatar,
+      ChangeUserPhotoModal,
     },
     mixins: [commonCoreStrings],
     setup() {
       useFacilityTheme();
       const { isLearnerOnlyImport, isLearner, currentUserId } = useUser();
       const { facilityConfig } = useFacility();
+      const { changePhotoLabel$ } = profileEditStrings;
       return {
         pageLoading,
         isLearnerOnlyImport,
@@ -117,6 +162,7 @@
         currentUserId,
         facilityConfig,
         handleApiError,
+        changePhotoLabel$,
       };
     },
     data() {
@@ -131,9 +177,21 @@
         formSubmitted: false,
         status: '',
         userCopy: {},
+        picture: null,
+        kind: '',
+        isChangePhotoModalOpen: false,
       };
     },
     computed: {
+      canEditPicture() {
+        if (this.isLearner) {
+          return Boolean(
+            this.facilityConfig.learner_can_edit_name ||
+            this.facilityConfig.learner_can_edit_username
+          );
+        }
+        return true;
+      },
       formDisabled() {
         return this.status === 'BUSY';
       },
@@ -177,8 +235,13 @@
           this.gender = facilityUser.gender;
           this.fullName = facilityUser.full_name;
           this.username = facilityUser.username;
+          this.picture = facilityUser.picture;
+          this.kind = facilityUser.roles?.length ? facilityUser.roles[0].kind : 'learner';
           this.userCopy = { ...facilityUser };
         });
+      },
+      handlePhotoUpdated({ picture }) {
+        this.picture = picture;
       },
       getUpdates() {
         return pickBy(
@@ -248,6 +311,14 @@
     max-width: 500px;
     margin: auto;
     overflow: visible;
+  }
+
+  .user-photo-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+    margin-bottom: 24px;
   }
 
   .form {
