@@ -40,16 +40,19 @@ exports.default = createH5PEditor;
 const cache_manager_1 = require("cache-manager");
 const keyv_1 = require("keyv");
 const cacheable_1 = require("cacheable");
-const redis_1 = __importDefault(require("@keyv/redis"));
-const redis_2 = require("redis");
 const debug_1 = __importDefault(require("debug"));
 const H5P = __importStar(require("@lumieducation/h5p-server"));
-const dbImplementations = __importStar(require("@lumieducation/h5p-mongos3"));
-const h5p_redis_lock_1 = __importDefault(require("@lumieducation/h5p-redis-lock"));
 const h5p_svg_sanitizer_1 = __importDefault(require("@lumieducation/h5p-svg-sanitizer"));
-const h5p_clamav_scanner_1 = __importDefault(require("@lumieducation/h5p-clamav-scanner"));
+let redis_1;
+let redis_2;
+let dbImplementations;
+let h5p_redis_lock_1;
+let h5p_clamav_scanner_1;
 let mongoDb;
 async function getMongoDb() {
+    if (!dbImplementations) {
+        dbImplementations = __importStar(require("@lumieducation/h5p-mongos3"));
+    }
     if (!mongoDb) {
         mongoDb = await dbImplementations.initMongo();
     }
@@ -97,6 +100,9 @@ async function createH5PEditor(config, localLibraryPath, localContentPath, local
         });
     }
     else if (process.env.CACHE === 'redis') {
+        if (!redis_1) {
+            redis_1 = __importDefault(require("@keyv/redis"));
+        }
         (0, debug_1.default)('h5p-example')(`Using Redis for caching library storage (${process.env.REDIS_HOST}:${process.env.REDIS_PORT}, db: ${process.env.REDIS_DB})`);
         cache = (0, cache_manager_1.createCache)({
             stores: [
@@ -120,6 +126,12 @@ async function createH5PEditor(config, localLibraryPath, localContentPath, local
     }
     let lock;
     if (process.env.LOCK === 'redis') {
+        if (!redis_2) {
+            redis_2 = require("redis");
+        }
+        if (!h5p_redis_lock_1) {
+            h5p_redis_lock_1 = __importDefault(require("@lumieducation/h5p-redis-lock"));
+        }
         (0, debug_1.default)('h5p-example')(`Using Redis as lock provider (host: ${process.env.LOCK_REDIS_HOST}:${process.env.LOCK_REDIS_PORT}, db: ${process.env.LOCK_REDIS_DB}).`);
         const client = (0, redis_2.createClient)({
             socket: {
@@ -146,12 +158,18 @@ async function createH5PEditor(config, localLibraryPath, localContentPath, local
     // of the storage interfaces.
     let libraryStorage;
     if (process.env.LIBRARYSTORAGE === 'mongo') {
+        if (!dbImplementations) {
+            dbImplementations = __importStar(require("@lumieducation/h5p-mongos3"));
+        }
         (0, debug_1.default)('h5p-example')('Using pure MongoDB for library storage.');
         const mongoLibraryStorage = new dbImplementations.MongoLibraryStorage((await getMongoDb()).collection(process.env.LIBRARY_MONGO_COLLECTION));
         await mongoLibraryStorage.createIndexes();
         libraryStorage = mongoLibraryStorage;
     }
     else if (process.env.LIBRARYSTORAGE === 'mongos3') {
+        if (!dbImplementations) {
+            dbImplementations = __importStar(require("@lumieducation/h5p-mongos3"));
+        }
         (0, debug_1.default)('h5p-example')('Using MongoDB / S3 for library storage');
         const mongoS3LibraryStorage = new dbImplementations.MongoS3LibraryStorage(dbImplementations.initS3({
             forcePathStyle: true
@@ -169,6 +187,9 @@ async function createH5PEditor(config, localLibraryPath, localContentPath, local
     }
     let contentUserDataStorage;
     if (process.env.USERDATASTORAGE === 'mongo') {
+        if (!dbImplementations) {
+            dbImplementations = __importStar(require("@lumieducation/h5p-mongos3"));
+        }
         const mongoContentUserDataStorage = new dbImplementations.MongoContentUserDataStorage((await getMongoDb()).collection(process.env.USERDATA_MONGO_COLLECTION), (await getMongoDb()).collection(process.env.FINISHED_MONGO_COLLECTION));
         await mongoContentUserDataStorage.createIndexes();
         contentUserDataStorage = mongoContentUserDataStorage;
@@ -177,6 +198,9 @@ async function createH5PEditor(config, localLibraryPath, localContentPath, local
         process.env.USERDATASTORAGE === 'file') {
         contentUserDataStorage =
             new H5P.fsImplementations.FileContentUserDataStorage(localContentUserDataPath);
+    }
+    if ((process.env.CONTENTSTORAGE === 'mongos3' || process.env.TEMPORARYSTORAGE === 's3') && !dbImplementations) {
+        dbImplementations = __importStar(require("@lumieducation/h5p-mongos3"));
     }
     const h5pEditor = new H5P.H5PEditor(new H5P.cacheImplementations.CachedKeyValueStorage('kvcache', cache), // this is a general-purpose cache
     config, process.env.CACHE
@@ -208,12 +232,12 @@ async function createH5PEditor(config, localLibraryPath, localContentPath, local
         // You might not want to use ClamAV or opt out of using a virus
         // scanner.
         malwareScanners: process.env.CLAMSCAN_ENABLED === 'true'
-            ? [await h5p_clamav_scanner_1.default.create()]
+            ? [await (h5p_clamav_scanner_1 || (h5p_clamav_scanner_1 = __importDefault(require("@lumieducation/h5p-clamav-scanner")))).default.create()]
             : []
     }, contentUserDataStorage);
     // Set bucket lifecycle configuration for S3 temporary storage to make
     // sure temporary files expire.
-    if (h5pEditor.temporaryStorage instanceof
+    if (dbImplementations && h5pEditor.temporaryStorage instanceof
         dbImplementations.S3TemporaryFileStorage) {
         await h5pEditor.temporaryStorage.setBucketLifecycleConfiguration(h5pEditor.config);
     }

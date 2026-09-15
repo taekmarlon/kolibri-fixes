@@ -1,20 +1,24 @@
 import { Cache, createCache } from 'cache-manager';
 import { Keyv } from 'keyv';
 import { CacheableMemory } from 'cacheable';
-import KeyvRedis from '@keyv/redis';
-import { createClient } from 'redis';
 import debug from 'debug';
 import type { Db } from 'mongodb';
 
 import * as H5P from '@lumieducation/h5p-server';
-import * as dbImplementations from '@lumieducation/h5p-mongos3';
-import RedisLockProvider from '@lumieducation/h5p-redis-lock';
 import { ILockProvider } from '@lumieducation/h5p-server';
 import SvgSanitizer from '@lumieducation/h5p-svg-sanitizer';
-import ClamAVScanner from '@lumieducation/h5p-clamav-scanner';
 
-let mongoDb;
+let KeyvRedis: any;
+let createClient: any;
+let dbImplementations: any;
+let RedisLockProvider: any;
+let ClamAVScanner: any;
+
+let mongoDb: Db;
 async function getMongoDb(): Promise<Db> {
+    if (!dbImplementations) {
+        dbImplementations = await import('@lumieducation/h5p-mongos3');
+    }
     if (!mongoDb) {
         mongoDb = await dbImplementations.initMongo();
     }
@@ -71,6 +75,9 @@ export default async function createH5PEditor(
             ]
         });
     } else if (process.env.CACHE === 'redis') {
+        if (!KeyvRedis) {
+            KeyvRedis = (await import('@keyv/redis')).default;
+        }
         debug('h5p-example')(
             `Using Redis for caching library storage (${process.env.REDIS_HOST}:${process.env.REDIS_PORT}, db: ${process.env.REDIS_DB})`
         );
@@ -96,6 +103,12 @@ export default async function createH5PEditor(
 
     let lock: ILockProvider;
     if (process.env.LOCK === 'redis') {
+        if (!createClient) {
+            createClient = (await import('redis')).createClient;
+        }
+        if (!RedisLockProvider) {
+            RedisLockProvider = (await import('@lumieducation/h5p-redis-lock')).default;
+        }
         debug('h5p-example')(
             `Using Redis as lock provider (host: ${process.env.LOCK_REDIS_HOST}:${process.env.LOCK_REDIS_PORT}, db: ${process.env.LOCK_REDIS_DB}).`
         );
@@ -126,6 +139,9 @@ export default async function createH5PEditor(
 
     let libraryStorage: H5P.ILibraryStorage;
     if (process.env.LIBRARYSTORAGE === 'mongo') {
+        if (!dbImplementations) {
+            dbImplementations = await import('@lumieducation/h5p-mongos3');
+        }
         debug('h5p-example')('Using pure MongoDB for library storage.');
         const mongoLibraryStorage = new dbImplementations.MongoLibraryStorage(
             (await getMongoDb()).collection(
@@ -135,6 +151,9 @@ export default async function createH5PEditor(
         await mongoLibraryStorage.createIndexes();
         libraryStorage = mongoLibraryStorage;
     } else if (process.env.LIBRARYSTORAGE === 'mongos3') {
+        if (!dbImplementations) {
+            dbImplementations = await import('@lumieducation/h5p-mongos3');
+        }
         debug('h5p-example')('Using MongoDB / S3 for library storage');
         const mongoS3LibraryStorage =
             new dbImplementations.MongoS3LibraryStorage(
@@ -164,6 +183,9 @@ export default async function createH5PEditor(
 
     let contentUserDataStorage: H5P.IContentUserDataStorage;
     if (process.env.USERDATASTORAGE === 'mongo') {
+        if (!dbImplementations) {
+            dbImplementations = await import('@lumieducation/h5p-mongos3');
+        }
         const mongoContentUserDataStorage =
             new dbImplementations.MongoContentUserDataStorage(
                 (await getMongoDb()).collection(
@@ -183,6 +205,14 @@ export default async function createH5PEditor(
             new H5P.fsImplementations.FileContentUserDataStorage(
                 localContentUserDataPath
             );
+    }
+
+    if (
+        (process.env.CONTENTSTORAGE === 'mongos3' ||
+            process.env.TEMPORARYSTORAGE === 's3') &&
+        !dbImplementations
+    ) {
+        dbImplementations = await import('@lumieducation/h5p-mongos3');
     }
 
     const h5pEditor = new H5P.H5PEditor(
@@ -243,7 +273,16 @@ export default async function createH5PEditor(
             // scanner.
             malwareScanners:
                 process.env.CLAMSCAN_ENABLED === 'true'
-                    ? [await ClamAVScanner.create()]
+                    ? [
+                          await (
+                              ClamAVScanner ||
+                              (ClamAVScanner = (
+                                  await import(
+                                      '@lumieducation/h5p-clamav-scanner'
+                                  )
+                              ).default)
+                          ).create()
+                      ]
                     : []
         },
         contentUserDataStorage
@@ -252,8 +291,9 @@ export default async function createH5PEditor(
     // Set bucket lifecycle configuration for S3 temporary storage to make
     // sure temporary files expire.
     if (
+        dbImplementations &&
         h5pEditor.temporaryStorage instanceof
-        dbImplementations.S3TemporaryFileStorage
+            dbImplementations.S3TemporaryFileStorage
     ) {
         await (
             h5pEditor.temporaryStorage as any
