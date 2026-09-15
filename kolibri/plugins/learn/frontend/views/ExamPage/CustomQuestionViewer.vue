@@ -28,37 +28,39 @@
       v-if="question.question_type === 'multiple_choice' || question.question_type === 'true_false'"
       class="choices-list mt-24"
     >
-      <div
-        v-for="option in question.options"
-        :key="option.id"
-        class="choice-item"
-        :class="{ 'is-selected': selectedOption === option.id }"
-        :style="{
-          borderColor: selectedOption === option.id ? $themeTokens.primary : $themeTokens.fineLine,
-          backgroundColor: selectedOption === option.id ? $themePalette.grey.v_100 : $themeTokens.surface,
-        }"
-        @click="selectSingleChoice(option.id)"
-      >
-        <KRadioButton
-          :label="option.text || optionFallback$()"
-          :buttonValue="option.id"
-          :currentValue="selectedOption"
-          class="choice-radio"
-          @input="selectSingleChoice(option.id)"
-        />
-
-        <!-- Choice Image (if attached) -->
+      <KRadioButtonGroup>
         <div
-          v-if="option.image"
-          class="choice-image-container mt-8"
+          v-for="option in question.options"
+          :key="option.id"
+          class="choice-item"
+          :class="{ 'is-selected': selectedOption === option.id }"
+          :style="{
+            borderColor: selectedOption === option.id ? $themeTokens.primary : $themeTokens.fineLine,
+            backgroundColor: selectedOption === option.id ? $themePalette.grey.v_100 : $themeTokens.surface,
+          }"
+          @click="selectSingleChoice(option.id)"
         >
-          <img
-            :src="option.image"
-            alt="Option illustration"
-            class="choice-image"
+          <KRadioButton
+            :label="option.text || optionFallback$()"
+            :buttonValue="option.id"
+            :currentValue="selectedOption"
+            class="choice-radio"
+            @input="selectSingleChoice(option.id)"
+          />
+
+          <!-- Choice Image (if attached) -->
+          <div
+            v-if="option.image"
+            class="choice-image-container mt-8"
           >
+            <img
+              :src="option.image"
+              alt="Option illustration"
+              class="choice-image"
+            >
+          </div>
         </div>
-      </div>
+      </KRadioButtonGroup>
     </div>
 
     <!-- Checkboxes (Multi-Select) -->
@@ -119,16 +121,9 @@
       class="interactive-question-container mt-16"
     >
       <iframe
-        v-if="question.question_type === 'h5p' && question.h5p_content_id"
-        :src="question.h5p_url || `/h5p/play/${question.h5p_content_id}`"
-        class="h5p-player-iframe"
-        style="width: 100%; min-height: 560px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
-        allow="fullscreen; geolocation; microphone; camera; midi"
-      ></iframe>
-      <iframe
-        v-else-if="question.file_url"
-        :src="question.file_url"
-        class="interactive-file-iframe"
+        v-if="resolvedInteractiveUrl"
+        :src="resolvedInteractiveUrl"
+        class="interactive-player-iframe"
         style="width: 100%; min-height: 560px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
         allow="fullscreen; geolocation; microphone; camera; midi"
       ></iframe>
@@ -165,7 +160,7 @@
 
 <script>
 
-  import { ref, watch, onMounted, onUnmounted } from 'vue';
+  import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
 
   const viewerStrings = createTranslator('CustomQuestionViewerStrings', {
@@ -209,6 +204,15 @@
       const interactiveCompleted = ref(
         props.answerState === 'completed' || Boolean(props.answerState),
       );
+
+      const resolvedInteractiveUrl = computed(() => {
+        const q = props.question;
+        if (!q) return '';
+        if (q.file_url) return q.file_url;
+        if (q.h5p_url) return q.h5p_url;
+        if (q.h5p_content_id) return `/h5p/play/${q.h5p_content_id}`;
+        return '';
+      });
 
       function onWindowMessage(event) {
         if (!event.data) return;
@@ -332,6 +336,7 @@
         selectedOptions,
         shortAnswerText,
         interactiveCompleted,
+        resolvedInteractiveUrl,
         selectSingleChoice,
         toggleMultiChoice,
         isChoiceChecked,

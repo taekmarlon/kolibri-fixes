@@ -501,7 +501,7 @@
         return this.currentQuestion ? this.currentQuestion.exercise_id : null;
       },
       missingResources() {
-        return this.questions.some(q => !this.contentNodeMap[q.exercise_id]);
+        return this.questions.some(q => !q.is_custom && !this.contentNodeMap[q.exercise_id]);
       },
       itemId() {
         return this.currentQuestion ? this.currentQuestion.question_id : null;

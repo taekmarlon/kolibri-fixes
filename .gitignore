@@ -19,6 +19,7 @@ docker-whl.iid
 *.egg
 *.egg-info
 /dist
+/kolibri/dist
 dist-packages-temp
 dist-packages-cache
 /build

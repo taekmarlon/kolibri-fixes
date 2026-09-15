@@ -459,7 +459,12 @@ class DraftExamFilter(FilterSet):
 
 class ExamPermissions(KolibriAuthPermissions):
     def has_permission(self, request, view):
-        if getattr(view, "action", None) in ("upload_image", "upload_h5p", "size"):
+        if getattr(view, "action", None) in (
+            "upload_image",
+            "upload_h5p",
+            "export_h5p",
+            "size",
+        ):
             return request.user.is_authenticated
         return super().has_permission(request, view)
 
@@ -787,6 +792,58 @@ class ExamViewset(ValuesViewset):
                 "file_name": file_name,
                 "file_size": file_size,
                 "resource_type": detected_type,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=False,
+        methods=["post"],
+    )
+    def export_h5p(self, request, **kwargs):
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        h5p_content_id = str(
+            request.data.get("h5p_content_id") or request.data.get("content_id") or ""
+        ).strip()
+        title = str(request.data.get("title") or "interactive_activity").strip()
+        if not h5p_content_id:
+            return Response(
+                {"detail": "h5p_content_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        resource_id = uuid.uuid4().hex
+        from kolibri.core.lessons.viewsets.lesson import _fetch_h5p_content_bundle
+        from kolibri.core.lessons.viewsets.lesson import _save_interactive_html
+
+        content, _ = _fetch_h5p_content_bundle(h5p_content_id)
+        if not content:
+            return Response(
+                {
+                    "resource_id": resource_id,
+                    "h5p_content_id": h5p_content_id,
+                    "file_url": "",
+                    "content": "",
+                    "h5p_url": f"/h5p/play/{h5p_content_id}",
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        file_url, file_name, file_size = _save_interactive_html(
+            content, resource_id, title
+        )
+        return Response(
+            {
+                "resource_id": resource_id,
+                "h5p_content_id": h5p_content_id,
+                "file_url": file_url,
+                "file_name": file_name,
+                "file_size": file_size,
+                "content": content,
+                "h5p_url": f"/h5p/play/{h5p_content_id}",
             },
             status=status.HTTP_200_OK,
         )

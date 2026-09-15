@@ -27,7 +27,10 @@
           {{ isQuizMode ? assignmentTargetQuizSubtitle$() : assignmentTargetSubtitle$() }}
         </p>
 
-        <div class="target-select-row">
+        <div
+          v-if="!isQuizMode"
+          class="target-select-row"
+        >
           <KSelect
             v-model="selectedTargetOption"
             :label="targetLessonLabel$()"
@@ -37,7 +40,7 @@
         </div>
 
         <div
-          v-if="isCreatingNewTarget"
+          v-if="isCreatingNewTarget || isQuizMode"
           class="mt-12"
         >
           <KTextbox
@@ -547,13 +550,7 @@
       const newTargetTitle = ref('');
       const targetOptions = computed(() => {
         if (props.isQuizMode) {
-          const list = [{ label: strings.newQuizOptionLabel$(), value: '__new__' }];
-          if (props.quizzes && props.quizzes.length) {
-            props.quizzes.forEach(q => {
-              list.push({ label: q.title, value: q.id });
-            });
-          }
-          return list;
+          return [{ label: strings.newQuizOptionLabel$(), value: '__new__' }];
         }
         const list = [{ label: strings.newLessonOptionLabel$(), value: '__new__' }];
         if (props.lessons && props.lessons.length) {
@@ -623,6 +620,25 @@
           const activityTitle = title ? title.trim() : 'H5P Interactive Activity';
 
           if (props.isQuizMode) {
+            let fileUrl = '';
+            let bundleContent = '';
+            try {
+              const exportRes = await client({
+                url: '/api/exams/exam/export_h5p/',
+                method: 'POST',
+                data: {
+                  h5p_content_id: String(contentId),
+                  title: activityTitle,
+                },
+              });
+              if (exportRes && exportRes.data) {
+                fileUrl = exportRes.data.file_url || '';
+                bundleContent = exportRes.data.content || '';
+              }
+            } catch (exportErr) {
+              // Fallback to dynamic player URL if export fails
+            }
+
             const exerciseId = generateHexId();
             const qId = generateHexId();
             const q = {
@@ -635,6 +651,8 @@
               question_type: 'h5p',
               h5p_content_id: String(contentId),
               h5p_url: `/h5p/play/${contentId}`,
+              file_url: fileUrl,
+              content: bundleContent,
               prompt: activityTitle,
               options: [],
               answer_key: [],

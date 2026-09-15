@@ -1,4 +1,5 @@
 import uuid
+from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
@@ -1087,3 +1088,23 @@ class ExamDraftAPITestCase(BaseExamTest, APITestCase):
         self.assertEqual(response.status_code, 200, response.data)
         self.assertIn("file_url", response.data)
         self.assertIn("resource_id", response.data)
+
+    @mock.patch("kolibri.core.lessons.viewsets.lesson._fetch_h5p_content_bundle")
+    def test_export_h5p_for_exam(self, mock_fetch):
+        mock_fetch.return_value = (
+            "<html><body><div>H5P Activity</div></body></html>",
+            "",
+        )
+        self.login_as_admin()
+        url = reverse("kolibri:core:exam-export-h5p")
+        response = self.client.post(
+            url,
+            {"h5p_content_id": "42", "title": "Addition 1-5"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertIn("file_url", response.data)
+        self.assertTrue(response.data["file_url"].endswith("index.html"))
+        self.assertIn("content", response.data)
+        self.assertEqual(response.data["h5p_content_id"], "42")
+        self.assertEqual(response.data["h5p_url"], "/h5p/play/42")
