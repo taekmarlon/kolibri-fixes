@@ -385,6 +385,7 @@
       });
 
       return {
+        classId,
         pageLoading,
         quizzes,
         refreshClassSummary,

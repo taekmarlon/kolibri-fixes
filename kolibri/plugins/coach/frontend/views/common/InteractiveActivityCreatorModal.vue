@@ -260,7 +260,7 @@
 <script>
 
   import { ref, computed, onMounted, onUnmounted } from 'vue';
-  import { useRouter } from 'vue-router/composables';
+  import { useRouter, useRoute } from 'vue-router/composables';
   import client from 'kolibri/client';
   import { createTranslator } from 'kolibri/utils/i18n';
   import useSnackbar from 'kolibri/composables/useSnackbar';
@@ -434,7 +434,16 @@
     emits: ['close', 'created'],
     setup(props, { emit }) {
       const router = useRouter();
+      const route = useRoute();
       const { createSnackbar } = useSnackbar();
+
+      const effectiveClassId = computed(() => {
+        return (
+          props.classId ||
+          (route && route.params && route.params.classId) ||
+          ''
+        );
+      });
 
       const h5pMode = ref('hub');
       const activityBuilderRef = ref(null);
@@ -451,6 +460,69 @@
       const isSavingH5P = ref(false);
       const isIframeLoading = ref(true);
       const h5pEditorUrl = ref('/h5p/new');
+
+      let savingTimeout = null;
+      function clearSavingTimeout() {
+        if (savingTimeout) {
+          clearTimeout(savingTimeout);
+          savingTimeout = null;
+        }
+      }
+
+      function getUniqueQuizTitle(baseTitle) {
+        const title = (baseTitle || '').trim() || 'Interactive Quiz';
+        const existingTitles = new Set(
+          (props.quizzes || []).map(q => (q.title || '').trim().toLowerCase()),
+        );
+        if (!existingTitles.has(title.toLowerCase())) {
+          return title;
+        }
+        let counter = 2;
+        while (existingTitles.has(`${title.toLowerCase()} (${counter})`)) {
+          counter++;
+        }
+        return `${title} (${counter})`;
+      }
+
+      function getH5PEditorTitle() {
+        try {
+          if (h5pEditorIframe.value && h5pEditorIframe.value.contentWindow) {
+            const doc = h5pEditorIframe.value.contentWindow.document;
+            const editorIframe = doc.querySelector('.h5p-editor-iframe');
+            const targetDoc = (editorIframe && editorIframe.contentDocument) || doc;
+            const titleInput = targetDoc.querySelector(
+              '.h5p-metadata-title input, input.h5peditor-text, input[name="title"], #h5peditor-uploader-title',
+            );
+            if (titleInput && titleInput.value && titleInput.value.trim()) {
+              return titleInput.value.trim();
+            }
+          }
+        } catch (e) {}
+        return '';
+      }
+
+      function extractErrorMessage(err) {
+        let detailMsg = '';
+        const errData =
+          (err && err.response && err.response.data) ||
+          (err && err.data) ||
+          (err && err.message) ||
+          err;
+
+        if (typeof errData === 'string') {
+          detailMsg = errData;
+        } else if (errData && errData.detail) {
+          detailMsg = errData.detail;
+        } else if (Array.isArray(errData) && errData.length > 0) {
+          const first = errData[0];
+          detailMsg = first.metadata?.message || first.message || JSON.stringify(first);
+        } else if (errData && typeof errData === 'object') {
+          const firstKey = Object.keys(errData)[0];
+          const val = errData[firstKey];
+          detailMsg = `${firstKey}: ${Array.isArray(val) ? val[0] : val}`;
+        }
+        return detailMsg || strings.errorNotice$();
+      }
 
       function reloadH5PEditor() {
         isIframeLoading.value = true;
@@ -501,12 +573,22 @@
       });
 
       async function saveQuizFromQuestions(quizTitle, questions) {
-        const finalTitle = newTargetTitle.value.trim() || quizTitle || 'Interactive Quiz';
+        const rawTitle = newTargetTitle.value.trim() || quizTitle || 'Interactive Quiz';
+        const finalTitle = getUniqueQuizTitle(rawTitle);
+        const cid = effectiveClassId.value;
+
+        if (!cid) {
+          createSnackbar('Class ID is required to create a quiz.');
+          isSubmitting.value = false;
+          isSavingH5P.value = false;
+          return;
+        }
+
         const newExam = await ExamResource.saveModel({
           data: {
             title: finalTitle,
-            collection: props.classId,
-            assignments: [props.classId],
+            collection: cid,
+            assignments: [cid],
             active: true,
             draft: false,
             data_model_version: 3,
@@ -528,7 +610,7 @@
           router.push({
             name: PageNames.EXAM_SUMMARY,
             params: {
-              classId: props.classId,
+              classId: cid,
               quizId: newExam.id,
             },
           });
@@ -570,8 +652,8 @@
             const newLesson = await LessonResource.saveModel({
               data: {
                 title: finalLessonTitle,
-                collection: props.classId,
-                assignments: [props.classId],
+                collection: effectiveClassId.value,
+                assignments: [effectiveClassId.value],
                 active: true,
                 resources: [],
               },
@@ -600,14 +682,13 @@
             router.push({
               name: PageNames.LESSON_SUMMARY,
               params: {
-                classId: props.classId,
+                classId: effectiveClassId.value,
                 lessonId: targetLessonId,
               },
             });
           }
         } catch (err) {
-          const detailMsg = err.response && err.response.data && err.response.data.detail;
-          createSnackbar(detailMsg || strings.errorNotice$());
+          createSnackbar(extractErrorMessage(err));
         } finally {
           isSavingH5P.value = false;
           isSubmitting.value = false;
@@ -624,8 +705,10 @@
               }
             } catch (e) {}
           } else if (event.data.type === 'KOLIBRI_H5P_SAVED') {
+            clearSavingTimeout();
             handleH5PContentSaved(event.data.contentId, event.data.title);
           } else if (event.data.type === 'KOLIBRI_H5P_VALIDATION_ERROR') {
+            clearSavingTimeout();
             isSubmitting.value = false;
             isSavingH5P.value = false;
             createSnackbar(event.data.message || strings.validationPrompt$());
@@ -638,6 +721,7 @@
       });
 
       onUnmounted(() => {
+        clearSavingTimeout();
         window.removeEventListener('message', onWindowMessage);
       });
 
@@ -706,13 +790,25 @@
 
               const saveBtn = doc.querySelector('#save-h5p');
               if (saveBtn) {
+                const extracted = getH5PEditorTitle();
+                if (extracted && !newTargetTitle.value) {
+                  newTargetTitle.value = extracted;
+                }
                 isSubmitting.value = true;
+                clearSavingTimeout();
+                savingTimeout = setTimeout(() => {
+                  if (isSubmitting.value) {
+                    isSubmitting.value = false;
+                    isSavingH5P.value = false;
+                    createSnackbar(strings.errorNotice$());
+                  }
+                }, 25000);
                 saveBtn.click();
                 return;
               }
             } catch (e) {
               isSubmitting.value = false;
-              createSnackbar(strings.errorNotice$());
+              createSnackbar(extractErrorMessage(e));
             }
           }
           return;
@@ -865,8 +961,8 @@
             const newLesson = await LessonResource.saveModel({
               data: {
                 title: finalLessonTitle,
-                collection: props.classId,
-                assignments: [props.classId],
+                collection: effectiveClassId.value,
+                assignments: [effectiveClassId.value],
                 active: true,
                 resources: [],
               },
@@ -913,14 +1009,13 @@
             router.push({
               name: PageNames.LESSON_SUMMARY,
               params: {
-                classId: props.classId,
+                classId: effectiveClassId.value,
                 lessonId: targetLessonId,
               },
             });
           }
         } catch (err) {
-          const detailMsg = err.response && err.response.data && err.response.data.detail;
-          createSnackbar(detailMsg || strings.errorNotice$());
+          createSnackbar(extractErrorMessage(err));
         } finally {
           isSubmitting.value = false;
         }
