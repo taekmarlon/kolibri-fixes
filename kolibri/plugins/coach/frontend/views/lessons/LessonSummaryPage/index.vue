@@ -275,7 +275,7 @@
                     : 'document';
 
             const tally = this.getContentStatusTally(resource.content_id, this.recipients);
-            return {
+            const tableRow = {
               ...resource,
               id: resource.contentnode_id,
               node_id: resource.contentnode_id,
@@ -284,8 +284,14 @@
               avgTimeSpent: this.getContentAvgTimeSpent(resource.content_id, this.recipients),
               tally,
               hasAssignments: Object.values(tally).reduce((a, b) => a + b, 0),
-              link: null,
             };
+
+            const link = this.resourceLink(tableRow);
+            if (link) {
+              tableRow.link = link;
+            }
+
+            return tableRow;
           }
 
           const content = this.resourceCache[resource.contentnode_id];

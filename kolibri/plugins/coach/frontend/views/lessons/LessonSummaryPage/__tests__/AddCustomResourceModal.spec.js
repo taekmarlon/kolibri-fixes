@@ -17,16 +17,26 @@ describe('AddCustomResourceModal', () => {
     lessonId: 'lesson_123',
   };
 
-  it('renders modal title and all four resource tabs', () => {
+  it('renders modal title and all resource tabs including Lesson Builder', () => {
     render(AddCustomResourceModal, {
       props,
     });
 
     expect(screen.getByText('Add Custom Resource to Lesson')).toBeTruthy();
+    expect(screen.getByText('Lesson Builder')).toBeTruthy();
     expect(screen.getByText('Upload File')).toBeTruthy();
     expect(screen.getByText('YouTube Video')).toBeTruthy();
     expect(screen.getByText('HTML5 Package')).toBeTruthy();
     expect(screen.getByText('Generate with AI')).toBeTruthy();
+  });
+
+  it('displays Lesson Builder content by default with authoring controls', () => {
+    render(AddCustomResourceModal, {
+      props,
+    });
+
+    expect(screen.getByText('Author Custom Lesson')).toBeTruthy();
+    expect(screen.getByText('Section Title')).toBeTruthy();
   });
 
   it('switches to YouTube Video tab when clicked', async () => {
@@ -69,5 +79,17 @@ describe('AddCustomResourceModal', () => {
       screen.getByText('Create structured study guides, summaries, or practice notes instantly with AI.')
     ).toBeTruthy();
     expect(screen.getByText('Generate Material with AI')).toBeTruthy();
+  });
+
+  it('switches to H5P Interactive tab and renders studio header and loading indicator', async () => {
+    render(AddCustomResourceModal, {
+      props,
+    });
+
+    const h5pTabBtn = screen.getByText('H5P Interactive');
+    await fireEvent.click(h5pTabBtn);
+
+    expect(screen.getByText('H5P Interactive Authoring Studio')).toBeTruthy();
+    expect(screen.getByText('Loading H5P Interactive Studio...')).toBeTruthy();
   });
 });

@@ -244,9 +244,12 @@ class H5PProxyView(View):
                     target_integration_check, replacement_integration_check, 1
                 )
 
-            if "</body>" in html_text:
-                html_text = html_text.replace(
-                    "</body>", f"{INJECTED_CLIENT_BRIDGE}</body>"
+            last_body_idx = html_text.rfind("</body>")
+            if last_body_idx != -1:
+                html_text = (
+                    html_text[:last_body_idx]
+                    + INJECTED_CLIENT_BRIDGE
+                    + html_text[last_body_idx:]
                 )
             else:
                 html_text = f"{html_text}{INJECTED_CLIENT_BRIDGE}"

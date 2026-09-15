@@ -18,6 +18,9 @@ export const LearnerClassroomResource = new Resource({
 export const LearnerLessonResource = new Resource({
   name: 'learnerlesson',
   namespace: 'kolibri.plugins.learn',
+  setCustomProgress(lessonId, data) {
+    return this.accessDetailEndpoint('post', 'update_custom_progress', lessonId, data);
+  },
 });
 
 export const LearnerCourseResource = new Resource({

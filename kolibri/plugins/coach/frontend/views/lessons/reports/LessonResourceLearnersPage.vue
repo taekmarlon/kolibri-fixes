@@ -204,6 +204,15 @@
         return this.getContentAvgTimeSpent(this.$route.params.resourceId, recipients);
       },
       onPreviewClick() {
+        if (this.resource && this.resource.is_custom) {
+          const classId = this.$route.params.classId;
+          const lessonId = this.$route.params.lessonId;
+          const resourceId = this.resource.content_id || this.resource.node_id || this.resource.id;
+          const previewUrl = `/en/learn/#/home/classes/${classId}/lesson/${lessonId}/resource/${resourceId}`;
+          window.open(previewUrl, '_blank');
+          return;
+        }
+
         let lastPage = LastPages.RESOURCE_LEARNER_LIST;
         if (this.viewByGroups) {
           lastPage = LastPages.RESOURCE_LEARNER_LIST_BY_GROUPS;

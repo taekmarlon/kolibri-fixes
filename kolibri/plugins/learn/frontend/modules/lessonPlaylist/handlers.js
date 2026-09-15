@@ -9,6 +9,7 @@ import useContentNodeProgress, {
 import { LearningActivities } from 'kolibri/constants';
 import { LearnerLessonResource } from '../../apiResources';
 import { ClassesPageNames } from '../../constants';
+import { getCustomResourceThumbnail } from '../../utils/customResources';
 
 const { fetchContentNodeProgress } = useContentNodeProgress();
 
@@ -58,7 +59,7 @@ export function showLessonPlaylist(store, { lessonId }) {
               is_custom: true,
               is_leaf: true,
               num_coach_contents: 0,
-              thumbnail: r.thumbnail || (r.resource_type === 'image' ? r.file_url : null),
+              thumbnail: getCustomResourceThumbnail(r),
               learning_activities: [
                 kind === 'video'
                   ? LearningActivities.WATCH

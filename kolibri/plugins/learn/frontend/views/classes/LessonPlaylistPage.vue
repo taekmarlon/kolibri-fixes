@@ -82,6 +82,7 @@
   import LearnAppBarPage from '../LearnAppBarPage';
   import HybridLearningLessonCard from '../HybridLearningLessonCard';
   import { LearningActivities } from 'kolibri/constants';
+  import { getCustomResourceThumbnail } from '../../utils/customResources';
 
   export default {
     name: 'LessonPlaylistPage',
@@ -123,13 +124,12 @@
       contentNodes() {
         return this.lessonResources
           .map(r => {
+            let node = null;
             if (this.contentNodesMap && this.contentNodesMap[r.contentnode_id]) {
-              return this.contentNodesMap[r.contentnode_id];
-            }
-            if (r.contentnode) {
-              return r.contentnode;
-            }
-            if (r.is_custom) {
+              node = { ...this.contentNodesMap[r.contentnode_id] };
+            } else if (r.contentnode) {
+              node = { ...r.contentnode };
+            } else if (r.is_custom) {
               const kind =
                 r.resource_type === 'youtube'
                   ? 'video'
@@ -138,7 +138,7 @@
                   : r.resource_type === 'html5' || r.resource_type === 'h5p'
                   ? 'html5'
                   : 'document';
-              return {
+              node = {
                 id: r.contentnode_id,
                 content_id: r.content_id,
                 title: r.title || 'Custom Resource',
@@ -147,7 +147,7 @@
                 is_custom: true,
                 is_leaf: true,
                 num_coach_contents: 0,
-                thumbnail: r.thumbnail || (r.resource_type === 'image' ? r.file_url : null),
+                thumbnail: getCustomResourceThumbnail(r),
                 learning_activities: [
                   kind === 'video'
                     ? LearningActivities.WATCH
@@ -163,7 +163,10 @@
                 content: r.content,
               };
             }
-            return null;
+            if (node && r.is_custom && !node.thumbnail) {
+              node.thumbnail = getCustomResourceThumbnail(r);
+            }
+            return node;
           })
           .filter(Boolean);
       },

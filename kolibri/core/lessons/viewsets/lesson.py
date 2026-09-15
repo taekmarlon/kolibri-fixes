@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import uuid
 import zipfile
 
@@ -427,18 +428,21 @@ def _save_interactive_html(content, resource_id, title):
         "setup();"
         "})();</script>"
     )
-    if "</body>" in content and "H5P_COMPLETE" not in content:
-        last_body_idx = content.rfind("</body>")
-        if last_body_idx != -1:
-            content = (
-                content[:last_body_idx]
-                + f"{xapi_bridge}</body>"
-                + content[last_body_idx + len("</body>") :]
-            )
+    if "H5P_COMPLETE" not in content:
+        closing_match = None
+        for pattern in [
+            r"(?i)</body>(?!\s*[\s\S]*</body>)",
+            r"(?i)</html>(?!\s*[\s\S]*</html>)",
+        ]:
+            matches = list(re.finditer(pattern, content))
+            if matches:
+                closing_match = matches[-1]
+                break
+        if closing_match:
+            idx = closing_match.start()
+            content = content[:idx] + f"{xapi_bridge}\n" + content[idx:]
         else:
-            content = f"{content}{xapi_bridge}"
-    elif "H5P_COMPLETE" not in content:
-        content = f"{content}{xapi_bridge}"
+            content = f"{content}\n{xapi_bridge}"
     with open(index_path, "w", encoding="utf-8") as f:
         f.write(content)
     file_url = f"/media/lessons/interactive/{resource_id}/index.html"

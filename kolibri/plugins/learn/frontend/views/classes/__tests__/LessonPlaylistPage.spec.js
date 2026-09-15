@@ -5,6 +5,14 @@ import LessonPlaylistPage from '../LessonPlaylistPage.vue';
 import { PageNames, ClassesPageNames } from '../../../constants';
 
 jest.mock('kolibri-common/composables/usePageLoading');
+jest.mock('kolibri-common/composables/useFacilities');
+jest.mock('kolibri-common/composables/useChannels', () => () => ({
+  channelsMap: {},
+  localChannelsCache: [],
+  fetchChannels: jest.fn().mockResolvedValue([]),
+  getChannelThumbnail: jest.fn(() => ''),
+  getChannelTitle: jest.fn(() => ''),
+}));
 
 jest.mock('../../../composables/useContentLink', () => () => ({
   genContentLinkBackLinkCurrentPage: jest.fn(() => ({ name: 'TOPICS_CONTENT' })),

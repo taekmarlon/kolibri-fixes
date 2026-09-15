@@ -258,3 +258,89 @@ class LearnerLessonTestCase(APITestCase):
         )
         self.assertEqual(matching_lesson["progress"]["resource_progress"], 1.0)
         self.assertEqual(matching_lesson["resources"][0]["progress"], 1.0)
+
+    def test_update_custom_progress_marks_started_and_completed(self):
+        res_id = uuid.uuid4().hex
+        node_id = uuid.uuid4().hex
+        custom_lesson = Lesson.objects.create(
+            title="Interactive Progress Lesson",
+            collection=self.classroom,
+            created_by=self.learner_user,
+            is_active=True,
+            resources=[
+                {
+                    "content_id": res_id,
+                    "contentnode_id": node_id,
+                    "channel_id": "custom",
+                    "is_custom": True,
+                    "resource_type": "h5p",
+                    "title": "Math H5P Activity",
+                }
+            ],
+        )
+        LessonAssignment.objects.create(
+            lesson=custom_lesson,
+            assigned_by=self.learner_user,
+            collection=self.classroom,
+        )
+        self.client.login(username="learner", password="password")
+        url = reverse(
+            self.basename + "-update_custom_progress",
+            kwargs={"pk": custom_lesson.id},
+        )
+
+        # 1. Post initial started progress
+        start_res = self.client.post(
+            url,
+            data={"content_id": res_id, "progress": 0.1, "time_spent": 15},
+            format="json",
+        )
+        self.assertEqual(start_res.status_code, 200)
+        self.assertEqual(start_res.data["progress"], 0.1)
+        self.assertEqual(start_res.data["time_spent"], 15.0)
+
+        log = ContentSummaryLog.objects.get(user=self.learner_user, content_id=res_id)
+        self.assertEqual(log.progress, 0.1)
+        self.assertEqual(log.time_spent, 15.0)
+        self.assertEqual(log.kind, "html5")
+        self.assertIsNone(log.completion_timestamp)
+
+        # 2. Post completed progress with additional time spent
+        finish_res = self.client.post(
+            url,
+            data={"content_id": res_id, "progress": 1.0, "time_spent": 45},
+            format="json",
+        )
+        self.assertEqual(finish_res.status_code, 200)
+        self.assertEqual(finish_res.data["progress"], 1.0)
+        self.assertEqual(finish_res.data["time_spent"], 60.0)
+
+        log.refresh_from_db()
+        self.assertEqual(log.progress, 1.0)
+        self.assertEqual(log.time_spent, 60.0)
+        self.assertIsNotNone(log.completion_timestamp)
+
+    def test_update_custom_progress_invalid_resource_returns_404(self):
+        custom_lesson = Lesson.objects.create(
+            title="Empty Custom Lesson",
+            collection=self.classroom,
+            created_by=self.learner_user,
+            is_active=True,
+            resources=[],
+        )
+        LessonAssignment.objects.create(
+            lesson=custom_lesson,
+            assigned_by=self.learner_user,
+            collection=self.classroom,
+        )
+        self.client.login(username="learner", password="password")
+        url = reverse(
+            self.basename + "-update_custom_progress",
+            kwargs={"pk": custom_lesson.id},
+        )
+        res = self.client.post(
+            url,
+            data={"content_id": uuid.uuid4().hex, "progress": 1.0},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 404)

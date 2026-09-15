@@ -34,6 +34,16 @@ STARTED = "Started"
 HELP_NEEDED = "HelpNeeded"
 COMPLETED = "Completed"
 
+CUSTOM_RESOURCE_KIND_MAP = {
+    "youtube": content_kinds.VIDEO,
+    "video": content_kinds.VIDEO,
+    "pdf": content_kinds.DOCUMENT,
+    "document": content_kinds.DOCUMENT,
+    "image": "image",
+    "h5p": content_kinds.HTML5,
+    "html5": content_kinds.HTML5,
+}
+
 
 # Instantiate the viewsets here so that we can use their serialize_list methods
 exam_viewset = ExamViewset()
@@ -178,6 +188,12 @@ def content_status_serializer(lesson_data, learners_data, classroom):
             "id", "content_id"
         )
     }
+
+    for lesson in lesson_data:
+        for resource in lesson.get("resources", []) or []:
+            if resource.get("is_custom") and resource.get("content_id"):
+                node_id = resource.get("contentnode_id", resource["content_id"])
+                content_map[node_id] = resource["content_id"]
 
     learner_ids = {learner["id"] for learner in learners_data}
 
@@ -345,6 +361,34 @@ class ClassSummaryViewSet(viewsets.ViewSet):
                 node_id=F("id"),
             )
         )
+
+        custom_node_ids = set()
+        for lesson in lesson_data:
+            for resource in lesson.get("resources", []) or []:
+                if resource.get("is_custom"):
+                    node_id = resource.get("contentnode_id") or resource.get(
+                        "content_id"
+                    )
+                    if node_id and node_id not in custom_node_ids:
+                        custom_node_ids.add(node_id)
+                        res_type = resource.get("resource_type", "")
+                        kind = CUSTOM_RESOURCE_KIND_MAP.get(
+                            res_type, content_kinds.DOCUMENT
+                        )
+                        content.append(
+                            {
+                                "available": True,
+                                "content_id": resource.get("content_id") or node_id,
+                                "title": resource.get("title") or "Custom Resource",
+                                "kind": kind,
+                                "channel_id": resource.get("channel_id", ""),
+                                "options": {},
+                                "node_id": node_id,
+                                "is_custom": True,
+                                "resource_type": res_type,
+                            }
+                        )
+
         # final list of available nodes
         node_lookup = {node["node_id"]: node for node in content}
 
@@ -360,10 +404,16 @@ class ClassSummaryViewSet(viewsets.ViewSet):
         # filter classes out of lesson assignments
         for lesson in lesson_data:
             lesson["groups"] = [g for g in lesson["assignments"] if g != pk]
-            # determine if any resources are missing locally for the lesson
+            custom_node_ids_for_lesson = {
+                r.get("contentnode_id")
+                for r in (lesson.get("resources") or [])
+                if r.get("is_custom")
+            }
+            # determine if any non-custom resources are missing locally for the lesson
             lesson["missing_resource"] = any(
                 node_id not in node_lookup or not node_lookup[node_id]["available"]
                 for node_id in lesson["node_ids"]
+                if node_id not in custom_node_ids_for_lesson
             )
 
         learners_data = serialize_users(query_learners)

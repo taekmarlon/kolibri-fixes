@@ -422,8 +422,6 @@
 
   import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import { useRoute } from 'vue-router/composables';
-  import client from 'kolibri/client';
-  import urls from 'kolibri/urls';
   import { createTranslator } from 'kolibri/utils/i18n';
   import KBreadcrumbs from 'kolibri-design-system/lib/KBreadcrumbs';
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
@@ -540,7 +538,7 @@
       const interactiveUrl = computed(() => {
         if (!resource.value || !resource.value.file_url) return '';
         const url = resource.value.file_url;
-        const v = resource.value.file_size || resource.value.content_id || '1';
+        const v = `${resource.value.file_size || resource.value.content_id || '1'}_${resource.value.contentnode_id || ''}`;
         return url.includes('?') ? `${url}&v=${v}` : `${url}?v=${v}`;
       });
 
@@ -590,6 +588,28 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
       }
 
+      const lastReportedTime = ref(Date.now());
+
+      async function reportCustomProgress(progressValue, isComplete = false) {
+        if (!resource.value || !currentLesson.value) return;
+        const elapsed = Math.max(1, Math.round((Date.now() - lastReportedTime.value) / 1000));
+        lastReportedTime.value = Date.now();
+
+        try {
+          const res = await LearnerLessonResource.setCustomProgress(currentLesson.value.id, {
+            content_id: resource.value.content_id,
+            progress: progressValue,
+            time_spent: elapsed,
+            extra_fields: { completed: isComplete },
+          });
+          if (res && res.data && res.data.progress !== undefined) {
+            resource.value.progress = res.data.progress;
+          }
+        } catch (err) {
+          // Keep local state
+        }
+      }
+
       async function loadData() {
         pageLoading.value = true;
         try {
@@ -603,8 +623,11 @@
           );
           if (found) {
             resource.value = found;
+            lastReportedTime.value = Date.now();
             if (found.progress >= 1.0) {
               isCompleted.value = true;
+            } else {
+              reportCustomProgress(0.1, false);
             }
           }
         } catch (err) {
@@ -623,25 +646,8 @@
           progress: 1.0,
         });
 
-        try {
-          const now = new Date().toISOString();
-          await client({
-            url: urls['kolibri:core:contentsummarylog_list'](),
-            method: 'POST',
-            data: {
-              content_id: resource.value.content_id,
-              start_timestamp: now,
-              end_timestamp: now,
-              completion_timestamp: now,
-              progress: 1.0,
-              time_spent: 120,
-              kind: resource.value.resource_type === 'youtube' ? 'video' : 'document',
-            },
-          });
-          createSnackbar(resourceStrings.progressSavedNotice$());
-        } catch (err) {
-          // Keep completed state
-        }
+        await reportCustomProgress(1.0, true);
+        createSnackbar(resourceStrings.progressSavedNotice$());
       }
 
       function downloadFile(url) {

@@ -130,6 +130,35 @@ class ClassSummaryTestCase(EvaluationMixin, APITestCase):
         self.assertIn(fake_data["contentnode_id"], node_ids)
         self.assertTrue(lesson["missing_resource"])
 
+    def test_lesson_with_custom_resource_not_missing(self):
+        custom_resource = {
+            "contentnode_id": uuid.uuid4().hex,
+            "content_id": uuid.uuid4().hex,
+            "channel_id": "",
+            "is_custom": True,
+            "resource_type": "h5p",
+            "title": "Interactive H5P Activity",
+        }
+        self.lesson.resources = [custom_resource]
+        self.lesson.save()
+
+        self.client.login(
+            username=self.facility_admin.username, password=DUMMY_PASSWORD
+        )
+        response = self.client.get(
+            reverse(self.detail_name, kwargs={"pk": self.classroom.id})
+        )
+        lesson = response.data["lessons"][0]
+        self.assertFalse(lesson["missing_resource"])
+        content = response.data["content"]
+        matching = [
+            c for c in content if c["node_id"] == custom_resource["contentnode_id"]
+        ]
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(matching[0]["title"], "Interactive H5P Activity")
+        self.assertEqual(matching[0]["kind"], "html5")
+        self.assertTrue(matching[0]["available"])
+
     def test_anon_user_cannot_access_detail(self):
         response = self.client.get(
             reverse(self.detail_name, kwargs={"pk": self.classroom.id})
@@ -580,4 +609,72 @@ class ClassSummaryStatusTests(APITestCase):
         self.assertEqual(
             self._get_status(response, self.learner.id, self.exercise_node.content_id),
             COMPLETED,
+        )
+
+    def test_custom_resource_completed_status(self):
+        """A custom resource in a lesson with progress == 1 is reported as COMPLETED in class summary."""
+        custom_content_id = uuid.uuid4().hex
+        custom_node_id = uuid.uuid4().hex
+        self.lesson.resources.append(
+            {
+                "contentnode_id": custom_node_id,
+                "content_id": custom_content_id,
+                "channel_id": "custom",
+                "is_custom": True,
+                "resource_type": "youtube",
+                "title": "Custom Vid",
+            }
+        )
+        self.lesson.save()
+
+        now = timezone.now()
+        ContentSummaryLog.objects.create(
+            user=self.learner,
+            content_id=custom_content_id,
+            start_timestamp=now - datetime.timedelta(hours=1),
+            end_timestamp=now,
+            time_spent=120.0,
+            progress=1.0,
+            kind="video",
+        )
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self._get_status(response, self.learner.id, custom_content_id),
+            COMPLETED,
+        )
+
+    def test_custom_resource_started_status(self):
+        """A custom resource with 0 < progress < 1 is reported as STARTED in class summary."""
+        custom_content_id = uuid.uuid4().hex
+        custom_node_id = uuid.uuid4().hex
+        self.lesson.resources.append(
+            {
+                "contentnode_id": custom_node_id,
+                "content_id": custom_content_id,
+                "channel_id": "custom",
+                "is_custom": True,
+                "resource_type": "pdf",
+                "title": "Custom PDF",
+            }
+        )
+        self.lesson.save()
+
+        now = timezone.now()
+        ContentSummaryLog.objects.create(
+            user=self.learner,
+            content_id=custom_content_id,
+            start_timestamp=now - datetime.timedelta(hours=1),
+            end_timestamp=now,
+            time_spent=60.0,
+            progress=0.4,
+            kind="document",
+        )
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self._get_status(response, self.learner.id, custom_content_id),
+            STARTED,
         )

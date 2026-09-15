@@ -23,7 +23,19 @@ export function generateResourceHandler(paramsToCheck) {
 export function showResourceView({ resourceId, exerciseId } = {}) {
   // Passed in exerciseId is the content_id of the contentNode
   // Map this to the id of the content node to do this fetch
-  const nodeId = store.state.classSummary.contentMap[resourceId || exerciseId].node_id;
+  const targetId = resourceId || exerciseId;
+  const content =
+    store.state.classSummary?.contentMap?.[targetId] ||
+    store.state.classSummary?.contentNodeMap?.[targetId];
+
+  if (content && content.is_custom) {
+    store.commit('resourceDetail/SET_STATE', {
+      resource: content,
+    });
+    return Promise.resolve();
+  }
+
+  const nodeId = content ? content.node_id : targetId;
   return ContentNodeResource.fetchModel({
     id: nodeId,
     getParams: { no_available_filtering: true },
