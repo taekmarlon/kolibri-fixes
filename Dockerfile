@@ -27,6 +27,11 @@ RUN echo "module.exports = require('/app/packages/kolibri-jest-config/jest.conf/
 # Build the Kolibri frontend
 RUN pnpm run build
 
+# Install H5P Server dependencies
+WORKDIR /app/h5p_server
+RUN npm install --omit=dev || npm install
+WORKDIR /app
+
 # --- Nginx config ---
 # Routes:
 #   /content/zipcontent/ -> Kolibri zip content server (port 8081)
@@ -36,6 +41,7 @@ RUN pnpm run build
 RUN cat > /etc/nginx/sites-available/default <<'NGINXEOF'
 server {
     listen 8080;
+    client_max_body_size 50m;
 
     proxy_buffers 16 32k;
     proxy_buffer_size 64k;
@@ -116,6 +122,12 @@ python /app/build_tools/sync_render_init.py || true
 echo "==> Starting nginx..."
 nginx
 
+echo "==> Starting H5P Interactive Server on port 8082..."
+export KOLIBRI_H5P_NODE_URL=http://127.0.0.1:8082
+cd /app/h5p_server/packages/h5p-examples
+PORT=8082 node build/express.js &
+cd /app
+
 echo "==> Starting Kolibri on port 8000 (zip content on port 8081)..."
 exec kolibri start --port=8000 --zip-port=8081 --foreground
 STARTEOF
@@ -126,6 +138,9 @@ RUN chmod +x /start.sh
 ENV KOLIBRI_RUN_MODE=prod
 ENV KOLIBRI_LISTEN_ADDRESS=0.0.0.0
 ENV KOLIBRI_ZIP_CONTENT_ORIGIN=https://lms-online-qvbg.onrender.com
+
+# H5P Interactive Engine Configuration
+ENV KOLIBRI_H5P_NODE_URL=http://127.0.0.1:8082
 
 # AI Tutor Configuration for Render
 ENV KOLIBRI_AI_PROVIDER=gemini

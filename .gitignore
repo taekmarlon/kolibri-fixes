@@ -112,6 +112,12 @@ kolibri/core/content/contentschema/migrations/*
 !kolibri/core/content/static/h5p/
 !kolibri/core/content/static/bloom/
 
+# H5P Server dynamic storage
+h5p_server/**/node_modules/
+h5p_server/**/h5p/content/
+h5p_server/**/h5p/temporary-storage/
+h5p_server/**/h5p/user-data/
+
 # virtual environment
 venv/
 .venv/

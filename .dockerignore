@@ -5,3 +5,9 @@ kolibri/kolibri/dist/
 dist/*
 .vscode/
 Dockerfile*
+
+# Keep H5P Server pre-compiled build artifacts and core/editor libraries
+!h5p_server/**/build
+!h5p_server/**/build/**
+!h5p_server/**/h5p
+!h5p_server/**/h5p/**

@@ -16,7 +16,7 @@
     "watch-hot": "pnpm run watch --hot",
     "python-devserver": "kolibri start --debug --foreground --port=8000 --settings=kolibri.deployment.default.settings.dev",
     "python-devserver-no-update": "kolibri start --debug --skip-update --foreground --port=8000 --settings=kolibri.deployment.default.settings.dev",
-    "h5p-server": "node ../Lumieducation-server/packages/h5p-examples/build/express.js",
+    "h5p-server": "node ./h5p_server/packages/h5p-examples/build/express.js",
     "frontend-devserver": "concurrently --passthrough-arguments --kill-others \"pnpm run watch --watchonly {1}\" \"pnpm run sandbox-dev\" --",
     "devserver": "concurrently --passthrough-arguments --kill-others \"pnpm run watch --watchonly {1}\" \"pnpm run python-devserver\" \"pnpm run sandbox-dev\" \"pnpm run h5p-server\" --",
     "devserver-hot": "concurrently --passthrough-arguments --kill-others \"pnpm run watch-hot --watchonly {1}\" \"pnpm run python-devserver\" \"pnpm run sandbox-dev\" \"pnpm run h5p-server\" --",
