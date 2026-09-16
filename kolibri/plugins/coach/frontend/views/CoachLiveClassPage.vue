@@ -163,7 +163,7 @@
   import useLiveMeeting from 'kolibri-common/composables/useLiveMeeting';
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
   import useUser from 'kolibri/composables/useUser';
-  import { buildLiveMeetingUrl } from 'kolibri-common/utils/liveMeeting';
+  import { buildLiveMeetingUrl, getClassRoomName } from 'kolibri-common/utils/liveMeeting';
   import CoachAppBarPage from './CoachAppBarPage';
   import commonCoach from './common';
 
@@ -323,8 +323,7 @@
         return this.isClassLive(this.currentClassId);
       },
       defaultClassRoomName() {
-        const id = this.currentClassId || 'general';
-        return `phiedu_class_${id}`;
+        return getClassRoomName(this.currentClassId, this.className);
       },
     },
     methods: {

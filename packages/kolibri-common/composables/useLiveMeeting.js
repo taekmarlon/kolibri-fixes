@@ -7,8 +7,8 @@ export default function useLiveMeeting() {
   const activeRoom = ref(null);
   const recentRooms = ref(Lockr.get(RECENT_ROOMS_KEY) || []);
 
-  function generateRoomId(prefix = 'kolibri', identifier = '') {
-    const randomSuffix = Math.random().toString(36).substring(2, 8);
+  function generateRoomId(prefix = 'PHIEDU', identifier = '') {
+    const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
     const cleanId = identifier ? identifier.replace(/[^a-zA-Z0-9]/g, '_') : '';
     return `${prefix}_${cleanId ? cleanId + '_' : ''}${randomSuffix}`;
   }

@@ -16,7 +16,7 @@ class LiveClassSessionApiTestCase(APITestCase):
         provision_device()
         self.admin = create_superuser(self.facility)
         self.client.login(username=self.admin.username, password="password")
-        self.url = reverse("kolibri:kolibri.core.device:live_sessions")
+        self.url = reverse("kolibri:core:live_sessions")
 
     def test_post_with_room_name_only(self):
         response = self.client.post(

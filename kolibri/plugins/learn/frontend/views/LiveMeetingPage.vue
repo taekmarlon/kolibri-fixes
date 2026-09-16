@@ -89,7 +89,7 @@
                     :style="{ color: isClassLive(classroom.id) ? '#166534' : '#64748b' }"
                     style="font-size: 12px; margin-top: 2px;"
                   >
-                    {{ isClassLive(classroom.id) ? 'Your teacher is in this room right now. Click to join!' : `Room ID: phiedu_class_${classroom.id}` }}
+                    {{ isClassLive(classroom.id) ? 'Your teacher is in this room right now. Click to join!' : `Room ID: ${getClassRoomName(classroom.id, classroom.name)}` }}
                   </div>
                 </div>
               </div>
@@ -99,7 +99,7 @@
                 appearance="raised-button"
                 icon="openNewTab"
                 :style="isClassLive(classroom.id) ? { backgroundColor: '#16a34a', color: '#ffffff', fontWeight: 'bold' } : {}"
-                @click="joinSpecificRoom(`phiedu_class_${classroom.id}`, `${classroom.name} — Live Class`)"
+                @click="joinSpecificRoom(getClassRoomName(classroom.id, classroom.name), `${classroom.name} — Live Class`)"
               />
             </div>
           </div>
@@ -253,7 +253,7 @@
   import useLiveMeeting from 'kolibri-common/composables/useLiveMeeting';
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
   import useUser from 'kolibri/composables/useUser';
-  import { buildLiveMeetingUrl } from 'kolibri-common/utils/liveMeeting';
+  import { buildLiveMeetingUrl, getClassRoomName } from 'kolibri-common/utils/liveMeeting';
   import ClassroomResource from 'kolibri-common/apiResources/ClassroomResource';
   import { LearnerClassroomResource } from '../apiResources';
   import commonLearnStrings from './commonLearnStrings';
@@ -362,14 +362,14 @@
             if (classes && classes.length > 0) {
               enrolledClassrooms.value = classes;
               if (!roomInput.value) {
-                roomInput.value = `class_${classes[0].id}`;
+                roomInput.value = getClassRoomName(classes[0].id, classes[0].name);
               }
             } else {
               ClassroomResource.fetchCollection()
                 .then(facClasses => {
                   enrolledClassrooms.value = facClasses || [];
                   if (facClasses && facClasses.length > 0 && !roomInput.value) {
-                    roomInput.value = `class_${facClasses[0].id}`;
+                    roomInput.value = getClassRoomName(facClasses[0].id, facClasses[0].name);
                   }
                 })
                 .catch(() => {
@@ -399,19 +399,26 @@
         if (!roomInput.value.trim()) {
           if (enrolledClassrooms.value && enrolledClassrooms.value.length > 0) {
             const firstClass = enrolledClassrooms.value[0];
-            joinSpecificRoom(`phiedu_class_${firstClass.id}`, `${firstClass.name} — Live Class`);
+            joinSpecificRoom(
+              getClassRoomName(firstClass.id, firstClass.name),
+              `${firstClass.name} — Live Class`,
+            );
             return;
           }
           generateRandomRoom();
         }
         roomError.value = '';
-        const cleanName = `phiedu_${roomInput.value.trim().replace(/[^a-zA-Z0-9-_]/g, '_')}`;
-        joinSpecificRoom(cleanName, roomInput.value.trim());
+        const rawInput = roomInput.value.trim();
+        const cleanInput = rawInput.replace(/[^a-zA-Z0-9-_]/g, '_');
+        const cleanName = cleanInput.toUpperCase().startsWith('PHIEDU')
+          ? cleanInput
+          : `PHIEDU_${cleanInput}`;
+        joinSpecificRoom(cleanName, rawInput);
       }
 
       function generateRandomRoom() {
-        const randomId = generateRoomId('phiedu_room');
-        roomInput.value = randomId.replace('phiedu_', '');
+        const randomChars = Math.random().toString(36).substring(2, 8).toUpperCase();
+        roomInput.value = `PHIEDU_${randomChars}`;
         roomError.value = '';
       }
 
@@ -448,6 +455,7 @@
         roomInput,
         roomError,
         enrolledClassrooms,
+        getClassRoomName,
         joinSpecificRoom,
         joinRoom,
         generateRandomRoom,

@@ -47,8 +47,9 @@ def _get_variants(val):
         "phiedu_room_",
         "phiedu_",
         "room_",
+        "class_",
     ):
-        if val_str.startswith(prefix):
+        if val_str.lower().startswith(prefix):
             sub = val_str[len(prefix) :]
             res.append(sub)
             res.append("".join(ch for ch in sub if ch.isalnum()).lower())
@@ -83,7 +84,7 @@ class LiveClassSessionView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        room_name = room_name or f"phiedu_class_{class_id}"
+        room_name = room_name or f"PHIEDU_{class_id}"
         class_id = class_id or room_name
         active = request.data.get("active", True)
         teacher_name = getattr(request.user, "full_name", None) or getattr(

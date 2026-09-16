@@ -104,7 +104,7 @@
   import LearnAppBarPage from '../LearnAppBarPage';
   import useLearnerResources from '../../composables/useLearnerResources';
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
-  import { buildLiveMeetingUrl } from 'kolibri-common/utils/liveMeeting';
+  import { buildLiveMeetingUrl, getClassRoomName } from 'kolibri-common/utils/liveMeeting';
   import { ClassesPageNames } from '../../constants';
 
   const learnerLiveStrings = createTranslator('LearnerLiveClassStrings', {
@@ -179,7 +179,7 @@
       });
 
       const classRoomName = computed(() => {
-        return `phiedu_class_${props.classId}`;
+        return getClassRoomName(props.classId, className.value);
       });
 
       const userDisplayName = computed(() => {

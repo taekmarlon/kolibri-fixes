@@ -144,7 +144,7 @@
     setResumableContentNodes,
   } from '../../composables/useLearnerResources';
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
-  import { buildLiveMeetingUrl } from 'kolibri-common/utils/liveMeeting';
+  import { buildLiveMeetingUrl, getClassRoomName } from 'kolibri-common/utils/liveMeeting';
   import { setContentNodeProgress } from '../../composables/useContentNodeProgress';
   import { inClasses } from '../../composables/useCoreLearn';
   import { PageNames, ClassesPageNames } from '../../constants';
@@ -222,8 +222,8 @@
       function joinLiveMeeting(classId) {
         const studentName =
           (full_name && full_name.value) || (username && username.value) || 'Student';
-        const roomName = `phiedu_class_${classId}`;
         const targetClass = (get(classes) || []).find(c => c.id === classId);
+        const roomName = getClassRoomName(classId, targetClass ? targetClass.name : '');
         const subject =
           targetClass && targetClass.name ? `${targetClass.name} — Live Class` : 'PHIEDU Live Class';
         const directUrl = buildLiveMeetingUrl({

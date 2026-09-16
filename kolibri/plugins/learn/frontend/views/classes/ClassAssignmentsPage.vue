@@ -123,7 +123,7 @@
   import useLearnerResources from '../../composables/useLearnerResources';
   import useAiTutor from 'kolibri-common/composables/useAiTutor';
   import useLiveSessions from 'kolibri-common/composables/useLiveSessions';
-  import { buildLiveMeetingUrl } from 'kolibri-common/utils/liveMeeting';
+  import { buildLiveMeetingUrl, getClassRoomName } from 'kolibri-common/utils/liveMeeting';
   import commonLearnStrings from '../commonLearnStrings';
   import LearnAppBarPage from '../LearnAppBarPage';
   import AnnouncementsSection from '../AnnouncementsSection';
@@ -192,7 +192,7 @@
 
       function joinLiveMeeting() {
         const studentName = full_name.value || username.value || 'Student';
-        const roomName = `phiedu_class_${props.classId}`;
+        const roomName = getClassRoomName(props.classId, className.value);
         const directUrl = buildLiveMeetingUrl({
           roomName,
           displayName: studentName,

@@ -32,6 +32,40 @@ export function buildLiveMeetingUrl({
   return `https://${domain}/${cleanRoom}#${configParams}`;
 }
 
-export function getClassRoomName(classId) {
-  return `phiedu_class_${classId || 'general'}`;
+/**
+ * Sanitizes a classroom name or topic for use in live meeting URLs and room IDs.
+ * Converts spaces and special punctuation into clean underscores.
+ * Example: 'Grade 1 Sec-Diamond' -> 'Grade_1_Sec_Diamond'
+ */
+export function sanitizeRoomName(name) {
+  if (!name) return '';
+  return String(name)
+    .trim()
+    .replace(/[^a-zA-Z0-9\s_-]/g, '')
+    .replace(/[\s-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+/**
+ * Returns a short, human-readable room name for a given classroom.
+ * Format: PHIEDU_<SanitizedClassName>
+ * Example:
+ *   - getClassRoomName('86ed...', 'Grade 1 Sec-Diamond') => 'PHIEDU_Grade_1_Sec_Diamond'
+ *   - getClassRoomName('021b...', 'Room1') => 'PHIEDU_Room1'
+ *   - getClassRoomName('86ed42b381532536a4b0d14cf77a5917') => 'PHIEDU_86ED42'
+ */
+export function getClassRoomName(classId, className = '') {
+  if (className && String(className).trim()) {
+    const clean = sanitizeRoomName(className);
+    if (clean) {
+      return `PHIEDU_${clean}`;
+    }
+  }
+  if (classId) {
+    const cleanId = String(classId).replace(/[^a-zA-Z0-9]/g, '');
+    const shortId = cleanId.length > 8 ? cleanId.slice(0, 6).toUpperCase() : cleanId;
+    return `PHIEDU_${shortId}`;
+  }
+  return 'PHIEDU_Live';
 }
