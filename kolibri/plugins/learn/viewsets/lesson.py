@@ -117,10 +117,12 @@ class LearnerLessonViewset(ReadOnlyValuesViewset):
         if user.is_superuser:
             return Lesson.objects.all()
         coach_collections = user.roles.filter(
-            kind__in=[role_kinds.ADMIN, role_kinds.COACH]
+            kind__in=[role_kinds.ADMIN, role_kinds.COACH, role_kinds.ASSIGNABLE_COACH]
         ).values_list("collection_id", flat=True)
         return Lesson.objects.filter(
-            learner_lessons | Q(collection__in=coach_collections)
+            learner_lessons
+            | Q(collection__in=coach_collections)
+            | Q(collection__parent__in=coach_collections)
         ).distinct()
 
     def consolidate(self, items, queryset):

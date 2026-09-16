@@ -271,7 +271,8 @@
         return (
           get(hasChannels) &&
           (!get(isUserLoggedIn) ||
-            (get(learnerFinishedAllClasses) && get(canAccessUnassignedContent)))
+            (get(learnerFinishedAllClasses) && get(canAccessUnassignedContent)) ||
+            !get(isLearner))
         );
       });
 

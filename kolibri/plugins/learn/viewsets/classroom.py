@@ -8,6 +8,7 @@ from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 
 from kolibri.core.api import ReadOnlyValuesViewset
+from kolibri.core.auth.constants import role_kinds
 from kolibri.core.auth.models import Classroom
 from kolibri.core.content.models import ContentNode
 from kolibri.core.courses.models import CourseSession
@@ -102,17 +103,51 @@ class LearnerClassroomViewset(ReadOnlyValuesViewset):
     def get_queryset(self):
         if self.request.user.is_anonymous:
             return Classroom.objects.none()
-        return Classroom.objects.filter(membership__user=self.request.user)
+        user = self.request.user
+        if user.is_superuser:
+            return Classroom.objects.all()
+        coach_collections = user.roles.filter(
+            kind__in=[role_kinds.ADMIN, role_kinds.COACH, role_kinds.ASSIGNABLE_COACH]
+        ).values_list("collection_id", flat=True)
+        return Classroom.objects.filter(
+            Q(membership__user=user)
+            | Q(id__in=coach_collections)
+            | Q(parent__in=coach_collections)
+        ).distinct()
 
     def consolidate(self, items, queryset):
         if not items:
             return items
-        lessons = (
-            Lesson.objects.filter(
-                lesson_assignments__collection__membership__user=self.request.user,
-                is_active=True,
-                collection__in=(c["id"] for c in items),
+        user = self.request.user
+        item_classroom_ids = [c["id"] for c in items]
+
+        if user.is_superuser:
+            staff_classroom_ids = set(item_classroom_ids)
+        else:
+            coach_collections = user.roles.filter(
+                kind__in=[
+                    role_kinds.ADMIN,
+                    role_kinds.COACH,
+                    role_kinds.ASSIGNABLE_COACH,
+                ]
+            ).values_list("collection_id", flat=True)
+            staff_classroom_ids = set(
+                Classroom.objects.filter(id__in=item_classroom_ids)
+                .filter(Q(id__in=coach_collections) | Q(parent__in=coach_collections))
+                .values_list("id", flat=True)
             )
+
+        lesson_filter = Q(
+            collection__in=staff_classroom_ids,
+            is_active=True,
+        ) | Q(
+            lesson_assignments__collection__membership__user=user,
+            is_active=True,
+            collection__in=item_classroom_ids,
+        )
+
+        lessons = (
+            Lesson.objects.filter(lesson_filter)
             .distinct()
             .values(
                 "description", "id", "is_active", "title", "resources", "collection"
@@ -122,25 +157,29 @@ class LearnerClassroomViewset(ReadOnlyValuesViewset):
         for lesson in lessons:
             lesson["active"] = lesson.pop("is_active")
 
-        user_masterylog_content_ids = MasteryLog.objects.filter(
-            user=self.request.user
-        ).values("summarylog__content_id")
+        user_masterylog_content_ids = MasteryLog.objects.filter(user=user).values(
+            "summarylog__content_id"
+        )
+
+        exam_filter = (
+            Q(collection__in=staff_classroom_ids)
+            | Q(
+                assignments__collection__membership__user=user,
+                collection__in=item_classroom_ids,
+            )
+        ) & (Q(active=True) | Q(id__in=user_masterylog_content_ids))
 
         exams = (
-            Exam.objects.filter(
-                assignments__collection__membership__user=self.request.user,
-                collection__in=(c["id"] for c in items),
-            )
-            .filter(Q(active=True) | Q(id__in=user_masterylog_content_ids))
+            Exam.objects.filter(exam_filter)
             .annotate(
                 closed=Subquery(
                     MasteryLog.objects.filter(
-                        summarylog__content_id=OuterRef("id"), user=self.request.user
+                        summarylog__content_id=OuterRef("id"), user=user
                     ).values("complete")[:1]
                 ),
                 score=Subquery(
                     AttemptLog.objects.filter(
-                        sessionlog__content_id=OuterRef("id"), user=self.request.user
+                        sessionlog__content_id=OuterRef("id"), user=user
                     )
                     .order_by()
                     .values_list("item")
@@ -152,7 +191,7 @@ class LearnerClassroomViewset(ReadOnlyValuesViewset):
                 ),
                 answer_count=Subquery(
                     AttemptLog.objects.filter(
-                        sessionlog__content_id=OuterRef("id"), user=self.request.user
+                        sessionlog__content_id=OuterRef("id"), user=user
                     )
                     .order_by()
                     .values_list("item")
@@ -224,12 +263,17 @@ class LearnerClassroomViewset(ReadOnlyValuesViewset):
                     break
             exam["missing_resource"] = missing_resource
 
+        course_filter = Q(
+            collection__in=staff_classroom_ids,
+            is_active=True,
+        ) | Q(
+            assignments__collection__membership__user=user,
+            collection__in=item_classroom_ids,
+            is_active=True,
+        )
+
         courses = (
-            CourseSession.objects.filter(
-                assignments__collection__membership__user=self.request.user,
-                collection__in=(c["id"] for c in items),
-                is_active=True,
-            )
+            CourseSession.objects.filter(course_filter)
             .distinct()
             .values("id", "course", "title", "description", "is_active", "collection")
         )

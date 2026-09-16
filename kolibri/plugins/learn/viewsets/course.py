@@ -1,9 +1,11 @@
+from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from kolibri.core.api import ReadOnlyValuesViewset
+from kolibri.core.auth.constants import role_kinds
 from kolibri.core.auth.models import Classroom
 from kolibri.core.courses.models import CourseSession
 
@@ -53,11 +55,16 @@ class LearnerCourseViewset(ReadOnlyValuesViewset):
     def get_queryset(self):
         if self.request.user.is_anonymous:
             return CourseSession.objects.none()
-        # distinct() needed: a course session can be assigned to multiple
-        # sub-collections the user belongs to (e.g. classroom + learner group),
-        # which would produce duplicate rows without it (a4244f1b8e).
+        user = self.request.user
+        if user.is_superuser:
+            return CourseSession.objects.filter(is_active=True).distinct()
+        coach_collections = user.roles.filter(
+            kind__in=[role_kinds.ADMIN, role_kinds.COACH, role_kinds.ASSIGNABLE_COACH]
+        ).values_list("collection_id", flat=True)
         return CourseSession.objects.filter(
-            assignments__collection__membership__user=self.request.user,
+            Q(assignments__collection__membership__user=user)
+            | Q(collection__in=coach_collections)
+            | Q(collection__parent__in=coach_collections),
             is_active=True,
         ).distinct()
 

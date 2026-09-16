@@ -57,6 +57,9 @@ from kolibri.core.api import CreateModelMixin
 from kolibri.core.api import ListModelMixin
 from kolibri.core.api import ReadOnlyValuesViewset
 from kolibri.core.api import ValuesViewsetOrderingFilter
+from kolibri.core.auth.constants.role_kinds import ADMIN
+from kolibri.core.auth.constants.role_kinds import ASSIGNABLE_COACH
+from kolibri.core.auth.constants.role_kinds import COACH
 from kolibri.core.auth.middleware import session_exempt
 from kolibri.core.auth.permissions import KolibriAuthPermissions
 from kolibri.core.auth.permissions import KolibriAuthPermissionsFilter
@@ -1626,15 +1629,26 @@ class UserContentNodeFilter(ContentNodeFilter):
     popular = BooleanFilter(method="filter_by_popular")
 
     def filter_by_lesson(self, queryset, name, value):
-        lesson = (
-            Lesson.objects.filter(
-                lesson_assignments__collection__membership__user=self.request.user,
-                is_active=True,
-                pk=value,
-            ).first()
-            if self.request.user.is_authenticated
-            else None
-        )
+        user = self.request.user
+        if not user.is_authenticated:
+            return queryset.none()
+        if user.is_superuser:
+            lesson = Lesson.objects.filter(is_active=True, pk=value).first()
+        else:
+            coach_collections = user.roles.filter(
+                kind__in=[ADMIN, COACH, ASSIGNABLE_COACH]
+            ).values_list("collection_id", flat=True)
+            lesson = (
+                Lesson.objects.filter(
+                    Q(lesson_assignments__collection__membership__user=user)
+                    | Q(collection__in=coach_collections)
+                    | Q(collection__parent__in=coach_collections),
+                    is_active=True,
+                    pk=value,
+                )
+                .distinct()
+                .first()
+            )
         if lesson is None:
             return queryset.none()
         node_ids = [

@@ -6,6 +6,8 @@ from le_utils.constants.labels import learning_activities
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from kolibri.core.auth.constants import role_kinds
+from kolibri.core.auth.models import Classroom
 from kolibri.core.auth.models import Facility
 from kolibri.core.content.api import ContentNodeProgressViewset
 from kolibri.core.content.api import ContentNodeViewset
@@ -38,9 +40,28 @@ class LearnStateView(APIView):
                     "can_download_externally": can_download_externally,
                 }
             )
+        in_classes = request.user.memberships.exists()
+        if not in_classes and (
+            request.user.is_superuser
+            or getattr(request.user, "can_manage_content", False)
+        ):
+            in_classes = Classroom.objects.exists()
+        elif not in_classes:
+            coach_collections = request.user.roles.filter(
+                kind__in=[
+                    role_kinds.ADMIN,
+                    role_kinds.COACH,
+                    role_kinds.ASSIGNABLE_COACH,
+                ]
+            ).values_list("collection_id", flat=True)
+            if coach_collections.exists():
+                in_classes = Classroom.objects.filter(
+                    Q(id__in=coach_collections) | Q(parent__in=coach_collections)
+                ).exists()
+
         return Response(
             {
-                "in_classes": request.user.memberships.exists(),
+                "in_classes": in_classes,
                 "can_download_externally": request.user.dataset.show_download_button_in_learn,
             }
         )

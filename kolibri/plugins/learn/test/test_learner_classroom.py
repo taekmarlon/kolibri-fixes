@@ -10,6 +10,7 @@ from kolibri.core.auth.models import Facility
 from kolibri.core.auth.models import FacilityUser
 from kolibri.core.auth.models import LearnerGroup
 from kolibri.core.auth.test.helpers import clear_process_cache
+from kolibri.core.auth.test.helpers import create_superuser
 from kolibri.core.auth.test.helpers import KolibriAPITestCase as APITestCase
 from kolibri.core.auth.test.helpers import provision_device
 from kolibri.core.content.models import ContentNode
@@ -280,3 +281,56 @@ class LearnerClassroomTestCase(APITestCase):
         list_request = self.client.get(reverse(self.basename + "-list"))
         self.assertEqual(len(list_request.data), 1)
         self.assertEqual(len(list_request.data[0]["courses"]), 1)
+
+    def test_superuser_sees_all_classrooms_and_active_assignments(self):
+        create_superuser(self.facility, username="superuser")
+        exam = Exam.objects.create(
+            title="Active Exam",
+            collection=self.own_classroom,
+            question_count=5,
+            creator=self.coach_user,
+            active=True,
+        )
+        lesson = Lesson.objects.create(
+            title="Active Lesson",
+            collection=self.own_classroom,
+            is_active=True,
+            created_by=self.coach_user,
+        )
+        self.client.login(username="superuser", password="password")
+        list_request = self.client.get(reverse(self.basename + "-list"))
+        self.assertGreaterEqual(len(list_request.data), 1)
+        own_class_data = next(
+            (c for c in list_request.data if c["id"] == self.own_classroom.id), None
+        )
+        self.assertIsNotNone(own_class_data)
+        self.assertEqual(len(own_class_data["exams"]), 1)
+        self.assertEqual(own_class_data["exams"][0]["id"], exam.id)
+        self.assertEqual(len(own_class_data["lessons"]), 1)
+        self.assertEqual(own_class_data["lessons"][0]["id"], lesson.id)
+
+    def test_coach_sees_classroom_and_active_assignments_without_learner_membership(
+        self,
+    ):
+        self.own_classroom.add_coach(self.coach_user)
+        exam = Exam.objects.create(
+            title="Coach Active Exam",
+            collection=self.own_classroom,
+            question_count=5,
+            creator=self.coach_user,
+            active=True,
+        )
+        lesson = Lesson.objects.create(
+            title="Coach Active Lesson",
+            collection=self.own_classroom,
+            is_active=True,
+            created_by=self.coach_user,
+        )
+        self.client.login(username="admin", password="password")
+        list_request = self.client.get(reverse(self.basename + "-list"))
+        self.assertEqual(len(list_request.data), 1)
+        self.assertEqual(list_request.data[0]["id"], self.own_classroom.id)
+        self.assertEqual(len(list_request.data[0]["exams"]), 1)
+        self.assertEqual(list_request.data[0]["exams"][0]["id"], exam.id)
+        self.assertEqual(len(list_request.data[0]["lessons"]), 1)
+        self.assertEqual(list_request.data[0]["lessons"][0]["id"], lesson.id)
