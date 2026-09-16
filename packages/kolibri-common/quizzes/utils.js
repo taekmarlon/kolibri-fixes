@@ -185,8 +185,32 @@ export async function convertExamQuestionSources(exam) {
 }
 
 /**
- * Convert an exam to the latest data model and fetch the exercise nodes for the
- * questions it references.
+ * Checks whether a question source item represents a custom or interactive activity.
+ * @param {object} question - The question object.
+ * @returns {boolean} True if the question is custom or interactive.
+ */
+export function isCustomQuestion(question) {
+  if (!question) {
+    return false;
+  }
+  return Boolean(
+    question.is_custom ||
+      question.h5p_content_id ||
+      question.h5p_url ||
+      question.file_url ||
+      question.custom_type ||
+      question.question_type === 'h5p' ||
+      question.question_type === 'interactive' ||
+      (question.question_type === 'multiple_choice' && question.is_custom) ||
+      (question.options && question.options.length) ||
+      question.question_type === 'short_answer',
+  );
+}
+
+/**
+ * Hydrates an exam's question sources to the latest version, extracts exercise IDs,
+ * and fetches the corresponding ContentNodes from the API.
+ *
  * @param {object} exam - The exam to be hydrated; mutated to the latest schema.
  * @returns {Promise<{exam: object, exercises: Array<object>}>} Resolves to an object
  * containing the converted exam and the fetched exercise content nodes.
@@ -199,23 +223,31 @@ export async function fetchExamWithContent(exam) {
         acc = [
           ...acc,
           ...section.questions
-            .filter(
-              item =>
-                !item.is_custom &&
-                !item.h5p_content_id &&
-                !item.file_url &&
-                item.exercise_id,
-            )
+            .filter(item => !isCustomQuestion(item) && item.exercise_id)
             .map(item => item.exercise_id),
         ];
         return acc;
       }, []),
     );
 
+    const customQuestions = exam.question_sources.reduce((acc, section) => {
+      return [...acc, ...section.questions.filter(item => isCustomQuestion(item))];
+    }, []);
+
+    const syntheticExercises = customQuestions.map(item => ({
+      id: item.exercise_id,
+      title: item.title || item.prompt || 'Custom Activity',
+      available: true,
+      is_custom: true,
+      files: [],
+      extra_fields: {},
+      assessmentmetadata: { assessment_item_ids: [item.question_id || item.item] },
+    }));
+
     if (ids.length === 0) {
       return Promise.resolve({
         exam,
-        exercises: [],
+        exercises: syntheticExercises,
       });
     }
 
@@ -227,7 +259,7 @@ export async function fetchExamWithContent(exam) {
     }).then(exercises => {
       return {
         exam,
-        exercises,
+        exercises: [...exercises, ...syntheticExercises],
       };
     });
   });

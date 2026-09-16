@@ -330,7 +330,7 @@
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import ImmersivePage from 'kolibri/components/pages/ImmersivePage';
   import TimeDuration from 'kolibri-common/components/TimeDuration';
-  import { annotateSections } from 'kolibri-common/quizzes/utils';
+  import { annotateSections, isCustomQuestion } from 'kolibri-common/quizzes/utils';
   import useUser from 'kolibri/composables/useUser';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
   import ResourceSyncingUiAlert from '../ResourceSyncingUiAlert';
@@ -650,16 +650,7 @@
             this.$router.replace({ name: ClassesPageNames.CLASS_ASSIGNMENTS });
           });
       },
-      isCustomQuestion(q) {
-        if (!q) return false;
-        return Boolean(
-          q.is_custom ||
-          q.h5p_content_id ||
-          q.file_url ||
-          q.question_type === 'h5p' ||
-          q.question_type === 'interactive',
-        );
-      },
+      isCustomQuestion,
       checkAnswer() {
         if (
           this.currentQuestion &&

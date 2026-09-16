@@ -7,6 +7,7 @@ function defaultState() {
     learnerMap: {},
     exercise: {},
     exam: null,
+    question: null,
     interactionIndex: 0,
     learnerId: null,
     questionId: null,

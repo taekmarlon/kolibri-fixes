@@ -57,8 +57,15 @@
               :selectedInteractionIndex="interactionIndex"
               @select="navigateToNewInteraction($event)"
             />
+            <CustomQuestionViewer
+              v-if="question && isCustomQuestion(question)"
+              :question="question"
+              :answerState="answerState"
+              :showCorrectAnswer="showCorrectAnswer"
+              :preview="true"
+            />
             <ContentViewer
-              v-if="currentInteraction"
+              v-else-if="currentInteraction && exercise && exercise.files"
               :itemId="currentLearner.item"
               :assessment="true"
               :allowHints="false"
@@ -85,6 +92,8 @@
   import CoachContentLabel from 'kolibri-common/components/labels/CoachContentLabel';
   import commonCoreStrings from 'kolibri/uiText/commonCoreStrings';
   import { pageLoading } from 'kolibri-common/composables/usePageLoading';
+  import CustomQuestionViewer from 'kolibri-common/components/CustomQuestionViewer.vue';
+  import { isCustomQuestion } from 'kolibri-common/quizzes/utils';
   import commonCoach from '../../common';
   import CoachImmersivePage from '../../CoachImmersivePage';
   import QuestionDetailLearnerList from '../QuestionDetailLearnerList';
@@ -98,6 +107,7 @@
       MultiPaneLayout,
       CoachContentLabel,
       CoachImmersivePage,
+      CustomQuestionViewer,
     },
     mixins: [commonCoach, commonCoreStrings],
     setup() {
@@ -112,6 +122,7 @@
     computed: {
       ...mapState('questionDetail', [
         'exercise',
+        'question',
         'interactionIndex',
         'learnerId',
         'questionId',
@@ -183,6 +194,7 @@
         this.showCorrectAnswer = !this.showCorrectAnswer;
         this.$forceUpdate();
       },
+      isCustomQuestion,
     },
   };
 

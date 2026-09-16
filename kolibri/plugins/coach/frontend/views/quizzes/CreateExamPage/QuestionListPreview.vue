@@ -113,23 +113,32 @@
       :layout8="{ span: windowIsSmall ? 8 : 4 }"
       :layout12="{ span: windowIsSmall ? 12 : 7 }"
     >
-      <h3
-        v-if="content && content.available"
-        class="question-title"
-      >
-        {{ displayQuestionTitle(currentQuestion, content.title) }}
-      </h3>
-      <ContentViewer
-        v-if="content && content.available && currentQuestion.question_id"
-        ref="contentViewer"
-        :files="content.files"
-        :extraFields="content.extra_fields"
-        :itemId="currentQuestion.question_id"
-        :assessment="true"
-        :allowHints="false"
-        :showCorrectAnswer="true"
-        :interactive="false"
-      />
+      <div v-if="currentQuestion && isCustomQuestion(currentQuestion)">
+        <h3 class="question-title">
+          {{ displayQuestionTitle(currentQuestion, currentQuestion.title || '') }}
+        </h3>
+        <CustomQuestionViewer
+          :question="currentQuestion"
+          :preview="true"
+          :showCorrectAnswer="true"
+        />
+      </div>
+      <template v-else-if="content && content.available">
+        <h3 class="question-title">
+          {{ displayQuestionTitle(currentQuestion, content.title) }}
+        </h3>
+        <ContentViewer
+          v-if="currentQuestion.question_id"
+          ref="contentViewer"
+          :files="content.files"
+          :extraFields="content.extra_fields"
+          :itemId="currentQuestion.question_id"
+          :assessment="true"
+          :allowHints="false"
+          :showCorrectAnswer="true"
+          :interactive="false"
+        />
+      </template>
       <p v-else>
         <KIcon
           icon="warning"
@@ -148,9 +157,10 @@
   import { ref, computed, toRefs, watch } from 'vue';
   import commonCoreStrings, { coreStrings } from 'kolibri/uiText/commonCoreStrings';
   import useAccordion from 'kolibri-common/components/useAccordion';
-  import AccordionItem from 'kolibri-common/components/AccordionItem';
   import AccordionContainer from 'kolibri-common/components/AccordionContainer';
-  import { annotateSections } from 'kolibri-common/quizzes/utils';
+  import AccordionItem from 'kolibri-common/components/AccordionItem';
+  import { annotateSections, isCustomQuestion } from 'kolibri-common/quizzes/utils';
+  import CustomQuestionViewer from 'kolibri-common/components/CustomQuestionViewer.vue';
   import {
     displayQuestionTitle,
     displaySectionTitle,
@@ -163,6 +173,7 @@
     components: {
       AccordionContainer,
       AccordionItem,
+      CustomQuestionViewer,
     },
     mixins: [commonCoreStrings],
     setup(props) {
@@ -269,6 +280,7 @@
         content,
         currentQuestion,
         annotatedSections,
+        isCustomQuestion,
 
         questionSelectOptions,
         sectionSelectOptions,

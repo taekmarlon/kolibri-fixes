@@ -148,6 +148,25 @@
                     <span style="font-weight: 600;">{{ acceptedAnswersLabel$() }}: </span>
                     <span>{{ (question.answer_key || []).join(', ') }}</span>
                   </div>
+                  <div
+                    v-else-if="isInteractiveQuestion(question)"
+                    style="margin-top: 12px;"
+                  >
+                    <iframe
+                      v-if="question.file_url || question.h5p_url || question.h5p_content_id"
+                      :src="question.file_url || question.h5p_url || (question.h5p_content_id ? `/h5p/play/${question.h5p_content_id}` : '')"
+                      style="width: 100%; min-height: 480px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
+                      sandbox="allow-scripts allow-same-origin"
+                      allow="fullscreen; geolocation; microphone; camera; midi"
+                    ></iframe>
+                    <iframe
+                      v-else-if="question.content"
+                      :srcdoc="question.content"
+                      style="width: 100%; min-height: 480px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
+                      sandbox="allow-scripts allow-same-origin"
+                      allow="fullscreen; geolocation; microphone; camera; midi"
+                    ></iframe>
+                  </div>
                 </div>
                 <ContentViewer
                   v-else-if="questionContentExists(question)"
@@ -431,6 +450,18 @@
         }
         const content = this.getQuestionContent(question);
         return content && content.available;
+      },
+      isInteractiveQuestion(q) {
+        if (!q) return false;
+        const type = (q.question_type || '').toLowerCase();
+        return (
+          type === 'h5p' ||
+          type === 'interactive' ||
+          Boolean(q.file_url) ||
+          Boolean(q.h5p_content_id) ||
+          Boolean(q.h5p_url) ||
+          (Boolean(q.content) && type !== 'short_answer')
+        );
       },
     },
   };

@@ -376,6 +376,27 @@
               </div>
             </div>
 
+            <!-- Interactive Activity Review -->
+            <div
+              v-else-if="isInteractiveQuestion(currentQuestion)"
+              class="interactive-activity-review"
+            >
+              <iframe
+                v-if="currentQuestion.file_url || currentQuestion.h5p_url || currentQuestion.h5p_content_id"
+                :src="currentQuestion.file_url || currentQuestion.h5p_url || (currentQuestion.h5p_content_id ? `/h5p/play/${currentQuestion.h5p_content_id}` : '')"
+                style="width: 100%; min-height: 480px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
+                sandbox="allow-scripts allow-same-origin"
+                allow="fullscreen; geolocation; microphone; camera; midi"
+              ></iframe>
+              <iframe
+                v-else-if="currentQuestion.content"
+                :srcdoc="currentQuestion.content"
+                style="width: 100%; min-height: 480px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
+                sandbox="allow-scripts allow-same-origin"
+                allow="fullscreen; geolocation; microphone; camera; midi"
+              ></iframe>
+            </div>
+
             <!-- Explanation (if provided) -->
             <div
               v-if="
@@ -430,7 +451,7 @@
   import MasteryLogResource from 'kolibri-common/apiResources/MasteryLogResource';
   import useNow from 'kolibri/composables/useNow';
   import { createTranslator } from 'kolibri/utils/i18n';
-  import { annotateSections } from 'kolibri-common/quizzes/utils';
+  import { annotateSections, isCustomQuestion } from 'kolibri-common/quizzes/utils';
   import MissingResourceAlert from 'kolibri-common/components/MissingResourceAlert';
   import { displaySectionTitle } from 'kolibri-common/strings/enhancedQuizManagementStrings';
   import AttemptLogList from './AttemptLogList';
@@ -724,7 +745,7 @@
         return this.questions && this.questions[this.questionNumber];
       },
       currentQuestionIsCustom() {
-        return Boolean(this.currentQuestion && this.currentQuestion.is_custom);
+        return Boolean(this.currentQuestion && isCustomQuestion(this.currentQuestion));
       },
       currentLearnerAnswerText() {
         if (!this.currentAttempt || this.currentAttempt.answer == null) return '';
@@ -764,6 +785,18 @@
       isChoiceCorrect(optId) {
         if (!this.currentQuestion || !this.currentQuestion.answer_key) return false;
         return this.currentQuestion.answer_key.includes(optId);
+      },
+      isInteractiveQuestion(q) {
+        if (!q) return false;
+        const type = (q.question_type || '').toLowerCase();
+        return (
+          type === 'h5p' ||
+          type === 'interactive' ||
+          Boolean(q.file_url) ||
+          Boolean(q.h5p_content_id) ||
+          Boolean(q.h5p_url) ||
+          (Boolean(q.content) && type !== 'short_answer')
+        );
       },
       navigateToQuestion(questionNumber) {
         if (questionNumber !== this.questionNumber) {

@@ -1,6 +1,6 @@
 import ContentNodeResource from 'kolibri-common/apiResources/ContentNodeResource';
 import store from 'kolibri/store';
-import { fetchExamWithContent } from 'kolibri-common/quizzes/utils';
+import { fetchExamWithContent, isCustomQuestion } from 'kolibri-common/quizzes/utils';
 import { pageLoading } from 'kolibri-common/composables/usePageLoading';
 import { coachStrings } from '../../views/common/commonCoachStrings';
 
@@ -57,14 +57,28 @@ function showQuestionDetailView(params) {
   }
   return promise
     .then(exam => {
-      return ContentNodeResource.fetchModel({ id: exerciseNodeId }).then(exercise => {
+      const question = exam ? questions.find(source => source.item === questionId) : null;
+      let fetchExercise;
+      if (question && isCustomQuestion(question)) {
+        fetchExercise = Promise.resolve({
+          id: exerciseNodeId,
+          title: question.title || question.prompt || 'Custom Activity',
+          available: true,
+          is_custom: true,
+          files: [],
+          extra_fields: {},
+          assessmentmetadata: { assessment_item_ids: [questionId] },
+        });
+      } else {
+        fetchExercise = ContentNodeResource.fetchModel({ id: exerciseNodeId });
+      }
+      return fetchExercise.then(exercise => {
         exercise.assessmentmetadata = exercise.assessmentmetadata || {};
         let title;
         if (exam) {
-          const question = questions.find(source => source.item === questionId);
           title = coachStrings.$tr('nthExerciseName', {
-            name: question.title,
-            number: question.counter_in_exercise,
+            name: question ? question.title : '',
+            number: question ? question.counter_in_exercise : 1,
           });
         } else {
           const questionNumber = Math.max(
@@ -83,6 +97,7 @@ function showQuestionDetailView(params) {
           title,
           exercise,
           exam,
+          question,
         });
         return store
           .dispatch('questionDetail/setLearners', {

@@ -1,7 +1,7 @@
 import map from 'lodash/map';
 import ContentNodeResource from 'kolibri-common/apiResources/ContentNodeResource';
 import { MAX_QUESTIONS_PER_QUIZ_SECTION } from 'kolibri/constants';
-import { convertExamQuestionSources } from '../utils';
+import { convertExamQuestionSources, fetchExamWithContent, isCustomQuestion } from '../utils';
 
 // map of content IDs to lists of question IDs
 const QUESTION_IDS = {
@@ -514,6 +514,64 @@ describe('exam utils', () => {
           return q;
         }),
       );
+    });
+  });
+
+  describe('isCustomQuestion and fetchExamWithContent with custom/interactive activities', () => {
+    it('isCustomQuestion returns true for custom questions and interactive activities', () => {
+      expect(isCustomQuestion(null)).toBe(false);
+      expect(isCustomQuestion({})).toBe(false);
+      expect(
+        isCustomQuestion({
+          exercise_id: 'e1',
+          question_id: 'q1',
+        }),
+      ).toBe(false);
+
+      expect(isCustomQuestion({ is_custom: true })).toBe(true);
+      expect(isCustomQuestion({ custom_type: 'h5p' })).toBe(true);
+      expect(isCustomQuestion({ h5p_content_id: '123' })).toBe(true);
+      expect(isCustomQuestion({ file_url: '/api/exams/custom_file/test.h5p' })).toBe(true);
+      expect(isCustomQuestion({ question_type: 'h5p' })).toBe(true);
+      expect(isCustomQuestion({ question_type: 'interactive' })).toBe(true);
+      expect(isCustomQuestion({ question_type: 'short_answer' })).toBe(true);
+      expect(isCustomQuestion({ options: [{ id: 'opt1', text: 'A' }] })).toBe(true);
+    });
+
+    it('fetchExamWithContent generates synthetic exercises for custom questions', async () => {
+      const customExam = {
+        id: 'custom-exam-1',
+        data_model_version: 3,
+        question_sources: [
+          {
+            section_title: 'Section 1',
+            questions: [
+              {
+                exercise_id: 'custom-exercise-uuid',
+                question_id: 'custom-question-uuid',
+                item: 'custom-exercise-uuid:custom-question-uuid',
+                title: 'ADDITION 1-10',
+                is_custom: true,
+                question_type: 'h5p',
+                file_url: '/api/exams/custom_file/addition.h5p',
+              },
+            ],
+          },
+        ],
+      };
+
+      const { exam, exercises } = await fetchExamWithContent(customExam);
+      expect(exam.id).toBe('custom-exam-1');
+      expect(exercises).toHaveLength(1);
+      expect(exercises[0]).toEqual({
+        id: 'custom-exercise-uuid',
+        title: 'ADDITION 1-10',
+        available: true,
+        is_custom: true,
+        files: [],
+        extra_fields: {},
+        assessmentmetadata: { assessment_item_ids: ['custom-question-uuid'] },
+      });
     });
   });
 });
