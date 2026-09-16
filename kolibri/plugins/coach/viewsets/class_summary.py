@@ -288,6 +288,15 @@ def serialize_lessons(request, pk):
     )
 
 
+def _is_custom_question(question):
+    return bool(
+        question.get("is_custom")
+        or question.get("h5p_content_id")
+        or question.get("file_url")
+        or question.get("question_type") in ("h5p", "interactive")
+    )
+
+
 def _map_exam(item):
     data_model_version = item.get("data_model_version")
     if data_model_version == 3:
@@ -296,12 +305,14 @@ def _map_exam(item):
             for question_source in item.get("question_sources", [])
             for question in question_source.get("questions", [])
             if question.get("exercise_id") is not None
+            and not _is_custom_question(question)
         ]
     else:
         item["node_ids"] = [
             question["exercise_id"]
             for question in item.get("question_sources", [])
             if question.get("exercise_id") is not None
+            and not _is_custom_question(question)
         ]
     return item
 
@@ -331,6 +342,65 @@ class ClassSummaryPermissions(permissions.BasePermission):
             )
         except (Collection.DoesNotExist, ValueError):
             return False
+
+
+def _extract_custom_lesson_content(lesson_data, custom_node_ids):
+    custom_content = []
+    for lesson in lesson_data:
+        for resource in lesson.get("resources", []) or []:
+            if resource.get("is_custom"):
+                node_id = resource.get("contentnode_id") or resource.get("content_id")
+                if node_id and node_id not in custom_node_ids:
+                    custom_node_ids.add(node_id)
+                    res_type = resource.get("resource_type", "")
+                    kind = CUSTOM_RESOURCE_KIND_MAP.get(
+                        res_type, content_kinds.DOCUMENT
+                    )
+                    custom_content.append(
+                        {
+                            "available": True,
+                            "content_id": resource.get("content_id") or node_id,
+                            "title": resource.get("title") or "Custom Resource",
+                            "kind": kind,
+                            "channel_id": resource.get("channel_id", ""),
+                            "options": {},
+                            "node_id": node_id,
+                            "is_custom": True,
+                            "resource_type": res_type,
+                        }
+                    )
+    return custom_content
+
+
+def _extract_custom_exam_content(exam_data, custom_node_ids):
+    custom_content = []
+    for exam in exam_data:
+        data_model_version = exam.get("data_model_version")
+        questions = []
+        if data_model_version == 3:
+            for qs in exam.get("question_sources", []):
+                questions.extend(qs.get("questions", []))
+        else:
+            questions.extend(exam.get("question_sources", []))
+        for question in questions:
+            if _is_custom_question(question):
+                node_id = question.get("exercise_id")
+                if node_id and node_id not in custom_node_ids:
+                    custom_node_ids.add(node_id)
+                    custom_content.append(
+                        {
+                            "available": True,
+                            "content_id": question.get("question_id") or node_id,
+                            "title": question.get("title") or "Custom Question",
+                            "kind": content_kinds.EXERCISE,
+                            "channel_id": "",
+                            "options": {},
+                            "node_id": node_id,
+                            "is_custom": True,
+                            "resource_type": question.get("question_type", "h5p"),
+                        }
+                    )
+    return custom_content
 
 
 class ClassSummaryViewSet(viewsets.ViewSet):
@@ -363,31 +433,8 @@ class ClassSummaryViewSet(viewsets.ViewSet):
         )
 
         custom_node_ids = set()
-        for lesson in lesson_data:
-            for resource in lesson.get("resources", []) or []:
-                if resource.get("is_custom"):
-                    node_id = resource.get("contentnode_id") or resource.get(
-                        "content_id"
-                    )
-                    if node_id and node_id not in custom_node_ids:
-                        custom_node_ids.add(node_id)
-                        res_type = resource.get("resource_type", "")
-                        kind = CUSTOM_RESOURCE_KIND_MAP.get(
-                            res_type, content_kinds.DOCUMENT
-                        )
-                        content.append(
-                            {
-                                "available": True,
-                                "content_id": resource.get("content_id") or node_id,
-                                "title": resource.get("title") or "Custom Resource",
-                                "kind": kind,
-                                "channel_id": resource.get("channel_id", ""),
-                                "options": {},
-                                "node_id": node_id,
-                                "is_custom": True,
-                                "resource_type": res_type,
-                            }
-                        )
+        content.extend(_extract_custom_lesson_content(lesson_data, custom_node_ids))
+        content.extend(_extract_custom_exam_content(exam_data, custom_node_ids))
 
         # final list of available nodes
         node_lookup = {node["node_id"]: node for node in content}

@@ -199,7 +199,13 @@ export async function fetchExamWithContent(exam) {
         acc = [
           ...acc,
           ...section.questions
-            .filter(item => !item.is_custom && item.exercise_id)
+            .filter(
+              item =>
+                !item.is_custom &&
+                !item.h5p_content_id &&
+                !item.file_url &&
+                item.exercise_id,
+            )
             .map(item => item.exercise_id),
         ];
         return acc;

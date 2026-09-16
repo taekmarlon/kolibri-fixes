@@ -622,6 +622,7 @@
           if (props.isQuizMode) {
             let fileUrl = '';
             let bundleContent = '';
+            let fileSize = 0;
             try {
               const exportRes = await client({
                 url: '/api/exams/exam/export_h5p/',
@@ -634,6 +635,7 @@
               if (exportRes && exportRes.data) {
                 fileUrl = exportRes.data.file_url || '';
                 bundleContent = exportRes.data.content || '';
+                fileSize = exportRes.data.file_size || 0;
               }
             } catch (exportErr) {
               // Fallback to dynamic player URL if export fails
@@ -652,6 +654,7 @@
               h5p_content_id: String(contentId),
               h5p_url: `/h5p/play/${contentId}`,
               file_url: fileUrl,
+              file_size: fileSize,
               content: bundleContent,
               prompt: activityTitle,
               options: [],
@@ -945,7 +948,7 @@
                 headers: { 'Content-Type': 'multipart/form-data' },
               });
 
-              const { file_url } = resp.data;
+              const { file_url, file_size } = resp.data;
               const exerciseId = generateHexId();
               const qId = generateHexId();
               const questions = [
@@ -956,8 +959,9 @@
                   title: activityTitle,
                   counter_in_exercise: 1,
                   is_custom: true,
-                  question_type: 'interactive',
+                  question_type: 'h5p',
                   file_url: file_url,
+                  file_size: file_size || 0,
                   prompt: activityTitle,
                   description: h5pDescription.value.trim(),
                   options: [],

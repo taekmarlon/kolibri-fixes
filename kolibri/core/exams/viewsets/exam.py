@@ -76,6 +76,7 @@ class QuestionSourceSerializer(Serializer):
     h5p_content_id = CharField(default="", allow_blank=True, required=False)
     content = CharField(default="", allow_blank=True, required=False)
     file_url = CharField(default="", allow_blank=True, required=False)
+    file_size = IntegerField(default=0, required=False)
     h5p_url = CharField(default="", allow_blank=True, required=False)
     description = CharField(default="", allow_blank=True, required=False)
 
@@ -704,10 +705,38 @@ class ExamViewset(ValuesViewset):
                 id__in=[
                     question["exercise_id"]
                     for question in exam.get_questions()
-                    if not question.get("is_custom") and question.get("exercise_id")
+                    if not question.get("is_custom")
+                    and not question.get("h5p_content_id")
+                    and not question.get("file_url")
+                    and question.get("exercise_id")
                 ]
             )
-            exams_sizes_set.append({exam.id: total_file_size(quiz_nodes)})
+            custom_size = 0
+            for question in exam.get_questions():
+                if (
+                    question.get("is_custom")
+                    or question.get("h5p_content_id")
+                    or question.get("file_url")
+                ):
+                    file_size = question.get("file_size")
+                    if file_size:
+                        custom_size += file_size
+                    else:
+                        file_url = question.get("file_url")
+                        if file_url:
+                            rel_path = file_url.lstrip("/")
+                            if rel_path.startswith("media/"):
+                                rel_path = rel_path[len("media/") :]
+                            full_path = os.path.join(settings.MEDIA_ROOT, rel_path)
+                            if os.path.exists(full_path):
+                                try:
+                                    custom_size += os.path.getsize(full_path)
+                                except OSError:
+                                    pass
+                        elif question.get("content"):
+                            custom_size += len(question.get("content").encode("utf-8"))
+
+            exams_sizes_set.append({exam.id: total_file_size(quiz_nodes) + custom_size})
 
         return Response(exams_sizes_set)
 

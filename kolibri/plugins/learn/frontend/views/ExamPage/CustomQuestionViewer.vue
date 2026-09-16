@@ -117,13 +117,15 @@
 
     <!-- H5P / Interactive Activity -->
     <div
-      v-else-if="question.question_type === 'h5p' || question.question_type === 'interactive'"
+      v-else-if="isInteractiveQuestion"
       class="interactive-question-container mt-16"
     >
       <iframe
         v-if="resolvedInteractiveUrl"
+        :key="resolvedInteractiveUrl"
         :src="resolvedInteractiveUrl"
         class="interactive-player-iframe"
+        sandbox="allow-scripts allow-same-origin"
         style="width: 100%; min-height: 560px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
         allow="fullscreen; geolocation; microphone; camera; midi"
       ></iframe>
@@ -133,24 +135,38 @@
         class="interactive-srcdoc-iframe"
         sandbox="allow-scripts allow-same-origin"
         style="width: 100%; min-height: 560px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
+        allow="fullscreen; geolocation; microphone; camera; midi"
       ></iframe>
       <div
-        v-if="interactiveCompleted"
-        class="completion-badge mt-12"
-        :style="{
-          padding: '10px 16px',
-          backgroundColor: '#f0fdf4',
-          border: '1px solid #bbf7d0',
-          color: '#15803d',
-          borderRadius: '6px',
-          fontWeight: 'bold',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-        }"
+        class="interactive-controls mt-16"
+        style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;"
       >
-        <KIcon icon="check" />
-        <span>{{ activityCompletedLabel$() }}</span>
+        <div
+          v-if="interactiveCompleted"
+          class="completion-badge"
+          :style="{
+            padding: '8px 16px',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            color: '#15803d',
+            borderRadius: '6px',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }"
+        >
+          <KIcon icon="check" />
+          <span>{{ activityCompletedLabel$() }}</span>
+        </div>
+        <div v-else></div>
+
+        <KButton
+          :text="interactiveCompleted ? markAsIncompleteLabel$() : markAsCompletedLabel$()"
+          :appearance="interactiveCompleted ? 'flat-button' : 'raised-button'"
+          :primary="!interactiveCompleted"
+          @click="toggleInteractiveComplete"
+        />
       </div>
     </div>
   </div>
@@ -184,6 +200,14 @@
       message: 'Interactive Activity Completed!',
       context: 'Status badge when learner finishes interactive task',
     },
+    markAsCompletedLabel: {
+      message: 'Mark as completed',
+      context: 'Button label to mark interactive task complete',
+    },
+    markAsIncompleteLabel: {
+      message: 'Mark as incomplete',
+      context: 'Button label to toggle interactive task incomplete',
+    },
   });
 
   export default {
@@ -205,6 +229,20 @@
         props.answerState === 'completed' || Boolean(props.answerState),
       );
 
+      const isInteractiveQuestion = computed(() => {
+        const q = props.question;
+        if (!q) return false;
+        const type = (q.question_type || '').toLowerCase();
+        return (
+          type === 'h5p' ||
+          type === 'interactive' ||
+          Boolean(q.file_url) ||
+          Boolean(q.h5p_content_id) ||
+          Boolean(q.h5p_url) ||
+          (Boolean(q.content) && type !== 'short_answer')
+        );
+      });
+
       const resolvedInteractiveUrl = computed(() => {
         const q = props.question;
         if (!q) return '';
@@ -213,6 +251,11 @@
         if (q.h5p_content_id) return `/h5p/play/${q.h5p_content_id}`;
         return '';
       });
+
+      function toggleInteractiveComplete() {
+        interactiveCompleted.value = !interactiveCompleted.value;
+        emit('interaction');
+      }
 
       function onWindowMessage(event) {
         if (!event.data) return;
@@ -252,7 +295,8 @@
             shortAnswerText.value = typeof newVal === 'string' ? newVal : '';
           } else if (
             props.question.question_type === 'h5p' ||
-            props.question.question_type === 'interactive'
+            props.question.question_type === 'interactive' ||
+            isInteractiveQuestion.value
           ) {
             interactiveCompleted.value = newVal === 'completed' || Boolean(newVal);
           }
@@ -317,7 +361,7 @@
             const lowerAnswer = simpleAnswer.toLowerCase();
             isCorrect = expected.map(s => s.toLowerCase()).includes(lowerAnswer);
           }
-        } else if (type === 'h5p' || type === 'interactive') {
+        } else if (type === 'h5p' || type === 'interactive' || isInteractiveQuestion.value) {
           const isDone = Boolean(interactiveCompleted.value);
           answerState = isDone ? 'completed' : null;
           simpleAnswer = isDone ? 'Completed' : 'In progress';
@@ -336,7 +380,9 @@
         selectedOptions,
         shortAnswerText,
         interactiveCompleted,
+        isInteractiveQuestion,
         resolvedInteractiveUrl,
+        toggleInteractiveComplete,
         selectSingleChoice,
         toggleMultiChoice,
         isChoiceChecked,

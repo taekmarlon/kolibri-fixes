@@ -183,7 +183,7 @@
                 {{ $tr('question', { num: questionNumber + 1, total: exam.question_count }) }}
               </h2>
               <CustomQuestionViewer
-                v-if="currentQuestion && currentQuestion.is_custom"
+                v-if="currentQuestion && isCustomQuestion(currentQuestion)"
                 ref="customViewer"
                 :question="currentQuestion"
                 :answerState="currentAttempt ? currentAttempt.answer : null"
@@ -501,7 +501,9 @@
         return this.currentQuestion ? this.currentQuestion.exercise_id : null;
       },
       missingResources() {
-        return this.questions.some(q => !q.is_custom && !this.contentNodeMap[q.exercise_id]);
+        return this.questions.some(
+          q => !this.isCustomQuestion(q) && !this.contentNodeMap[q.exercise_id],
+        );
       },
       itemId() {
         return this.currentQuestion ? this.currentQuestion.question_id : null;
@@ -648,8 +650,22 @@
             this.$router.replace({ name: ClassesPageNames.CLASS_ASSIGNMENTS });
           });
       },
+      isCustomQuestion(q) {
+        if (!q) return false;
+        return Boolean(
+          q.is_custom ||
+          q.h5p_content_id ||
+          q.file_url ||
+          q.question_type === 'h5p' ||
+          q.question_type === 'interactive',
+        );
+      },
       checkAnswer() {
-        if (this.currentQuestion && this.currentQuestion.is_custom && this.$refs.customViewer) {
+        if (
+          this.currentQuestion &&
+          this.isCustomQuestion(this.currentQuestion) &&
+          this.$refs.customViewer
+        ) {
           return this.$refs.customViewer.checkAnswer();
         }
         if (this.$refs.contentViewer) {

@@ -1065,6 +1065,47 @@ class ExamDraftAPITestCase(BaseExamTest, APITestCase):
         self.assertEqual(q["h5p_content_id"], "42")
         self.assertEqual(q["h5p_url"], "/h5p/play/42")
 
+    def test_exam_size_with_custom_resource(self):
+        if self.draft:
+            return
+        self.login_as_admin()
+        exam_data = self.make_basic_exam()
+        ex_id = uuid.uuid4().hex
+        q_id = uuid.uuid4().hex
+        h5p_question = {
+            "exercise_id": ex_id,
+            "question_id": q_id,
+            "title": "Interactive H5P Question",
+            "counter_in_exercise": 1,
+            "is_custom": True,
+            "file_size": 4096,
+            "question_type": "h5p",
+            "h5p_content_id": "42",
+            "h5p_url": "/h5p/play/42",
+            "prompt": "Complete the interactive exercise below",
+            "options": [],
+            "answer_key": [],
+            "point_value": 10,
+        }
+        exam_data["question_sources"] = [
+            {
+                "section_title": "Interactive Section",
+                "questions": [h5p_question],
+                "learners_see_fixed_order": True,
+            }
+        ]
+        exam_data["active"] = True
+        response = self.post_new_exam(exam_data)
+        self.assertEqual(response.status_code, 201)
+        created_exam_id = response.data["id"]
+
+        size_url = reverse("kolibri:core:exam-size")
+        size_resp = self.client.get(size_url)
+        self.assertEqual(size_resp.status_code, 200)
+        matching = [item for item in size_resp.data if created_exam_id in item]
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(matching[0][created_exam_id], 4096)
+
     def test_upload_h5p_file_for_exam(self):
         import io
         import zipfile

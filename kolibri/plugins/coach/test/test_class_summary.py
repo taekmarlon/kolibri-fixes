@@ -10,6 +10,8 @@ from kolibri.core.auth.models import Facility
 from kolibri.core.auth.test.helpers import KolibriAPITestCase as APITestCase
 from kolibri.core.auth.test.helpers import provision_device
 from kolibri.core.content.models import ContentNode
+from kolibri.core.exams.models import Exam
+from kolibri.core.exams.models import ExamAssignment
 from kolibri.core.lessons import models
 from kolibri.core.logger.models import AttemptLog
 from kolibri.core.logger.models import ContentSessionLog
@@ -158,6 +160,58 @@ class ClassSummaryTestCase(EvaluationMixin, APITestCase):
         self.assertEqual(matching[0]["title"], "Interactive H5P Activity")
         self.assertEqual(matching[0]["kind"], "html5")
         self.assertTrue(matching[0]["available"])
+
+    def test_exam_with_custom_resource_not_missing(self):
+        custom_exercise_id = uuid.uuid4().hex
+        custom_question_id = uuid.uuid4().hex
+        exam = Exam.objects.create(
+            title="Interactive Quiz",
+            creator=self.facility_admin,
+            collection=self.classroom,
+            question_count=1,
+            data_model_version=3,
+            active=True,
+            question_sources=[
+                {
+                    "section_title": "Section 1",
+                    "description": "",
+                    "questions": [
+                        {
+                            "exercise_id": custom_exercise_id,
+                            "question_id": custom_question_id,
+                            "item": f"{custom_exercise_id}:{custom_question_id}",
+                            "title": "Interactive H5P Question",
+                            "counter_in_exercise": 1,
+                            "is_custom": True,
+                            "question_type": "h5p",
+                            "h5p_content_id": "42",
+                            "file_url": "/media/lessons/interactive/test/index.html",
+                        }
+                    ],
+                }
+            ],
+        )
+        ExamAssignment.objects.create(
+            exam=exam,
+            collection=self.classroom,
+            assigned_by=self.facility_admin,
+        )
+
+        self.client.login(
+            username=self.facility_admin.username, password=DUMMY_PASSWORD
+        )
+        response = self.client.get(
+            reverse(self.detail_name, kwargs={"pk": self.classroom.id})
+        )
+        exams = response.data["exams"]
+        matching_exams = [e for e in exams if e["id"] == exam.id]
+        self.assertEqual(len(matching_exams), 1)
+        self.assertFalse(matching_exams[0]["missing_resource"])
+        content = response.data["content"]
+        matching_content = [c for c in content if c["node_id"] == custom_exercise_id]
+        self.assertEqual(len(matching_content), 1)
+        self.assertEqual(matching_content[0]["title"], "Interactive H5P Question")
+        self.assertTrue(matching_content[0]["available"])
 
     def test_anon_user_cannot_access_detail(self):
         response = self.client.get(

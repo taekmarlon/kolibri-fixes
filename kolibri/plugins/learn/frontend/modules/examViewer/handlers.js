@@ -78,7 +78,14 @@ export function showExam(store, params, alreadyOnQuiz, route) {
               }
 
               for (const question of allQuestions) {
-                question.missing = !question.is_custom && !contentNodeMap[question.exercise_id];
+                const isCustom = Boolean(
+                  question.is_custom ||
+                  question.h5p_content_id ||
+                  question.file_url ||
+                  question.question_type === 'h5p' ||
+                  question.question_type === 'interactive',
+                );
+                question.missing = !isCustom && !contentNodeMap[question.exercise_id];
               }
               exam.question_sources = question_sources;
               store.commit('examViewer/SET_STATE', {

@@ -111,4 +111,32 @@ describe('CustomQuestionViewer', () => {
     expect(await screen.findByText('Interactive Activity Completed!')).toBeTruthy();
     expect(emitted().interaction).toBeTruthy();
   });
+
+  it('toggles activity completion when clicking the manual completion button', async () => {
+    const question = {
+      is_custom: true,
+      question_type: 'h5p',
+      title: 'Addition 1-5',
+      prompt: 'Addition 1-5',
+      h5p_content_id: '42',
+      file_url: '/media/lessons/interactive/abc1234/index.html',
+      options: [],
+      answer_key: [],
+      point_value: 10,
+    };
+
+    const { emitted } = render(CustomQuestionViewer, {
+      props: {
+        question,
+        answerState: null,
+      },
+    });
+
+    const button = screen.getByRole('button', { name: /mark as completed/i });
+    expect(button).toBeTruthy();
+    await button.click();
+
+    expect(screen.getByText('Interactive Activity Completed!')).toBeTruthy();
+    expect(emitted().interaction).toBeTruthy();
+  });
 });
