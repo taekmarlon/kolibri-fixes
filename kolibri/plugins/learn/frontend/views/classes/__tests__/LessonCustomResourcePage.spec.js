@@ -176,4 +176,89 @@ describe('LessonCustomResourcePage', () => {
       expect(screen.getByText('Hide Explanation')).toBeInTheDocument();
     });
   });
+
+  it('renders Perseus interactive activity and does not display AI study notes', async () => {
+    const perseusItem = {
+      question: {
+        content: 'What is 2 + 2?',
+        images: {},
+        widgets: {},
+      },
+      answerArea: {
+        calculator: false,
+      },
+      itemDataVersion: {
+        major: 0,
+        minor: 1,
+      },
+      hints: [],
+    };
+
+    LearnerLessonResource.fetchModel.mockResolvedValue({
+      id: 'lesson-1',
+      title: 'Math Quiz',
+      classroom: { id: 'class-1', name: 'Math Class' },
+      resources: [
+        {
+          contentnode_id: 'res-youtube-1',
+          content_id: 'res-youtube-1',
+          is_custom: true,
+          resource_type: 'perseus',
+          title: 'Perseus Math Challenge',
+          content: JSON.stringify(perseusItem),
+          progress: 0,
+        },
+      ],
+    });
+
+    render(LessonCustomResourcePage, { routes });
+
+    await waitFor(() => {
+      expect(screen.getByText('PERSEUS ACTIVITY')).toBeInTheDocument();
+      expect(screen.getByText('Check Answer')).toBeInTheDocument();
+      expect(screen.queryByText('✨ AI Study Notes')).not.toBeInTheDocument();
+    });
+  });
+
+  it('auto-detects Perseus JSON content when resource_type is generic document and does not dump raw JSON', async () => {
+    const perseusItem = {
+      question: {
+        content: 'What is the central theme of the opening paragraph?',
+        images: {},
+        widgets: {
+          'radio 1': {
+            type: 'radio',
+            options: {},
+          },
+        },
+      },
+      hints: [],
+    };
+
+    LearnerLessonResource.fetchModel.mockResolvedValue({
+      id: 'lesson-1',
+      title: 'Literature Quiz',
+      classroom: { id: 'class-1', name: 'English Class' },
+      resources: [
+        {
+          contentnode_id: 'res-youtube-1',
+          content_id: 'res-youtube-1',
+          is_custom: true,
+          resource_type: 'document',
+          title: 'Reading Comprehension',
+          content: JSON.stringify(perseusItem),
+          progress: 0,
+        },
+      ],
+    });
+
+    render(LessonCustomResourcePage, { routes });
+
+    await waitFor(() => {
+      expect(screen.getByText('PERSEUS ACTIVITY')).toBeInTheDocument();
+      expect(screen.getByText('Check Answer')).toBeInTheDocument();
+      expect(screen.queryByText('✨ AI Study Notes')).not.toBeInTheDocument();
+      expect(screen.queryByText('DOCUMENT')).not.toBeInTheDocument();
+    });
+  });
 });

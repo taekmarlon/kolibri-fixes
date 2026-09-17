@@ -146,23 +146,43 @@
 
         <!-- 4b. Perseus Interactive Exercise -->
         <div
-          v-else-if="resource.resource_type === 'perseus'"
+          v-else-if="isPerseusResource"
           class="perseus-box viewer-wrapper"
         >
-          <component
-            :is="perseusViewerComponent"
-            v-if="perseusViewerComponent && parsedPerseusItem"
-            ref="perseusLessonViewer"
-            :itemData="parsedPerseusItem"
-            :preset="'exercise'"
-            :interactive="true"
-            :allowHints="true"
-            @answerGiven="handlePerseusAnswerGiven"
-            @hintTaken="handlePerseusInteraction"
-            @interaction="handlePerseusInteraction"
-          />
           <div
-            v-else-if="!parsedPerseusItem"
+            v-if="parsedPerseusItem"
+            class="perseus-content-container"
+            :style="{
+              backgroundColor: $themeTokens.surface,
+              padding: '16px',
+              borderRadius: '8px',
+            }"
+          >
+            <ContentViewer
+              ref="perseusLessonViewer"
+              :itemData="parsedPerseusItem"
+              :preset="'exercise'"
+              :interactive="true"
+              :allowHints="true"
+              @answerGiven="handlePerseusAnswerGiven"
+              @hintTaken="handlePerseusInteraction"
+              @interaction="handlePerseusInteraction"
+            />
+            <div
+              v-if="!isCompleted"
+              class="perseus-action-row mt-16"
+              style="display: flex; justify-content: flex-end; padding-top: 16px; border-top: 1px solid #e2e8f0;"
+            >
+              <KButton
+                :text="checkAnswerLabel$()"
+                :primary="true"
+                appearance="raised-button"
+                @click="triggerCheckPerseusAnswer"
+              />
+            </div>
+          </div>
+          <div
+            v-else
             class="p-16"
             :style="{ color: $themeTokens.annotation, padding: '16px' }"
           >
@@ -368,7 +388,7 @@
 
         <!-- 7. AI Generated Study Guide / Markdown Notes -->
         <div
-          v-else-if="resource.resource_type === 'ai_text' || resource.content"
+          v-else-if="resource.resource_type === 'ai_text' || (resource.content && !isPerseusResource)"
           class="ai-box viewer-wrapper"
         >
           <div
@@ -456,6 +476,7 @@
   import YouTubePlayer from 'kolibri-common/components/YouTubePlayer';
   import AiMessageRenderer from 'kolibri-common/components/AiMessageRenderer';
   import InlineAiTutor from 'kolibri-common/components/InlineAiTutor';
+  import ContentViewer from 'kolibri/components/internal/ContentViewer';
   import { setContentNodeProgress } from '../../composables/useContentNodeProgress';
   import { LearnerLessonResource } from '../../apiResources';
   import { PageNames, ClassesPageNames } from '../../constants';
@@ -466,6 +487,10 @@
     markCompletedLabel: {
       message: 'Mark as Completed',
       context: 'Button label',
+    },
+    checkAnswerLabel: {
+      message: 'Check Answer',
+      context: 'Button label for checking interactive Perseus answer',
     },
     completedNotice: {
       message: 'Completed',
@@ -529,6 +554,7 @@
       YouTubePlayer,
       AiMessageRenderer,
       InlineAiTutor,
+      ContentViewer,
     },
     mixins: [commonCoreStrings, commonLearnStrings],
     setup() {
@@ -543,14 +569,51 @@
       const lessonId = computed(() => route.params.lessonId);
       const resourceId = computed(() => route.params.resourceId);
 
+      const parsedPerseusItem = computed(() => {
+        if (!resource.value || !resource.value.content) return null;
+        let data = resource.value.content;
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            return null;
+          }
+        }
+        if (!data || typeof data !== 'object') return null;
+        if (
+          data.item &&
+          typeof data.item === 'object' &&
+          (data.item.question || data.item.widgets)
+        ) {
+          return data.item;
+        }
+        if (
+          data.perseusItem &&
+          typeof data.perseusItem === 'object' &&
+          (data.perseusItem.question || data.perseusItem.widgets)
+        ) {
+          return data.perseusItem;
+        }
+        if (data.question || data.widgets) {
+          return data;
+        }
+        return null;
+      });
+
+      const isPerseusResource = computed(() => {
+        if (!resource.value) return false;
+        if (resource.value.resource_type === 'perseus') return true;
+        return Boolean(parsedPerseusItem.value);
+      });
+
       const resourceKindIcon = computed(() => {
         if (!resource.value) return 'document';
+        if (isPerseusResource.value) return 'exercise';
         const type = resource.value.resource_type;
         if (type === 'lesson_builder') return 'lesson';
         if (type === 'youtube') return 'video';
         if (type === 'image') return 'image';
         if (type === 'html5' || type === 'h5p') return 'html5';
-        if (type === 'perseus') return 'practice';
         if (type === 'content_card') return 'topic';
         if (type === 'ai_text') return 'hint';
         return 'document';
@@ -558,6 +621,7 @@
 
       const typePillText = computed(() => {
         if (!resource.value) return 'RESOURCE';
+        if (isPerseusResource.value) return 'PERSEUS ACTIVITY';
         const type = resource.value.resource_type;
         if (type === 'lesson_builder') return 'CUSTOM LESSON';
         if (type === 'youtube') return 'YOUTUBE VIDEO';
@@ -565,7 +629,6 @@
         if (type === 'image') return 'PICTURE / DIAGRAM';
         if (type === 'html5') return 'HTML5 SIMULATION';
         if (type === 'h5p') return 'INTERACTIVE ACTIVITY';
-        if (type === 'perseus') return 'PERSEUS ACTIVITY';
         if (type === 'content_card') return 'CONTENT CARD';
         if (type === 'ai_text') return 'AI STUDY GUIDE';
         return 'DOCUMENT';
@@ -771,29 +834,19 @@
 
       const perseusLessonViewer = ref(null);
 
-      const perseusViewerComponent = computed(() => {
-        if (Vue.options && Vue.options.components) {
-          if (Vue.options.components['exercise_viewer']) {
-            return 'exercise_viewer';
+      function triggerCheckPerseusAnswer() {
+        if (
+          perseusLessonViewer.value &&
+          typeof perseusLessonViewer.value.checkAnswer === 'function'
+        ) {
+          const res = perseusLessonViewer.value.checkAnswer();
+          if (res) {
+            handlePerseusAnswerGiven(res);
+            return;
           }
-          if (Vue.options.components['ContentViewer']) {
-            return 'ContentViewer';
-          }
         }
-        return 'ContentViewer';
-      });
-
-      const parsedPerseusItem = computed(() => {
-        if (!resource.value || !resource.value.content) return null;
-        if (typeof resource.value.content === 'object') {
-          return resource.value.content;
-        }
-        try {
-          return JSON.parse(resource.value.content);
-        } catch (e) {
-          return null;
-        }
-      });
+        handleMarkAsCompleted();
+      }
 
       function handlePerseusAnswerGiven(answer) {
         if (answer && answer.correct) {
@@ -825,9 +878,10 @@
         getCalloutBgColor,
         getCalloutIcon,
         defaultCalloutTitle,
+        isPerseusResource,
         perseusLessonViewer,
-        perseusViewerComponent,
         parsedPerseusItem,
+        triggerCheckPerseusAnswer,
         handlePerseusAnswerGiven,
         handlePerseusInteraction,
         ...resourceStrings,

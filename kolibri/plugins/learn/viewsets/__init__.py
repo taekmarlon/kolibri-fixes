@@ -1,3 +1,5 @@
+import json
+
 from django.db.models import Count
 from django.db.models import Q
 from le_utils.constants import content_kinds
@@ -79,16 +81,31 @@ def _map_contentnodes(request, content_ids):
 
 def _build_custom_contentnode(resource):
     res_type = resource.get("resource_type")
+    content = resource.get("content") or ""
+    if res_type != "perseus" and content:
+        try:
+            parsed = json.loads(content)
+            if isinstance(parsed, dict) and (
+                "question" in parsed
+                or "widgets" in parsed
+                or ("item" in parsed and "question" in parsed.get("item", {}))
+            ):
+                res_type = "perseus"
+        except (ValueError, TypeError):
+            pass
+
     kind_map = {
         "youtube": "video",
         "image": "image",
         "html5": "html5",
         "h5p": "html5",
+        "perseus": "exercise",
     }
     kind = kind_map.get(res_type, "document")
     activity_map = {
         "video": learning_activities.WATCH,
         "html5": learning_activities.EXPLORE,
+        "exercise": learning_activities.PRACTICE,
     }
     activity = activity_map.get(kind, learning_activities.READ)
 

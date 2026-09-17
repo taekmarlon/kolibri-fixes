@@ -63,6 +63,7 @@ def _save_custom_resource_log(user, resource, progress, time_spent, extra_fields
         "image": "image",
         "html5": "html5",
         "h5p": "html5",
+        "perseus": "exercise",
     }
     kind = kind_map.get(res_type, "document")
     now = local_now()

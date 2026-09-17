@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -457,6 +458,20 @@ def _save_interactive_html(content, resource_id, title):
     return file_url, file_name, file_size
 
 
+def _is_perseus_content(content):
+    if not content:
+        return False
+    try:
+        parsed = json.loads(content)
+        return isinstance(parsed, dict) and (
+            "question" in parsed
+            or "widgets" in parsed
+            or ("item" in parsed and "question" in parsed.get("item", {}))
+        )
+    except (ValueError, TypeError):
+        return False
+
+
 def _handle_custom_resource_content(
     data, resource_id, title, file_obj, content, resource_type
 ):
@@ -487,13 +502,18 @@ def _handle_custom_resource_content(
     ):
         resource_type = "youtube"
         url = (data.get("url") or "").strip()
-    elif resource_type == "perseus":
+    elif resource_type == "perseus" or _is_perseus_content(content):
         resource_type = "perseus"
         file_name = f"{title.lower().replace(' ', '_')}.perseus"
         file_size = len(content.encode("utf-8")) if content else 0
-    elif resource_type not in ["content_card", "lesson_builder", "ai_text", "perseus"]:
-        resource_type = "ai_text" if content else resource_type
-        url = (data.get("url") or "").strip()
+    else:
+        if resource_type not in [
+            "content_card",
+            "lesson_builder",
+            "ai_text",
+        ]:
+            resource_type = "ai_text" if content else resource_type
+            url = (data.get("url") or "").strip()
 
     return resource_type, file_name, file_size, file_url, url, content
 
