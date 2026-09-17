@@ -16,7 +16,7 @@ COPY . /app
 # Install Python dependencies for Kolibri
 ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.16.0
 RUN mkdir -p kolibri/dist && touch kolibri/dist/__init__.py
-RUN uv pip install --system -e . --group base --group dev
+RUN uv pip install --system -e ".[postgres]" --group base --group dev
 
 # Install frontend dependencies
 RUN pnpm install --shamefully-hoist
@@ -106,6 +106,29 @@ cat > /root/.kolibri/options.ini <<OPTEOF
 [Deployment]
 ZIP_CONTENT_ORIGIN = https://lms-online-qvbg.onrender.com
 OPTEOF
+
+# Auto-configure PostgreSQL if DATABASE_URL is provided by Render
+if [ -n "$DATABASE_URL" ]; then
+    echo "==> Configuring PostgreSQL from DATABASE_URL..."
+    python3 - <<'PYEOF'
+import os
+import urllib.parse
+
+db_url = os.environ.get("DATABASE_URL")
+if db_url:
+    parsed = urllib.parse.urlparse(db_url)
+    options_path = "/root/.kolibri/options.ini"
+    with open(options_path, "a") as f:
+        f.write("\n[Database]\n")
+        f.write("DATABASE_ENGINE = postgres\n")
+        f.write(f"DATABASE_NAME = {urllib.parse.unquote(parsed.path.lstrip('/'))}\n")
+        f.write(f"DATABASE_USER = {urllib.parse.unquote(parsed.username or '')}\n")
+        f.write(f"DATABASE_PASSWORD = {urllib.parse.unquote(parsed.password or '')}\n")
+        f.write(f"DATABASE_HOST = {parsed.hostname or ''}\n")
+        f.write(f"DATABASE_PORT = {parsed.port or 5432}\n")
+        f.write("DATABASE_SSL_MODE = require\n")
+PYEOF
+fi
 
 echo "==> options.ini configured:"
 cat /root/.kolibri/options.ini
