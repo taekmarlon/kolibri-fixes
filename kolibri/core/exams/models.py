@@ -277,8 +277,13 @@ class Exam(AbstractExam, AbstractFacilityDataModel):
         if getattr(self, "archive", False) is True:
             if getattr(self, "date_archived") is None:
                 self.date_archived = timezone.now()
+        elif (
+            getattr(self, "archive", False) is False
+            and getattr(self, "date_archived", None) is not None
+        ):
+            self.date_archived = None
         # If active is True during the save op, but there is no date_activated then
-        # this is the save that is archiving the object and we need to datestamp it
+        # this is the save that is activating the object and we need to datestamp it
         if getattr(self, "active", False) is True:
             if getattr(self, "date_activated") is None:
                 self.date_activated = timezone.now()

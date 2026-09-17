@@ -4,7 +4,7 @@
     <KGrid gutter="16">
       <!-- Quiz Open button -->
       <div
-        v-if="!exam.active && !exam.archive && !$isPrint"
+        v-if="(!exam.active || exam.archive) && !$isPrint"
         class="status-item"
       >
         <KGridItem
@@ -438,6 +438,7 @@
           data: {
             active: true,
             draft: false,
+            archive: false,
           },
           exists: true,
         });

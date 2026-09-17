@@ -173,7 +173,16 @@
                   />
                   <!-- Closed quiz label -->
                   <div v-if="exam.archive">
-                    {{ quizClosedLabel$() }}
+                    <span>{{ quizClosedLabel$() }}</span>
+                    <KButton
+                      :text="openQuizLabel$()"
+                      appearance="flat-button"
+                      style="margin-left: 8px"
+                      @click="
+                        showOpenConfirmationModal = true;
+                        activeQuiz = exam;
+                      "
+                    />
                   </div>
                 </td>
               </tr>
@@ -623,6 +632,7 @@
           data: {
             active: true,
             draft: false,
+            archive: false,
           },
           exists: true,
         });
