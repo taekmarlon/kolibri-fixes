@@ -1,5 +1,7 @@
 import 'dotenv/config';
 
+process.env.CACHE = process.env.CACHE || 'in-memory';
+
 import { dir, DirectoryResult } from 'tmp-promise';
 import bodyParser from 'body-parser';
 import express from 'express';

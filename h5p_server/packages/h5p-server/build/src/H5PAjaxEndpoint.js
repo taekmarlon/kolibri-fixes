@@ -79,9 +79,7 @@ class H5PAjaxEndpoint {
                 if (machineName === undefined ||
                     majorVersion === undefined ||
                     minorVersion === undefined) {
-                    throw new H5pError_1.default('malformed-request', {
-                        error: 'You must specify a machineName, majorVersion and minorVersion.'
-                    }, 400);
+                    return this.h5pEditor.getContentTypeCache(user, language);
                 }
                 // getLibraryData validates the library name and language code,
                 // so we don't do it here.

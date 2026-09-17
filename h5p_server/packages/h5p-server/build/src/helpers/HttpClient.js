@@ -24,7 +24,8 @@ const getClient = (config) => {
     }
     return axios_1.default.create({
         proxy: proxyAgent ? false : undefined,
-        httpsAgent: proxyAgent
+        httpsAgent: proxyAgent,
+        timeout: 4000
     });
 };
 exports.default = getClient;

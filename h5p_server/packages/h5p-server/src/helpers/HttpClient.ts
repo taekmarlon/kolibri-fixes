@@ -26,7 +26,8 @@ const getClient = (config: IH5PConfig): AxiosInstance => {
 
     return axios.create({
         proxy: proxyAgent ? false : undefined,
-        httpsAgent: proxyAgent
+        httpsAgent: proxyAgent,
+        timeout: 4000
     });
 };
 

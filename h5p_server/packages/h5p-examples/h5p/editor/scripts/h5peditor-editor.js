@@ -190,40 +190,58 @@ ns.Editor = function (library, defaultParams, replace, iframeLoaded) {
     };
 
     // Load libraries data
-    $.ajax({
-      url: this.contentWindow.H5PEditor.getAjaxUrl(H5PIntegration.hubIsEnabled ? 'content-type-cache' : 'libraries')
-    }).fail(function () {
-      $container.html('Error, unable to load libraries.');
-    }).done(function (data) {
-      if (data.success === false) {
-        $container.html(data.message + ' (' + data.errorCode  + ')');
-        return;
-      }
+    var primaryAction = (typeof H5PIntegration !== 'undefined' && H5PIntegration && H5PIntegration.hubIsEnabled) ||
+      (this.contentWindow && this.contentWindow.H5PIntegration && this.contentWindow.H5PIntegration.hubIsEnabled)
+        ? 'content-type-cache'
+        : 'content-type-cache';
 
-      // Create library selector
-      self.selector = new LibrarySelector(data, library, defaultParams);
-      self.selector.appendTo($container.html(''));
+    var loadAttempts = 0;
+    var fetchLibraries = function (action) {
+      $.ajax({
+        url: self.iframeWindow.H5PEditor.getAjaxUrl(action)
+      }).fail(function () {
+        if (loadAttempts < 2) {
+          loadAttempts++;
+          setTimeout(function () {
+            fetchLibraries('content-type-cache');
+          }, 500);
+          return;
+        }
+        $container.html('Error, unable to load libraries.');
+      }).done(function (data) {
+        if (data.success === false) {
+          $container.html(data.message + ' (' + data.errorCode  + ')');
+          return;
+        }
 
-      // Resize iframe when selector resizes
-      self.selector.on('resize', self.resize.bind(self));
+        // Create library selector
+        self.selector = new LibrarySelector(data, library, defaultParams);
+        self.selector.appendTo($container.html(''));
 
-      /**
-       * Event handler for exposing events
-       *
-       * @private
-       * @param {H5P.Event} event
-       */
-      var relayEvent = function (event) {
-        H5P.externalDispatcher.trigger(event);
-      };
-      self.selector.on('editorload', relayEvent);
-      self.selector.on('editorloaded', relayEvent);
+        // Resize iframe when selector resizes
+        self.selector.on('resize', self.resize.bind(self));
 
-      // Set library if editing
-      if (library) {
-        self.selector.setLibrary(library);
-      }
-    });
+        /**
+         * Event handler for exposing events
+         *
+         * @private
+         * @param {H5P.Event} event
+         */
+        var relayEvent = function (event) {
+          H5P.externalDispatcher.trigger(event);
+        };
+        self.selector.on('editorload', relayEvent);
+        self.selector.on('editorloaded', relayEvent);
+
+        // Set library if editing
+        if (library) {
+          self.selector.setLibrary(library);
+        }
+      });
+    };
+
+    fetchLibraries(primaryAction);
+  };
 
     // Start resizing the iframe
     if (iframe.contentWindow.MutationObserver !== undefined) {

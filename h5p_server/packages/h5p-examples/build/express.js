@@ -37,6 +37,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
+process.env.CACHE = process.env.CACHE || 'in-memory';
 const tmp_promise_1 = require("tmp-promise");
 const body_parser_1 = __importDefault(require("body-parser"));
 const express_1 = __importDefault(require("express"));
@@ -210,5 +211,7 @@ const start = async () => {
 };
 // We can't use await outside a an async function, so we use the start()
 // function as a workaround.
-start();
+start().catch(err => {
+    console.error('Fatal error starting H5P server:', err);
+});
 //# sourceMappingURL=express.js.map

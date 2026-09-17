@@ -154,6 +154,14 @@ export default class ContentTypeCache {
 
         let cache = await this.storage.load('contentTypeCache');
         if (!cache) {
+            if (this.config.fetchingDisabled) {
+                log.info(
+                    'ContentTypeCache fetching is disabled. Using local installed libraries.'
+                );
+                await this.storage.save('contentTypeCache', []);
+                await this.storage.save('contentTypeCacheUpdate', Date.now());
+                return [];
+            }
             log.info(
                 'ContentTypeCache was never updated before. Downloading it from the H5P Hub...'
             );
@@ -162,8 +170,10 @@ export default class ContentTypeCache {
             // if the cache is still empty (e.g. because no connection to the H5P Hub can be established, return an empty array)
             if (!cache) {
                 log.info(
-                    'ContentTypeCache could not be retrieved from H5P Hub.'
+                    'ContentTypeCache could not be retrieved from H5P Hub. Saving empty cache to avoid blocking.'
                 );
+                await this.storage.save('contentTypeCache', []);
+                await this.storage.save('contentTypeCacheUpdate', Date.now());
                 return [];
             }
         }
