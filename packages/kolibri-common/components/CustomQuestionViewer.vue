@@ -320,21 +320,33 @@
     },
     emits: ['interaction'],
     setup(props, { emit }) {
+      function extractAnswerValue(state) {
+        if (!state) return null;
+        if (typeof state === 'object' && state !== null && 'value' in state) {
+          return state.value;
+        }
+        return state;
+      }
+
+      const initialVal = extractAnswerValue(props.answerState);
+
       const selectedOption = ref(
-        typeof props.answerState === 'string' ? props.answerState : null,
+        typeof initialVal === 'string' ? initialVal : null,
       );
 
       const selectedOptions = ref(
-        Array.isArray(props.answerState) ? [...props.answerState] : [],
+        Array.isArray(initialVal) ? [...initialVal] : [],
       );
 
       const shortAnswerText = ref(
-        typeof props.answerState === 'string' ? props.answerState : '',
+        typeof initialVal === 'string' ? initialVal : '',
       );
 
       const interactiveCompleted = ref(
-        props.answerState === 'completed' || Boolean(props.answerState),
+        initialVal === 'completed' || Boolean(initialVal),
       );
+
+      const interactiveScoreText = ref('');
 
       const isInteractiveQuestion = computed(() => {
         const q = props.question;
@@ -370,16 +382,43 @@
 
       function onWindowMessage(event) {
         if (!event.data) return;
-        const msg = event.data;
-        if (
-          msg.type === 'H5P_COMPLETE' ||
-          msg.type === 'H5P_SCORE' ||
-          (msg.verb &&
-            (msg.verb.includes('completed') ||
-              msg.verb.includes('passed') ||
-              msg.verb.includes('answered')))
-        ) {
+        let data = event.data;
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            // not a json string
+          }
+        }
+        if (!data) return;
+
+        const isH5pComplete =
+          data.type === 'H5P_COMPLETE' ||
+          data.type === 'H5P_SCORE' ||
+          data.h5p_completed ||
+          data.completed;
+
+        const statement = data.statement || (data.data && data.data.statement);
+        const verb = statement && statement.verb;
+        const verbId = typeof verb === 'object' ? verb.id : verb;
+        const isXApiComplete =
+          verbId &&
+          (verbId === 'http://adlnet.gov/expapi/verbs/completed' ||
+            verbId === 'http://adlnet.gov/expapi/verbs/passed' ||
+            verbId === 'http://adlnet.gov/expapi/verbs/answered' ||
+            (typeof verbId === 'string' &&
+              (verbId.includes('completed') ||
+                verbId.includes('passed') ||
+                verbId.includes('answered'))));
+
+        if (isH5pComplete || isXApiComplete) {
           interactiveCompleted.value = true;
+          if (statement && statement.result && statement.result.score) {
+            const sc = statement.result.score;
+            if (sc.raw !== undefined && sc.max !== undefined) {
+              interactiveScoreText.value = `${sc.raw}/${sc.max}`;
+            }
+          }
           emit('interaction');
         }
       }
@@ -395,21 +434,23 @@
       watch(
         () => props.answerState,
         newVal => {
+          if (newVal === undefined || newVal === null) return;
+          const val = extractAnswerValue(newVal);
           if (
             props.question.question_type === 'multiple_choice' ||
             props.question.question_type === 'true_false'
           ) {
-            selectedOption.value = typeof newVal === 'string' ? newVal : null;
+            selectedOption.value = typeof val === 'string' ? val : null;
           } else if (props.question.question_type === 'checkboxes') {
-            selectedOptions.value = Array.isArray(newVal) ? [...newVal] : [];
+            selectedOptions.value = Array.isArray(val) ? [...val] : [];
           } else if (props.question.question_type === 'short_answer') {
-            shortAnswerText.value = typeof newVal === 'string' ? newVal : '';
+            shortAnswerText.value = typeof val === 'string' ? val : '';
           } else if (
             props.question.question_type === 'h5p' ||
             props.question.question_type === 'interactive' ||
             isInteractiveQuestion.value
           ) {
-            interactiveCompleted.value = newVal === 'completed' || Boolean(newVal);
+            interactiveCompleted.value = val === 'completed' || Boolean(val);
           }
         },
       );
@@ -475,12 +516,23 @@
         } else if (type === 'h5p' || type === 'interactive' || isInteractiveQuestion.value) {
           const isDone = Boolean(interactiveCompleted.value);
           answerState = isDone ? 'completed' : null;
-          simpleAnswer = isDone ? 'Completed' : 'In progress';
+          simpleAnswer = isDone
+            ? (interactiveScoreText.value
+                ? `${interactiveScoreText.value} (Completed)`
+                : 'Completed')
+            : 'In progress';
           isCorrect = isDone;
         }
 
         return {
-          answerState,
+          answerState:
+            answerState !== null
+              ? {
+                  value: answerState,
+                  type,
+                  simple_answer: simpleAnswer,
+                }
+              : null,
           simpleAnswer,
           correct: isCorrect ? 1 : 0,
         };

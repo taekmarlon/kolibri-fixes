@@ -1883,6 +1883,30 @@ class ProgressTrackingViewSetUpdateSessionAssessmentBase:
         self.assertEqual(attempt.answer, {"response": "test"})
         self.assertEqual(attempt.time_spent, 10)
 
+    def test_update_assessment_session_create_attempt_with_string_answer_succeeds(self):
+        response = self._make_request(
+            {
+                "interactions": [
+                    {
+                        "item": self.item,
+                        "answer": "completed",
+                        "simple_answer": "Completed",
+                        "correct": 1.0,
+                        "time_spent": 15,
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(response.status_code, 200)
+        attempt_id = response.json().get("attempts", [{}])[0].get("id")
+        self.assertIsNotNone(attempt_id)
+        attempt = AttemptLog.objects.get(id=attempt_id)
+        self.assertEqual(attempt.item, self.item)
+        self.assertEqual(attempt.correct, 1.0)
+        self.assertEqual(attempt.answer, "completed")
+        self.assertEqual(attempt.simple_answer, "Completed")
+
     def test_update_assessment_session_create_errored_attempt_succeeds(self):
         response = self._make_request(
             {

@@ -156,7 +156,10 @@
         const total_resources = resources.length;
         if (total_resources === 0) return NaN;
         const resource_progress = resources.reduce((sum, resource) => {
-          const contentId = resource.contentnode && resource.contentnode.content_id;
+          const contentId =
+            (resource.contentnode && resource.contentnode.content_id) ||
+            resource.content_id ||
+            resource.contentnode_id;
           const progress = contentId
             ? Math.max(contentNodeProgressMap[contentId] || 0, resource.progress || 0)
             : resource.progress || 0;

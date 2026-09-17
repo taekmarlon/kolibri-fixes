@@ -640,13 +640,14 @@
         }
 
         return this.updateContentSession(data)
-
           .then(() => {
+            LearnerClassroomResource.clearCache();
             if (close) {
               this.stopTrackingProgress();
             }
           })
           .catch(() => {
+            LearnerClassroomResource.clearCache();
             this.$router.replace({ name: ClassesPageNames.CLASS_ASSIGNMENTS });
           });
       },
@@ -668,6 +669,9 @@
         const answer = this.checkAnswer();
         if (answer) {
           this.currentQuestionAnswered = true;
+          if (this.currentQuestion && this.isCustomQuestion(this.currentQuestion)) {
+            this.saveAnswer();
+          }
         }
       },
       saveAnswer(close = false) {

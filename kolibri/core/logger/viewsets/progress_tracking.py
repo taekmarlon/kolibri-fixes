@@ -161,7 +161,7 @@ class InteractionSerializer(serializers.Serializer):
     complete = serializers.BooleanField(required=False, default=False)
     time_spent = serializers.FloatField(min_value=0)
 
-    answer = serializers.DictField(required=False)
+    answer = serializers.JSONField(required=False, allow_null=True)
     simple_answer = serializers.CharField(required=False, allow_blank=True)
     error = serializers.BooleanField(required=False, default=False)
     hinted = serializers.BooleanField(required=False, default=False)
@@ -170,7 +170,7 @@ class InteractionSerializer(serializers.Serializer):
     replace = serializers.BooleanField(required=False, default=False)
 
     def validate(self, data):
-        if not data["error"] and "answer" not in data:
+        if not data.get("error") and "answer" not in data:
             raise ValidationError("Must provide an answer if not an error")
         return data
 
