@@ -476,7 +476,6 @@
   import YouTubePlayer from 'kolibri-common/components/YouTubePlayer';
   import AiMessageRenderer from 'kolibri-common/components/AiMessageRenderer';
   import InlineAiTutor from 'kolibri-common/components/InlineAiTutor';
-  import ContentViewer from 'kolibri/components/internal/ContentViewer';
   import { setContentNodeProgress } from '../../composables/useContentNodeProgress';
   import { LearnerLessonResource } from '../../apiResources';
   import { PageNames, ClassesPageNames } from '../../constants';
@@ -554,7 +553,6 @@
       YouTubePlayer,
       AiMessageRenderer,
       InlineAiTutor,
-      ContentViewer,
     },
     mixins: [commonCoreStrings, commonLearnStrings],
     setup() {
