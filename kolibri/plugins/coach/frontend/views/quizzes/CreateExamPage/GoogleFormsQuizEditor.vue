@@ -153,6 +153,9 @@
               <option value="true_false">
                 {{ trueFalseLabel$() }}
               </option>
+              <option value="perseus">
+                {{ perseusInteractiveLabel$() }}
+              </option>
             </select>
           </div>
         </div>
@@ -199,9 +202,46 @@
           </div>
         </div>
 
+        <!-- Perseus Studio Configuration Panel -->
+        <div
+          v-if="question.question_type === 'perseus'"
+          class="perseus-config-container mt-16"
+          :style="{
+            backgroundColor: $themePalette.grey.v_100,
+            border: `1.5px solid ${$themeTokens.fineLine}`,
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '16px',
+          }"
+        >
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span
+                style="padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 13px;"
+                :style="{ backgroundColor: $themeTokens.primary, color: $themeTokens.textInverted }"
+              >
+                PERSEUS INTERACTIVE
+              </span>
+              <span style="font-weight: 600;" :style="{ color: $themeTokens.text }">
+                {{ question.prompt || question.title || 'Interactive Activity' }}
+              </span>
+            </div>
+            <KButton
+              :text="editPerseusActivityAction$()"
+              icon="edit"
+              :primary="true"
+              appearance="raised-button"
+              @click.stop="openPerseusModal(question, qIndex)"
+            />
+          </div>
+          <p class="mt-8 mb-0" :style="{ color: $themeTokens.annotation, fontSize: '13px' }">
+            {{ perseusEditorDescription$() }}
+          </p>
+        </div>
+
         <!-- Options Section for Multiple Choice / Checkboxes / True-False -->
         <div
-          v-if="question.question_type !== 'short_answer'"
+          v-else-if="question.question_type !== 'short_answer'"
           class="options-container"
         >
           <div
@@ -308,7 +348,7 @@
 
         <!-- Short Answer Configuration -->
         <div
-          v-else
+          v-else-if="question.question_type === 'short_answer'"
           class="short-answer-container"
         >
           <p :style="{ color: $themeTokens.annotation, margin: '8px 0' }">
@@ -425,6 +465,24 @@
       <KCircularLoader :delay="false" />
       <span class="uploading-text">{{ uploadingImageNotice$() }}</span>
     </div>
+
+    <!-- Perseus Activity Studio Modal -->
+    <KModal
+      v-if="isPerseusModalOpen"
+      :title="authorPerseusActivityTitle$()"
+      :submitText="savePerseusActivityAction$()"
+      :cancelText="cancelButton$()"
+      size="large"
+      @submit="savePerseusActivityFromModal"
+      @cancel="isPerseusModalOpen = false"
+    >
+      <div style="max-height: 80vh; overflow-y: auto; padding: 4px;">
+        <PerseusActivityStudio
+          :initialItem="currentModalPerseusItem"
+          @change="onModalPerseusChange"
+        />
+      </div>
+    </KModal>
   </div>
 
 </template>
@@ -437,6 +495,7 @@
   import { createTranslator } from 'kolibri/utils/i18n';
   import useSnackbar from 'kolibri/composables/useSnackbar';
   import { injectQuizCreation } from '../../../composables/useQuizCreation';
+  import PerseusActivityStudio from '../../common/PerseusActivityStudio.vue';
 
   const editorStrings = createTranslator('GoogleFormsQuizEditorStrings', {
     authorCustomQuestionsTitle: {
@@ -483,6 +542,31 @@
     trueFalseLabel: {
       message: 'True / False',
       context: 'Question type option',
+    },
+    perseusInteractiveLabel: {
+      message: 'Perseus Interactive Activity',
+      context: 'Question type option',
+    },
+    editPerseusActivityAction: {
+      message: 'Configure Perseus Activity',
+      context: 'Button label to open Perseus studio',
+    },
+    perseusEditorDescription: {
+      message:
+        'Interactive activity with multi-subject widgets: passages, dropdowns, chronological timelines, categorizers, matchers, or formulas.',
+      context: 'Description under Perseus question configuration',
+    },
+    authorPerseusActivityTitle: {
+      message: 'Perseus Interactive Activity Studio',
+      context: 'Modal title for authoring Perseus activity',
+    },
+    savePerseusActivityAction: {
+      message: 'Save to Question',
+      context: 'Button to confirm and save Perseus activity to question',
+    },
+    cancelButton: {
+      message: 'Cancel',
+      context: 'Button to dismiss modal',
     },
     questionPromptLabel: {
       message: 'Question Prompt',
@@ -590,12 +674,56 @@
 
   export default {
     name: 'GoogleFormsQuizEditor',
+    components: {
+      PerseusActivityStudio,
+    },
     setup() {
       const { createSnackbar } = useSnackbar();
       const { activeSectionIndex, activeSection, updateSection } = injectQuizCreation();
 
       const activeQuestionIndex = ref(0);
       const isUploadingImage = ref(false);
+      const isPerseusModalOpen = ref(false);
+      const editingQuestionIndex = ref(null);
+      const currentModalPerseusItem = ref(null);
+      const tempModalPerseusData = ref(null);
+
+      function parsePerseusContent(content) {
+        if (!content) return null;
+        if (typeof content === 'object') return content;
+        try {
+          return JSON.parse(content);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function openPerseusModal(question, qIndex) {
+        editingQuestionIndex.value = qIndex;
+        currentModalPerseusItem.value = parsePerseusContent(question.content);
+        tempModalPerseusData.value = currentModalPerseusItem.value;
+        isPerseusModalOpen.value = true;
+      }
+
+      function onModalPerseusChange(data) {
+        tempModalPerseusData.value = data;
+      }
+
+      function savePerseusActivityFromModal() {
+        if (editingQuestionIndex.value !== null && tempModalPerseusData.value) {
+          const q = localQuestions.value[editingQuestionIndex.value];
+          if (q) {
+            const item = tempModalPerseusData.value.item || tempModalPerseusData.value;
+            q.content = JSON.stringify(item);
+            if (tempModalPerseusData.value.title && !q.prompt) {
+              q.prompt = tempModalPerseusData.value.title;
+            }
+            syncToSection();
+          }
+        }
+        isPerseusModalOpen.value = false;
+        createSnackbar('Perseus activity saved to question!');
+      }
 
       // Initialize local questions from activeSection
       const localQuestions = ref(
@@ -664,7 +792,33 @@
       }
 
       function handleQuestionTypeChange(question) {
-        if (question.question_type === 'true_false') {
+        if (question.question_type === 'perseus') {
+          if (!question.content) {
+            question.content = JSON.stringify({
+              question: {
+                content: 'Select the correct option below:\n\n[[☃ dropdown 1]]',
+                images: {},
+                widgets: {
+                  'dropdown 1': {
+                    type: 'dropdown',
+                    options: {
+                      choices: [
+                        { content: 'Option A (Correct)', correct: true },
+                        { content: 'Option B', correct: false },
+                      ],
+                      placeholder: 'Select answer...',
+                    },
+                  },
+                },
+              },
+              hints: [],
+              answerArea: { calculator: false, periodicTable: false },
+              itemDataVersion: { major: 0, minor: 1 },
+            });
+          }
+          question.options = [];
+          question.answer_key = [];
+        } else if (question.question_type === 'true_false') {
           const tId = `opt_${generateHexId().substring(0, 8)}`;
           const fId = `opt_${generateHexId().substring(0, 8)}`;
           question.options = [
@@ -726,6 +880,9 @@
       }
 
       function isOptionCorrectConfigured(question) {
+        if (question.question_type === 'perseus') {
+          return Boolean(question.content);
+        }
         if (question.question_type === 'short_answer') {
           return question.answer_key && question.answer_key.length > 0;
         }
@@ -895,6 +1052,11 @@
         triggerOptionImageUpload,
         removeOptionImage,
         onQuestionChange,
+        isPerseusModalOpen,
+        currentModalPerseusItem,
+        openPerseusModal,
+        onModalPerseusChange,
+        savePerseusActivityFromModal,
         ...editorStrings,
       };
     },

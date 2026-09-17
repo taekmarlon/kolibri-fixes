@@ -32,6 +32,14 @@
           @click="activeTab = 'h5p'"
         />
         <KButton
+          :text="tabPerseusLabel$()"
+          icon="practice"
+          :appearance="activeTab === 'perseus' ? 'raised-button' : 'flat-button'"
+          :primary="activeTab === 'perseus'"
+          class="tab-btn"
+          @click="activeTab = 'perseus'"
+        />
+        <KButton
           :text="tabFilesLabel$()"
           icon="document"
           :appearance="activeTab === 'file' ? 'raised-button' : 'flat-button'"
@@ -1133,6 +1141,16 @@
         />
       </div>
 
+      <!-- TAB: PERSEUS MULTI-SUBJECT STUDIO -->
+      <div
+        v-if="activeTab === 'perseus'"
+        class="tab-content perseus-tab-content"
+      >
+        <PerseusActivityStudio
+          @change="onPerseusStudioChange"
+        />
+      </div>
+
       <!-- Submitting Indicator -->
       <div
         v-if="isSubmitting"
@@ -1156,6 +1174,7 @@
   import useAiTutor from 'kolibri-common/composables/useAiTutor';
   import YouTubePlayer from 'kolibri-common/components/YouTubePlayer';
   import H5PActivityBuilder from './H5PActivityBuilder';
+  import PerseusActivityStudio from '../../common/PerseusActivityStudio.vue';
 
   const modalStrings = createTranslator('AddCustomResourceModalStrings', {
     modalTitle: {
@@ -1173,6 +1192,10 @@
     tabH5PInteractiveLabel: {
       message: 'H5P Interactive',
       context: 'Tab label for interactive H5P activities',
+    },
+    tabPerseusLabel: {
+      message: 'Perseus Studio',
+      context: 'Tab button label for Perseus interactive studio',
     },
     h5pStudioModeLabel: {
       message: 'H5P Interactive Studio',
@@ -1528,6 +1551,7 @@
     components: {
       YouTubePlayer,
       H5PActivityBuilder,
+      PerseusActivityStudio,
     },
     setup(props, { emit }) {
       const { createSnackbar } = useSnackbar();
@@ -1536,6 +1560,13 @@
       const activeTab = ref(props.initialTab || 'builder');
       const isSubmitting = ref(false);
       const uploadWarningError = ref('');
+
+      // Perseus Studio State
+      const perseusActivityData = ref(null);
+
+      function onPerseusStudioChange(data) {
+        perseusActivityData.value = data;
+      }
 
       // Lesson Builder State
       const builderTitle = ref('');
@@ -1806,6 +1837,9 @@
         if (activeTab.value === 'ai') {
           return !aiContent.value.trim() || !aiTitle.value.trim();
         }
+        if (activeTab.value === 'perseus') {
+          return !perseusActivityData.value || !perseusActivityData.value.item;
+        }
         if (activeTab.value === 'card') {
           return !cardTitle.value.trim() || (!cardContent.value.trim() && !selectedCardImage.value);
         }
@@ -2028,6 +2062,21 @@
                 content: JSON.stringify(builderBlocks.value),
               },
             });
+          } else if (activeTab.value === 'perseus') {
+            const pData = perseusActivityData.value;
+            response = await client({
+              url: endpointUrl,
+              method: 'POST',
+              data: {
+                resource_type: 'perseus',
+                title:
+                  pData && pData.title && pData.title.trim()
+                    ? pData.title.trim()
+                    : 'Perseus Interactive Activity',
+                description: pData && pData.description ? pData.description.trim() : '',
+                content: JSON.stringify((pData && pData.item) || pData || {}),
+              },
+            });
           }
 
           createSnackbar(modalStrings.successNotice$());
@@ -2117,6 +2166,9 @@
         clearCardImage,
         handleGenerateAiContent,
         handleSubmit,
+        // Perseus tab
+        perseusActivityData,
+        onPerseusStudioChange,
         // Strings
         ...modalStrings,
       };

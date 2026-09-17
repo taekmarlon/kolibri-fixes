@@ -241,6 +241,49 @@
       </div>
     </div>
 
+    <!-- Perseus Interactive Exercise -->
+    <div
+      v-else-if="question.question_type === 'perseus'"
+      class="perseus-question-container mt-16"
+    >
+      <component
+        :is="perseusViewerComponent"
+        v-if="perseusViewerComponent && parsedPerseusItem"
+        ref="perseusViewerRef"
+        :key="perseusKey"
+        :itemData="parsedPerseusItem"
+        :preset="'exercise'"
+        :answerState="perseusAnswerState"
+        :interactive="!preview"
+        :allowHints="!preview"
+        :showCorrectAnswer="showCorrectAnswer"
+        @answerGiven="onPerseusAnswerGiven"
+        @hintTaken="onPerseusHintTaken"
+        @interaction="onPerseusInteraction"
+      />
+      <div
+        v-else-if="parsedPerseusItem"
+        class="perseus-static-fallback"
+        :style="{
+          padding: '16px',
+          border: `1px solid ${$themeTokens.fineLine}`,
+          borderRadius: '8px',
+          backgroundColor: $themePalette.grey.v_100,
+        }"
+      >
+        <div style="font-weight: 600; margin-bottom: 8px;">
+          {{ (parsedPerseusItem.question && parsedPerseusItem.question.content) || question.prompt }}
+        </div>
+      </div>
+      <div
+        v-else
+        class="perseus-error-fallback"
+        :style="{ color: $themeTokens.annotation, padding: '12px' }"
+      >
+        {{ invalidPerseusData$() }}
+      </div>
+    </div>
+
     <!-- H5P / Interactive Activity -->
     <div
       v-else-if="isInteractiveQuestion"
@@ -348,7 +391,7 @@
 
 <script>
 
-  import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+  import Vue, { ref, computed, watch, onMounted, onUnmounted } from 'vue';
   import { createTranslator } from 'kolibri/utils/i18n';
 
   const viewerStrings = createTranslator('CustomQuestionViewerStrings', {
@@ -411,6 +454,14 @@
     explanationLabel: {
       message: 'Explanation',
       context: 'Heading for explanation box',
+    },
+    perseusInteractiveLabel: {
+      message: 'Perseus Interactive Activity',
+      context: 'Label for Perseus activity type',
+    },
+    invalidPerseusData: {
+      message: 'Unable to load interactive Perseus content.',
+      context: 'Error message when Perseus JSON cannot be parsed',
     },
   });
 
@@ -488,6 +539,7 @@
         const q = props.question;
         if (!q) return false;
         const type = (q.question_type || '').toLowerCase();
+        if (type === 'perseus') return false;
         return (
           type === 'h5p' ||
           type === 'interactive' ||
@@ -497,6 +549,82 @@
           (Boolean(q.content) && type !== 'short_answer')
         );
       });
+
+      const perseusViewerRef = ref(null);
+      const latestPerseusAnswer = ref(null);
+      const perseusKey = ref(0);
+
+      const perseusViewerComponent = computed(() => {
+        if (Vue.options && Vue.options.components) {
+          if (Vue.options.components['exercise_viewer']) {
+            return 'exercise_viewer';
+          }
+          if (Vue.options.components['ContentViewer']) {
+            return 'ContentViewer';
+          }
+        }
+        return 'ContentViewer';
+      });
+
+      const parsedPerseusItem = computed(() => {
+        const q = props.question;
+        if (!q) return null;
+        if (q.item_data && typeof q.item_data === 'object') {
+          return q.item_data;
+        }
+        if (q.content) {
+          if (typeof q.content === 'object') {
+            return q.content;
+          }
+          try {
+            return JSON.parse(q.content);
+          } catch (e) {
+            return null;
+          }
+        }
+        return null;
+      });
+
+      const perseusAnswerState = computed(() => {
+        if (props.showCorrectAnswer) {
+          return null;
+        }
+        if (!props.answerState) return null;
+        if (props.answerState.userInput || props.answerState.question) {
+          return props.answerState;
+        }
+        if (props.answerState.value) {
+          if (typeof props.answerState.value === 'object') {
+            return props.answerState.value;
+          }
+          try {
+            return JSON.parse(props.answerState.value);
+          } catch (e) {
+            return null;
+          }
+        }
+        return props.answerState;
+      });
+
+      function onPerseusAnswerGiven(answer) {
+        if (!answer) return;
+        latestPerseusAnswer.value = answer;
+        emit('interaction');
+      }
+
+      function onPerseusHintTaken() {
+        emit('interaction');
+      }
+
+      function onPerseusInteraction() {
+        if (perseusViewerRef.value && typeof perseusViewerRef.value.checkAnswer === 'function') {
+          const res = perseusViewerRef.value.checkAnswer();
+          if (res) {
+            latestPerseusAnswer.value = res;
+          }
+        }
+        emit('interaction');
+      }
 
       const resolvedInteractiveUrl = computed(() => {
         const q = props.question;
@@ -657,6 +785,21 @@
             const lowerAnswer = simpleAnswer.toLowerCase();
             isCorrect = expected.map(s => s.toLowerCase()).includes(lowerAnswer);
           }
+        } else if (type === 'perseus') {
+          if (perseusViewerRef.value && typeof perseusViewerRef.value.checkAnswer === 'function') {
+            const res = perseusViewerRef.value.checkAnswer();
+            if (res) {
+              return res;
+            }
+          }
+          if (latestPerseusAnswer.value) {
+            return latestPerseusAnswer.value;
+          }
+          return {
+            answerState: null,
+            simpleAnswer: '',
+            correct: 0,
+          };
         } else if (type === 'h5p' || type === 'interactive' || isInteractiveQuestion.value) {
           const isDone = Boolean(interactiveCompleted.value);
           answerState = isDone ? 'completed' : null;
@@ -691,6 +834,14 @@
         isShortAnswerCorrect,
         isInteractiveQuestion,
         resolvedInteractiveUrl,
+        perseusViewerRef,
+        perseusViewerComponent,
+        perseusKey,
+        parsedPerseusItem,
+        perseusAnswerState,
+        onPerseusAnswerGiven,
+        onPerseusHintTaken,
+        onPerseusInteraction,
         isOptionCorrect,
         toggleInteractiveComplete,
         selectSingleChoice,

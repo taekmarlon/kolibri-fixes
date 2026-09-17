@@ -345,3 +345,22 @@ class LessonCustomResourcesTestCase(APITestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertIn("KOLIBRI_H5P_SAVED", response.content.decode("utf-8"))
+
+    def test_add_perseus_custom_resource(self):
+        self.client.login(username=self.admin.username, password=DUMMY_PASSWORD)
+        url = reverse(
+            "kolibri:core:lesson-custom-resource", kwargs={"pk": self.lesson.id}
+        )
+        perseus_json = '{"question": {"content": "Read excerpt [[☃ passage 1]]", "widgets": {}}, "hints": []}'
+        payload = {
+            "resource_type": "perseus",
+            "title": "Historical Reading Comprehension",
+            "description": "Analyze primary source document.",
+            "content": perseus_json,
+        }
+        response = self.client.post(url, data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["resource_type"], "perseus")
+        self.assertEqual(response.data["title"], "Historical Reading Comprehension")
+        self.assertEqual(response.data["content"], perseus_json)
+        self.assertTrue(response.data["is_custom"])

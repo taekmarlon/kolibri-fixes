@@ -487,7 +487,11 @@ def _handle_custom_resource_content(
     ):
         resource_type = "youtube"
         url = (data.get("url") or "").strip()
-    elif resource_type not in ["content_card", "lesson_builder", "ai_text"]:
+    elif resource_type == "perseus":
+        resource_type = "perseus"
+        file_name = f"{title.lower().replace(' ', '_')}.perseus"
+        file_size = len(content.encode("utf-8")) if content else 0
+    elif resource_type not in ["content_card", "lesson_builder", "ai_text", "perseus"]:
         resource_type = "ai_text" if content else resource_type
         url = (data.get("url") or "").strip()
 

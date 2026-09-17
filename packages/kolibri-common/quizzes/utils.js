@@ -201,6 +201,7 @@ export function isCustomQuestion(question) {
       question.custom_type ||
       question.question_type === 'h5p' ||
       question.question_type === 'interactive' ||
+      question.question_type === 'perseus' ||
       (question.question_type === 'multiple_choice' && question.is_custom) ||
       (question.options && question.options.length) ||
       question.question_type === 'short_answer',

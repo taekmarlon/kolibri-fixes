@@ -534,6 +534,7 @@ describe('exam utils', () => {
       expect(isCustomQuestion({ file_url: '/api/exams/custom_file/test.h5p' })).toBe(true);
       expect(isCustomQuestion({ question_type: 'h5p' })).toBe(true);
       expect(isCustomQuestion({ question_type: 'interactive' })).toBe(true);
+      expect(isCustomQuestion({ question_type: 'perseus' })).toBe(true);
       expect(isCustomQuestion({ question_type: 'short_answer' })).toBe(true);
       expect(isCustomQuestion({ options: [{ id: 'opt1', text: 'A' }] })).toBe(true);
     });

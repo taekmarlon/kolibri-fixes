@@ -144,6 +144,32 @@
           ></iframe>
         </div>
 
+        <!-- 4b. Perseus Interactive Exercise -->
+        <div
+          v-else-if="resource.resource_type === 'perseus'"
+          class="perseus-box viewer-wrapper"
+        >
+          <component
+            :is="perseusViewerComponent"
+            v-if="perseusViewerComponent && parsedPerseusItem"
+            ref="perseusLessonViewer"
+            :itemData="parsedPerseusItem"
+            :preset="'exercise'"
+            :interactive="true"
+            :allowHints="true"
+            @answerGiven="handlePerseusAnswerGiven"
+            @hintTaken="handlePerseusInteraction"
+            @interaction="handlePerseusInteraction"
+          />
+          <div
+            v-else-if="!parsedPerseusItem"
+            class="p-16"
+            :style="{ color: $themeTokens.annotation, padding: '16px' }"
+          >
+            {{ invalidPerseusNotice$() }}
+          </div>
+        </div>
+
         <!-- 5. Standalone Content Card (Banner Image + Formatted Content) -->
         <div
           v-else-if="resource.resource_type === 'content_card'"
@@ -420,7 +446,7 @@
 
 <script>
 
-  import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+  import Vue, { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import { useRoute } from 'vue-router/composables';
   import { createTranslator } from 'kolibri/utils/i18n';
   import KBreadcrumbs from 'kolibri-design-system/lib/KBreadcrumbs';
@@ -464,6 +490,14 @@
     html5DocTitle: {
       message: 'Interactive Simulation',
       context: 'Title attribute for HTML5 viewer iframe',
+    },
+    perseusDocTitle: {
+      message: 'Perseus Interactive Activity',
+      context: 'Title attribute for Perseus viewer',
+    },
+    invalidPerseusNotice: {
+      message: 'Unable to load interactive Perseus content.',
+      context: 'Error message when Perseus activity content cannot be loaded',
     },
     aiStudyNotesBadge: {
       message: '✨ AI Study Notes',
@@ -516,6 +550,7 @@
         if (type === 'youtube') return 'video';
         if (type === 'image') return 'image';
         if (type === 'html5' || type === 'h5p') return 'html5';
+        if (type === 'perseus') return 'practice';
         if (type === 'content_card') return 'topic';
         if (type === 'ai_text') return 'hint';
         return 'document';
@@ -530,6 +565,7 @@
         if (type === 'image') return 'PICTURE / DIAGRAM';
         if (type === 'html5') return 'HTML5 SIMULATION';
         if (type === 'h5p') return 'INTERACTIVE ACTIVITY';
+        if (type === 'perseus') return 'PERSEUS ACTIVITY';
         if (type === 'content_card') return 'CONTENT CARD';
         if (type === 'ai_text') return 'AI STUDY GUIDE';
         return 'DOCUMENT';
@@ -733,6 +769,44 @@
         window.removeEventListener('message', handleWindowMessage);
       });
 
+      const perseusLessonViewer = ref(null);
+
+      const perseusViewerComponent = computed(() => {
+        if (Vue.options && Vue.options.components) {
+          if (Vue.options.components['exercise_viewer']) {
+            return 'exercise_viewer';
+          }
+          if (Vue.options.components['ContentViewer']) {
+            return 'ContentViewer';
+          }
+        }
+        return 'ContentViewer';
+      });
+
+      const parsedPerseusItem = computed(() => {
+        if (!resource.value || !resource.value.content) return null;
+        if (typeof resource.value.content === 'object') {
+          return resource.value.content;
+        }
+        try {
+          return JSON.parse(resource.value.content);
+        } catch (e) {
+          return null;
+        }
+      });
+
+      function handlePerseusAnswerGiven(answer) {
+        if (answer && answer.correct) {
+          handleMarkAsCompleted();
+        } else {
+          reportCustomProgress(0.5, false);
+        }
+      }
+
+      function handlePerseusInteraction() {
+        reportCustomProgress(0.2, false);
+      }
+
       return {
         pageLoading,
         resource,
@@ -751,6 +825,11 @@
         getCalloutBgColor,
         getCalloutIcon,
         defaultCalloutTitle,
+        perseusLessonViewer,
+        perseusViewerComponent,
+        parsedPerseusItem,
+        handlePerseusAnswerGiven,
+        handlePerseusInteraction,
         ...resourceStrings,
       };
     },

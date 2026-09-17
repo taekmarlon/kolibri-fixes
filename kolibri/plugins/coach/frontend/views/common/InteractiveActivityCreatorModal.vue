@@ -69,6 +69,13 @@
           @click="h5pMode = 'hub'"
         />
         <KButton
+          :text="perseusStudioModeLabel$()"
+          icon="topic"
+          :appearance="h5pMode === 'perseus' ? 'raised-button' : 'flat-button'"
+          :primary="h5pMode === 'perseus'"
+          @click="h5pMode = 'perseus'"
+        />
+        <KButton
           :text="h5pQuickModeLabel$()"
           icon="plus"
           :appearance="h5pMode === 'create' ? 'raised-button' : 'flat-button'"
@@ -176,6 +183,14 @@
         </div>
       </div>
 
+      <!-- Mode Perseus: Multi-Subject Perseus Studio -->
+      <div v-else-if="h5pMode === 'perseus'">
+        <PerseusActivityStudio
+          ref="perseusStudioRef"
+          @change="onPerseusStudioChange"
+        />
+      </div>
+
       <!-- Mode B: Quick Activity Builder -->
       <div v-else-if="h5pMode === 'create'">
         <H5PActivityBuilder ref="activityBuilderRef" />
@@ -270,9 +285,14 @@
   import LessonResource from 'kolibri-common/apiResources/LessonResource';
   import ExamResource from 'kolibri-common/apiResources/ExamResource';
   import H5PActivityBuilder from '../lessons/LessonSummaryPage/H5PActivityBuilder';
+  import PerseusActivityStudio from './PerseusActivityStudio';
   import { PageNames } from '../../constants';
 
   const strings = createTranslator('InteractiveActivityCreatorModalStrings', {
+    perseusStudioModeLabel: {
+      message: 'Perseus Multi-Subject Studio',
+      context: 'Button label for Perseus interactive activity studio',
+    },
     modalTitle: {
       message: 'Create Interactive Activity',
       context: 'Modal header title',
@@ -415,6 +435,7 @@
     name: 'InteractiveActivityCreatorModal',
     components: {
       H5PActivityBuilder,
+      PerseusActivityStudio,
     },
     props: {
       classId: {
@@ -463,6 +484,14 @@
       const isSavingH5P = ref(false);
       const isIframeLoading = ref(true);
       const h5pEditorUrl = ref('/h5p/new');
+
+      // Perseus Studio state
+      const perseusActivityData = ref(null);
+      const perseusStudioRef = ref(null);
+
+      function onPerseusStudioChange(data) {
+        perseusActivityData.value = data;
+      }
 
       let savingTimeout = null;
       function clearSavingTimeout() {
@@ -750,6 +779,13 @@
         if (h5pMode.value === 'hub') {
           return false;
         }
+        if (h5pMode.value === 'perseus') {
+          return (
+            !perseusActivityData.value ||
+            !perseusActivityData.value.title ||
+            !perseusActivityData.value.title.trim()
+          );
+        }
         if (h5pMode.value === 'create') {
           return !activityBuilderRef.value || !activityBuilderRef.value.isValid;
         }
@@ -791,6 +827,89 @@
       }
 
       async function handleSubmit() {
+        if (h5pMode.value === 'perseus') {
+          isSubmitting.value = true;
+          try {
+            const pData = perseusActivityData.value;
+            const activityTitle =
+              (pData && pData.title && pData.title.trim()) || 'Perseus Interactive Activity';
+            const activityDesc = (pData && pData.description) || '';
+            const perseusJson =
+              (pData && pData.jsonString) || JSON.stringify((pData && pData.perseusItem) || {});
+
+            if (props.isQuizMode) {
+              const exerciseId = generateHexId();
+              const qId = generateHexId();
+              const q = {
+                item: `${exerciseId}:${qId}`,
+                exercise_id: exerciseId,
+                question_id: qId,
+                title: activityTitle,
+                counter_in_exercise: 1,
+                is_custom: true,
+                question_type: 'perseus',
+                content: perseusJson,
+                prompt: activityTitle,
+                options: [],
+                answer_key: [],
+                point_value: 10,
+              };
+              await saveQuizFromQuestions(activityTitle, [q]);
+              return;
+            }
+
+            let targetLessonId;
+            if (isCreatingNewTarget.value) {
+              const finalLessonTitle =
+                newTargetTitle.value.trim() || activityTitle || 'Perseus Interactive Lesson';
+
+              const newLesson = await LessonResource.saveModel({
+                data: {
+                  title: finalLessonTitle,
+                  collection: effectiveClassId.value,
+                  assignments: [effectiveClassId.value],
+                  active: true,
+                  resources: [],
+                },
+              });
+              targetLessonId = newLesson.id;
+            } else {
+              targetLessonId = selectedTargetOption.value.value;
+            }
+
+            const endpointUrl = `/api/lessons/lesson/${targetLessonId}/custom_resource/`;
+            await client({
+              url: endpointUrl,
+              method: 'POST',
+              data: {
+                resource_type: 'perseus',
+                title: activityTitle,
+                description: activityDesc,
+                content: perseusJson,
+              },
+            });
+
+            createSnackbar(strings.successNotice$());
+            emit('created', { lessonId: targetLessonId });
+            emit('close');
+
+            if (isCreatingNewTarget.value && router) {
+              router.push({
+                name: PageNames.LESSON_SUMMARY,
+                params: {
+                  classId: effectiveClassId.value,
+                  lessonId: targetLessonId,
+                },
+              });
+            }
+          } catch (err) {
+            createSnackbar(extractErrorMessage(err));
+          } finally {
+            isSubmitting.value = false;
+          }
+          return;
+        }
+
         if (h5pMode.value === 'hub') {
           if (h5pEditorIframe.value && h5pEditorIframe.value.contentWindow) {
             try {

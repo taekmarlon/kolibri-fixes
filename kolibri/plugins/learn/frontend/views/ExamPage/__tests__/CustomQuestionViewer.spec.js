@@ -198,4 +198,43 @@ describe('CustomQuestionViewer', () => {
     expect(screen.getByText('Learner answer')).toBeTruthy();
     expect(screen.getByText('Correct answer')).toBeTruthy();
   });
+
+  it('renders a Perseus interactive question with prompt and points badge', () => {
+    const perseusItem = {
+      question: {
+        content: 'Read the passage below and answer the question:\n\n[[☃ dropdown 1]]',
+        images: {},
+        widgets: {
+          'dropdown 1': {
+            type: 'dropdown',
+            options: {
+              choices: [
+                { content: 'Photosynthesis', correct: true },
+                { content: 'Respiration', correct: false },
+              ],
+            },
+          },
+        },
+      },
+      hints: [],
+    };
+
+    const question = {
+      is_custom: true,
+      question_type: 'perseus',
+      prompt: 'Biological Processes Comprehension',
+      content: JSON.stringify(perseusItem),
+      point_value: 3,
+    };
+
+    render(CustomQuestionViewer, {
+      props: {
+        question,
+        answerState: null,
+      },
+    });
+
+    expect(screen.getByText('Biological Processes Comprehension')).toBeTruthy();
+    expect(screen.getByText('3 point(s)')).toBeTruthy();
+  });
 });

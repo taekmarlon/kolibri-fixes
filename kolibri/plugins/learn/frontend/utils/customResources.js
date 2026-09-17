@@ -27,6 +27,26 @@ export function getCustomResourceThumbnail(resource = {}) {
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
+  if (type === 'perseus') {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270">
+      <defs>
+        <linearGradient id="bg-perseus" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0e7490"/>
+          <stop offset="50%" stop-color="#06b6d4"/>
+          <stop offset="100%" stop-color="#22d3ee"/>
+        </linearGradient>
+      </defs>
+      <rect width="480" height="270" rx="8" fill="url(#bg-perseus)"/>
+      <g transform="translate(240, 105)" fill="#ffffff">
+        <circle cx="0" cy="0" r="42" fill="#ffffff" fill-opacity="0.2"/>
+        <path d="M-12,-16 L16,0 L-12,16 Z" fill="#ffffff"/>
+      </g>
+      <rect x="135" y="172" width="210" height="34" rx="17" fill="#ffffff" fill-opacity="0.25"/>
+      <text x="240" y="195" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="700" letter-spacing="1.5" text-anchor="middle">PERSEUS STUDIO</text>
+    </svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }
+
   if (type === 'youtube') {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270">
       <defs>
