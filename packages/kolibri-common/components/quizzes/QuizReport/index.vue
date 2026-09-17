@@ -120,8 +120,62 @@
           :currentSectionIndex="currentSectionIndex"
           @select="navigateToQuestion"
         />
+        <!-- Custom / Interactive Question View -->
         <div
-          v-if="exercise && exercise.available"
+          v-if="currentQuestionIsCustom"
+          class="exercise-container"
+          :class="windowIsSmall ? 'mobile-exercise-container' : ''"
+          :style="{ backgroundColor: $themeTokens.surface, padding: '24px' }"
+        >
+          <h3 v-if="questionNumberInSectionLabel">{{ questionNumberInSectionLabel }}</h3>
+
+          <p v-if="currentSection && currentSection.description">
+            {{ currentSection.description }}
+          </p>
+
+          <div
+            v-if="!isSurvey"
+            data-testid="diff-business"
+          >
+            <KCheckbox
+              :label="coreString('showCorrectAnswerLabel')"
+              :checked="showCorrectAnswer"
+              @change="toggleShowCorrectAnswer"
+            />
+            <div
+              v-if="currentAttemptDiff"
+              style="padding-bottom: 15px"
+            >
+              <AttemptIconDiff
+                :correct="currentAttempt.correct"
+                :diff="currentAttemptDiff.correct"
+              />
+              <AttemptTextDiff
+                :userId="userId"
+                :correct="currentAttempt.correct"
+                :diff="currentAttemptDiff.correct"
+              />
+            </div>
+            <InteractionList
+              v-if="!showCorrectAnswer"
+              :interactions="currentInteractionHistory"
+              :selectedInteractionIndex="selectedInteractionIndex"
+              :reverse="reverseInteractions"
+              @select="navigateToQuestionAttempt"
+            />
+          </div>
+
+          <CustomQuestionViewer
+            :question="currentQuestion"
+            :answerState="customAnswerState"
+            :showCorrectAnswer="showCorrectAnswer"
+            :preview="true"
+          />
+        </div>
+
+        <!-- Standard Channel Exercise (Perseus) View -->
+        <div
+          v-else-if="exercise && exercise.available && !exercise.is_custom"
           class="exercise-container"
           :class="windowIsSmall ? 'mobile-exercise-container' : ''"
           :style="{ backgroundColor: $themeTokens.surface }"
@@ -174,254 +228,6 @@
             :showCorrectAnswer="showCorrectAnswer"
           />
         </div>
-        <div
-          v-else-if="currentQuestionIsCustom"
-          class="exercise-container"
-          :class="windowIsSmall ? 'mobile-exercise-container' : ''"
-          :style="{ backgroundColor: $themeTokens.surface, padding: '24px' }"
-        >
-          <h3 v-if="questionNumberInSectionLabel">{{ questionNumberInSectionLabel }}</h3>
-
-          <p v-if="currentSection && currentSection.description">
-            {{ currentSection.description }}
-          </p>
-
-          <div
-            v-if="!isSurvey"
-            data-testid="diff-business"
-          >
-            <KCheckbox
-              :label="coreString('showCorrectAnswerLabel')"
-              :checked="showCorrectAnswer"
-              @change="toggleShowCorrectAnswer"
-            />
-            <div
-              v-if="currentAttemptDiff"
-              style="padding-bottom: 15px"
-            >
-              <AttemptIconDiff
-                :correct="currentAttempt.correct"
-                :diff="currentAttemptDiff.correct"
-              />
-              <AttemptTextDiff
-                :userId="userId"
-                :correct="currentAttempt.correct"
-                :diff="currentAttemptDiff.correct"
-              />
-            </div>
-          </div>
-
-          <!-- Custom Question Content Review -->
-          <div class="custom-question-report-content mt-16">
-            <!-- Points badge and Status -->
-            <div
-              class="report-meta mb-16"
-              style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;"
-            >
-              <span
-                v-if="currentQuestion.point_value"
-                :style="{
-                  backgroundColor: $themePalette.grey.v_200,
-                  color: $themeTokens.text,
-                  padding: '4px 10px',
-                  borderRadius: '12px',
-                  fontSize: '0.85rem',
-                  fontWeight: 'bold',
-                }"
-              >
-                {{ currentQuestion.point_value }} {{ pointValueLabel$() }}
-              </span>
-              <span
-                :style="{
-                  backgroundColor: currentAttempt && currentAttempt.correct ? '#ecfdf5' : '#fef2f2',
-                  color: currentAttempt && currentAttempt.correct ? '#059669' : '#dc2626',
-                  padding: '4px 10px',
-                  borderRadius: '12px',
-                  fontSize: '0.85rem',
-                  fontWeight: 'bold',
-                }"
-              >
-                {{ currentAttempt && currentAttempt.correct ? correctLabel$() : incorrectLabel$() }}
-              </span>
-            </div>
-
-            <!-- Question Prompt -->
-            <h4 :style="{ color: $themeTokens.text, fontSize: '1.15rem', marginBottom: '16px' }">
-              {{ currentQuestion.prompt || currentQuestion.title }}
-            </h4>
-
-            <!-- Prompt image -->
-            <div
-              v-if="currentQuestion.prompt_image"
-              style="margin-bottom: 20px; text-align: center;"
-            >
-              <img
-                :src="currentQuestion.prompt_image"
-                alt="Question illustration"
-                style="max-width: 100%; max-height: 380px; border-radius: 8px; border: 1px solid #e2e8f0;"
-              >
-            </div>
-
-            <!-- Choices list for multiple choice, true/false, checkboxes -->
-            <div
-              v-if="currentQuestion.options && currentQuestion.options.length"
-              class="custom-choices-review"
-            >
-              <div
-                v-for="opt in currentQuestion.options"
-                :key="opt.id"
-                class="choice-review-item"
-                :style="{
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  marginBottom: '10px',
-                  border: isChoiceSelectedByLearner(opt.id)
-                    ? `2px solid ${$themeTokens.primary}`
-                    : `1px solid ${$themeTokens.fineLine}`,
-                  backgroundColor:
-                    isChoiceCorrect(opt.id) &&
-                    (showCorrectAnswer || !currentAttempt || !currentAttempt.correct)
-                      ? '#f0fdf4'
-                      : isChoiceSelectedByLearner(opt.id) && !isChoiceCorrect(opt.id)
-                      ? '#fef2f2'
-                      : $themeTokens.surface,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }"
-              >
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <KIcon
-                    v-if="
-                      isChoiceCorrect(opt.id) &&
-                      (showCorrectAnswer || !currentAttempt || !currentAttempt.correct)
-                    "
-                    icon="correct"
-                    style="color: #059669;"
-                  />
-                  <KIcon
-                    v-else-if="isChoiceSelectedByLearner(opt.id)"
-                    icon="incorrect"
-                    style="color: #dc2626;"
-                  />
-                  <span :style="{ fontWeight: isChoiceSelectedByLearner(opt.id) ? 'bold' : 'normal' }">
-                    {{ opt.text }}
-                  </span>
-                </div>
-                <div>
-                  <span
-                    v-if="isChoiceSelectedByLearner(opt.id)"
-                    :style="{
-                      fontSize: '0.8rem',
-                      fontWeight: 'bold',
-                      color: $themeTokens.primary,
-                      marginRight: '8px',
-                    }"
-                  >
-                    {{ learnerAnswerBadge$() }}
-                  </span>
-                  <span
-                    v-if="isChoiceCorrect(opt.id) && showCorrectAnswer"
-                    :style="{
-                      fontSize: '0.8rem',
-                      fontWeight: 'bold',
-                      color: '#059669',
-                    }"
-                  >
-                    {{ correctAnswerBadge$() }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Short Answer Review -->
-            <div
-              v-else-if="currentQuestion.question_type === 'short_answer'"
-              class="short-answer-review"
-            >
-              <div
-                :style="{
-                  padding: '14px',
-                  borderRadius: '8px',
-                  backgroundColor: currentAttempt && currentAttempt.correct ? '#f0fdf4' : '#fef2f2',
-                  border: `1px solid ${$themeTokens.fineLine}`,
-                  marginBottom: '12px',
-                }"
-              >
-                <div
-                  style="font-weight: bold; margin-bottom: 4px;"
-                  :style="{ color: $themeTokens.annotation }"
-                >
-                  {{ learnerAnswerBadge$() }}:
-                </div>
-                <div :style="{ fontSize: '1.05rem', fontWeight: 'bold' }">
-                  {{ currentLearnerAnswerText || noAnswerSubmitted$() }}
-                </div>
-              </div>
-              <div
-                v-if="showCorrectAnswer || (currentAttempt && !currentAttempt.correct)"
-                :style="{
-                  padding: '14px',
-                  borderRadius: '8px',
-                  backgroundColor: '#f0fdf4',
-                  border: '1px solid #bbf7d0',
-                }"
-              >
-                <div style="font-weight: bold; margin-bottom: 4px; color: #059669;">
-                  {{ correctAnswerBadge$() }}:
-                </div>
-                <div style="font-size: 1.05rem; font-weight: bold; color: #065f46;">
-                  {{ (currentQuestion.answer_key || []).join(' / ') }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Interactive Activity Review -->
-            <div
-              v-else-if="isInteractiveQuestion(currentQuestion)"
-              class="interactive-activity-review"
-            >
-              <iframe
-                v-if="currentQuestion.file_url || currentQuestion.h5p_url || currentQuestion.h5p_content_id"
-                :src="currentQuestion.file_url || currentQuestion.h5p_url || (currentQuestion.h5p_content_id ? `/h5p/play/${currentQuestion.h5p_content_id}` : '')"
-                style="width: 100%; min-height: 480px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
-                sandbox="allow-scripts allow-same-origin"
-                allow="fullscreen; geolocation; microphone; camera; midi"
-              ></iframe>
-              <iframe
-                v-else-if="currentQuestion.content"
-                :srcdoc="currentQuestion.content"
-                style="width: 100%; min-height: 480px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;"
-                sandbox="allow-scripts allow-same-origin"
-                allow="fullscreen; geolocation; microphone; camera; midi"
-              ></iframe>
-            </div>
-
-            <!-- Explanation (if provided) -->
-            <div
-              v-if="
-                currentQuestion.explanation &&
-                (showCorrectAnswer || (currentAttempt && !currentAttempt.correct))
-              "
-              class="explanation-box mt-16"
-              :style="{
-                backgroundColor: $themePalette.grey.v_100,
-                border: `1px solid ${$themeTokens.fineLine}`,
-                borderRadius: '8px',
-                padding: '14px',
-                marginTop: '16px',
-              }"
-            >
-              <div
-                style="font-weight: bold; margin-bottom: 4px;"
-                :style="{ color: $themeTokens.annotation }"
-              >
-                {{ explanationLabel$() }}:
-              </div>
-              <p style="margin: 0;">{{ currentQuestion.explanation }}</p>
-            </div>
-          </div>
-        </div>
         <MissingResourceAlert
           v-else
           :multiple="false"
@@ -450,46 +256,15 @@
   import useKResponsiveWindow from 'kolibri-design-system/lib/composables/useKResponsiveWindow';
   import MasteryLogResource from 'kolibri-common/apiResources/MasteryLogResource';
   import useNow from 'kolibri/composables/useNow';
-  import { createTranslator } from 'kolibri/utils/i18n';
   import { annotateSections, isCustomQuestion } from 'kolibri-common/quizzes/utils';
   import MissingResourceAlert from 'kolibri-common/components/MissingResourceAlert';
+  import CustomQuestionViewer from 'kolibri-common/components/CustomQuestionViewer.vue';
   import { displaySectionTitle } from 'kolibri-common/strings/enhancedQuizManagementStrings';
   import AttemptLogList from './AttemptLogList';
   import AttemptTextDiff from './AttemptTextDiff';
   import AttemptIconDiff from './AttemptIconDiff';
   import TriesOverview from './TriesOverview';
   import CurrentTryOverview from './CurrentTryOverview';
-
-  const customQuizReportStrings = createTranslator('CustomQuizReportStrings', {
-    pointValueLabel: {
-      message: 'pts',
-      context: 'Abbreviation for points',
-    },
-    correctLabel: {
-      message: 'Correct',
-      context: 'Status for correct answer',
-    },
-    incorrectLabel: {
-      message: 'Incorrect',
-      context: 'Status for incorrect answer',
-    },
-    learnerAnswerBadge: {
-      message: "Learner's answer",
-      context: 'Badge for learner answer',
-    },
-    correctAnswerBadge: {
-      message: 'Correct answer',
-      context: 'Badge for correct answer',
-    },
-    noAnswerSubmitted: {
-      message: 'No answer submitted',
-      context: 'Placeholder text when learner did not answer',
-    },
-    explanationLabel: {
-      message: 'Explanation',
-      context: 'Label for question explanation',
-    },
-  });
 
   export default {
     name: 'QuizReport',
@@ -502,6 +277,7 @@
       TriesOverview,
       CurrentTryOverview,
       MissingResourceAlert,
+      CustomQuestionViewer,
     },
     mixins: [commonCoreStrings],
     setup() {
@@ -510,7 +286,6 @@
       return {
         windowIsSmall,
         now,
-        ...customQuizReportStrings,
       };
     },
     props: {
@@ -747,12 +522,29 @@
       currentQuestionIsCustom() {
         return Boolean(this.currentQuestion && isCustomQuestion(this.currentQuestion));
       },
-      currentLearnerAnswerText() {
-        if (!this.currentAttempt || this.currentAttempt.answer == null) return '';
-        if (typeof this.currentAttempt.answer === 'string') {
-          return this.currentAttempt.answer;
+      customAnswerState() {
+        let ans = null;
+        if (this.currentInteraction && this.currentInteraction.answer != null) {
+          ans = this.currentInteraction.answer;
+        } else if (this.currentAttempt && this.currentAttempt.answer != null) {
+          ans = this.currentAttempt.answer;
         }
-        return this.currentAttempt.simple_answer || '';
+        if (!ans) {
+          return null;
+        }
+        if (typeof ans === 'object' && ans !== null) {
+          return {
+            ...ans,
+            simple_answer:
+              ans.simple_answer ||
+              (this.currentAttempt && this.currentAttempt.simple_answer) ||
+              '',
+          };
+        }
+        return {
+          value: ans,
+          simple_answer: (this.currentAttempt && this.currentAttempt.simple_answer) || '',
+        };
       },
       titleIcon() {
         if (this.isSurvey) {
@@ -775,29 +567,6 @@
       }
     },
     methods: {
-      isChoiceSelectedByLearner(optId) {
-        if (!this.currentAttempt || this.currentAttempt.answer == null) return false;
-        if (Array.isArray(this.currentAttempt.answer)) {
-          return this.currentAttempt.answer.includes(optId);
-        }
-        return this.currentAttempt.answer === optId;
-      },
-      isChoiceCorrect(optId) {
-        if (!this.currentQuestion || !this.currentQuestion.answer_key) return false;
-        return this.currentQuestion.answer_key.includes(optId);
-      },
-      isInteractiveQuestion(q) {
-        if (!q) return false;
-        const type = (q.question_type || '').toLowerCase();
-        return (
-          type === 'h5p' ||
-          type === 'interactive' ||
-          Boolean(q.file_url) ||
-          Boolean(q.h5p_content_id) ||
-          Boolean(q.h5p_url) ||
-          (Boolean(q.content) && type !== 'short_answer')
-        );
-      },
       navigateToQuestion(questionNumber) {
         if (questionNumber !== this.questionNumber) {
           this.navigateTo(this.tryIndex, questionNumber, 0);

@@ -1,11 +1,28 @@
 <template>
 
   <div class="custom-question-viewer">
-    <!-- Prompt Text -->
+    <!-- Prompt Text & Points Badge -->
     <div
       class="question-prompt"
       :style="{ color: $themeTokens.text }"
     >
+      <div
+        v-if="question.point_value"
+        style="display: flex; align-items: center; margin-bottom: 8px;"
+      >
+        <span
+          :style="{
+            backgroundColor: $themePalette.grey.v_200,
+            color: $themeTokens.text,
+            padding: '4px 10px',
+            borderRadius: '12px',
+            fontSize: '0.85rem',
+            fontWeight: 'bold',
+          }"
+        >
+          {{ question.point_value }} {{ pointValueLabel$() }}
+        </span>
+      </div>
       <h3 class="prompt-text">
         {{ question.prompt || question.title || fallbackTitle$() }}
       </h3>
@@ -38,15 +55,20 @@
             borderColor:
               (preview || showCorrectAnswer) && isOptionCorrect(option.id)
                 ? '#22c55e'
+                : preview && selectedOption === option.id && !isOptionCorrect(option.id)
+                ? '#ef4444'
                 : selectedOption === option.id
                 ? $themeTokens.primary
                 : $themeTokens.fineLine,
             backgroundColor:
               (preview || showCorrectAnswer) && isOptionCorrect(option.id)
                 ? '#f0fdf4'
+                : preview && selectedOption === option.id && !isOptionCorrect(option.id)
+                ? '#fef2f2'
                 : selectedOption === option.id
                 ? $themePalette.grey.v_100
                 : $themeTokens.surface,
+            cursor: preview ? 'default' : 'pointer',
           }"
           @click="selectSingleChoice(option.id)"
         >
@@ -55,6 +77,7 @@
               :label="option.text || optionFallback$()"
               :buttonValue="option.id"
               :currentValue="selectedOption"
+              :disabled="preview"
               class="choice-radio"
               @input="selectSingleChoice(option.id)"
             />
@@ -68,6 +91,23 @@
                 style="fill: #15803d;"
               />
               {{ correctAnswerLabel$() }}
+              <span
+                v-if="preview && selectedOption === option.id"
+                style="margin-left: 4px; color: #15803d;"
+              >
+                ({{ learnerAnswerLabel$() }})
+              </span>
+            </span>
+            <span
+              v-else-if="preview && selectedOption === option.id && !isOptionCorrect(option.id)"
+              class="incorrect-badge"
+              style="display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: #dc2626;"
+            >
+              <KIcon
+                icon="close"
+                style="fill: #dc2626;"
+              />
+              {{ learnerAnswerLabel$() }}
             </span>
           </div>
 
@@ -100,15 +140,20 @@
           borderColor:
             (preview || showCorrectAnswer) && isOptionCorrect(option.id)
               ? '#22c55e'
+              : preview && isChoiceChecked(option.id) && !isOptionCorrect(option.id)
+              ? '#ef4444'
               : isChoiceChecked(option.id)
               ? $themeTokens.primary
               : $themeTokens.fineLine,
           backgroundColor:
             (preview || showCorrectAnswer) && isOptionCorrect(option.id)
               ? '#f0fdf4'
+              : preview && isChoiceChecked(option.id) && !isOptionCorrect(option.id)
+              ? '#fef2f2'
               : isChoiceChecked(option.id)
               ? $themePalette.grey.v_100
               : $themeTokens.surface,
+          cursor: preview ? 'default' : 'pointer',
         }"
         @click="toggleMultiChoice(option.id)"
       >
@@ -116,6 +161,7 @@
           <KCheckbox
             :label="option.text || optionFallback$()"
             :checked="isChoiceChecked(option.id)"
+            :disabled="preview"
             class="choice-checkbox"
             @change="toggleMultiChoice(option.id)"
             @click.stop="() => {}"
@@ -130,6 +176,23 @@
               style="fill: #15803d;"
             />
             {{ correctAnswerLabel$() }}
+            <span
+              v-if="preview && isChoiceChecked(option.id)"
+              style="margin-left: 4px; color: #15803d;"
+            >
+              ({{ learnerAnswerLabel$() }})
+            </span>
+          </span>
+          <span
+            v-else-if="preview && isChoiceChecked(option.id) && !isOptionCorrect(option.id)"
+            class="incorrect-badge"
+            style="display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: #dc2626;"
+          >
+            <KIcon
+              icon="close"
+              style="fill: #dc2626;"
+            />
+            {{ learnerAnswerLabel$() }}
           </span>
         </div>
 
@@ -152,10 +215,20 @@
       v-else-if="question.question_type === 'short_answer'"
       class="short-answer-entry mt-24"
     >
+      <div
+        v-if="preview && shortAnswerText"
+        class="mb-8"
+        style="display: flex; align-items: center; gap: 6px; font-weight: bold; margin-bottom: 8px;"
+        :style="{ color: isShortAnswerCorrect ? '#15803d' : '#dc2626' }"
+      >
+        <KIcon :icon="isShortAnswerCorrect ? 'check' : 'close'" />
+        <span>{{ isShortAnswerCorrect ? correctAnswerLabel$() : incorrectAnswerLabel$() }}</span>
+      </div>
       <KTextbox
         v-model="shortAnswerText"
         :label="yourAnswerLabel$()"
         :placeholder="typeYourAnswerPlaceholder$()"
+        :disabled="preview"
         class="short-answer-input"
         @input="onShortAnswerChange"
       />
@@ -173,6 +246,29 @@
       v-else-if="isInteractiveQuestion"
       class="interactive-question-container mt-16"
     >
+      <!-- Preview Summary Banner for Coach Report -->
+      <div
+        v-if="preview"
+        class="interactive-preview-summary mb-16"
+        style="margin-bottom: 16px; padding: 12px 16px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;"
+        :style="{
+          backgroundColor: interactiveCompleted ? '#f0fdf4' : '#fef2f2',
+          border: `1px solid ${interactiveCompleted ? '#bbf7d0' : '#fecaca'}`,
+          color: interactiveCompleted ? '#15803d' : '#dc2626',
+        }"
+      >
+        <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 15px;">
+          <KIcon :icon="interactiveCompleted ? 'check' : 'close'" />
+          <span>{{ interactiveCompleted ? activityCompletedLabel$() : activityIncompleteLabel$() }}</span>
+        </div>
+        <div
+          v-if="interactiveScoreText"
+          style="font-weight: 600; font-size: 14px; background: rgba(255, 255, 255, 0.7); padding: 4px 10px; border-radius: 6px;"
+        >
+          {{ scoreLabel$() }}: {{ interactiveScoreText }}
+        </div>
+      </div>
+
       <iframe
         v-if="resolvedInteractiveUrl"
         :key="resolvedInteractiveUrl"
@@ -276,6 +372,14 @@
       message: 'Interactive Activity Completed!',
       context: 'Status badge when learner finishes interactive task',
     },
+    activityIncompleteLabel: {
+      message: 'Activity Incomplete / Not Attempted',
+      context: 'Status badge when learner has not completed interactive task',
+    },
+    scoreLabel: {
+      message: 'Score',
+      context: 'Score label in interactive activity preview',
+    },
     markAsCompletedLabel: {
       message: 'Mark as completed',
       context: 'Button label to mark interactive task complete',
@@ -287,6 +391,18 @@
     correctAnswerLabel: {
       message: 'Correct answer',
       context: 'Badge indicating the correct option in preview/review',
+    },
+    incorrectAnswerLabel: {
+      message: 'Incorrect',
+      context: 'Status label when answer is incorrect',
+    },
+    learnerAnswerLabel: {
+      message: 'Learner answer',
+      context: 'Badge indicating learner selection in preview/review',
+    },
+    pointValueLabel: {
+      message: 'point(s)',
+      context: 'Label for point value of question',
     },
     acceptedAnswersLabel: {
       message: 'Accepted answers',
@@ -328,6 +444,15 @@
         return state;
       }
 
+      function extractScoreText(state) {
+        if (!state) return '';
+        if (typeof state === 'object' && state !== null) {
+          if (state.simple_answer) return state.simple_answer;
+          if (state.score) return state.score;
+        }
+        return '';
+      }
+
       const initialVal = extractAnswerValue(props.answerState);
 
       const selectedOption = ref(
@@ -346,7 +471,18 @@
         initialVal === 'completed' || Boolean(initialVal),
       );
 
-      const interactiveScoreText = ref('');
+      const interactiveScoreText = ref(extractScoreText(props.answerState));
+
+      const isShortAnswerCorrect = computed(() => {
+        if (!props.question.answer_key) return false;
+        const val = (shortAnswerText.value || '').trim();
+        if (!val) return false;
+        const expected = (props.question.answer_key || []).map(s => (s || '').trim());
+        if (props.question.case_sensitive) {
+          return expected.includes(val);
+        }
+        return expected.map(s => s.toLowerCase()).includes(val.toLowerCase());
+      });
 
       const isInteractiveQuestion = computed(() => {
         const q = props.question;
@@ -376,6 +512,7 @@
       }
 
       function toggleInteractiveComplete() {
+        if (props.preview) return;
         interactiveCompleted.value = !interactiveCompleted.value;
         emit('interaction');
       }
@@ -436,6 +573,10 @@
         newVal => {
           if (newVal === undefined || newVal === null) return;
           const val = extractAnswerValue(newVal);
+          const score = extractScoreText(newVal);
+          if (score) {
+            interactiveScoreText.value = score;
+          }
           if (
             props.question.question_type === 'multiple_choice' ||
             props.question.question_type === 'true_false'
@@ -456,11 +597,13 @@
       );
 
       function selectSingleChoice(optId) {
+        if (props.preview) return;
         selectedOption.value = optId;
         emit('interaction');
       }
 
       function toggleMultiChoice(optId) {
+        if (props.preview) return;
         if (selectedOptions.value.includes(optId)) {
           selectedOptions.value = selectedOptions.value.filter(id => id !== optId);
         } else {
@@ -474,6 +617,7 @@
       }
 
       function onShortAnswerChange() {
+        if (props.preview) return;
         emit('interaction');
       }
 
@@ -543,6 +687,8 @@
         selectedOptions,
         shortAnswerText,
         interactiveCompleted,
+        interactiveScoreText,
+        isShortAnswerCorrect,
         isInteractiveQuestion,
         resolvedInteractiveUrl,
         isOptionCorrect,

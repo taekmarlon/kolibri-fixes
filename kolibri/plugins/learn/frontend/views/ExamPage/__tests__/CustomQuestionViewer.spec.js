@@ -139,4 +139,63 @@ describe('CustomQuestionViewer', () => {
     expect(screen.getByText('Interactive Activity Completed!')).toBeTruthy();
     expect(emitted().interaction).toBeTruthy();
   });
+
+  it('renders preview mode with interactive score badge and status', () => {
+    const question = {
+      is_custom: true,
+      question_type: 'interactive',
+      title: 'Addition 1-3',
+      prompt: 'Addition 1-3',
+      file_url: '/media/lessons/interactive/1fb6259c50774362acc5e90a041c4938/index.html',
+      options: [],
+      answer_key: [],
+      point_value: 5,
+    };
+
+    render(CustomQuestionViewer, {
+      props: {
+        question,
+        answerState: {
+          value: 'completed',
+          type: 'h5p',
+          simple_answer: '2/3 (Completed)',
+        },
+        preview: true,
+      },
+    });
+
+    expect(screen.getByText('Interactive Activity Completed!')).toBeTruthy();
+    expect(screen.getByText(/2\/3 \(Completed\)/)).toBeTruthy();
+    expect(screen.getByText('5 point(s)')).toBeTruthy();
+    // Manual mark as completed button should NOT be displayed in preview mode
+    expect(screen.queryByRole('button', { name: /mark as completed/i })).toBeNull();
+  });
+
+  it('renders preview mode for multiple choice with learner answer and correct answer badges', () => {
+    const question = {
+      is_custom: true,
+      question_type: 'multiple_choice',
+      prompt: 'Which is 3 + 5?',
+      options: [
+        { id: 'optA', text: '7', image: '' },
+        { id: 'optB', text: '8', image: '' },
+      ],
+      answer_key: ['optB'],
+      point_value: 2,
+    };
+
+    render(CustomQuestionViewer, {
+      props: {
+        question,
+        answerState: 'optA',
+        preview: true,
+        showCorrectAnswer: true,
+      },
+    });
+
+    expect(screen.getByText('Which is 3 + 5?')).toBeTruthy();
+    expect(screen.getByText('2 point(s)')).toBeTruthy();
+    expect(screen.getByText('Learner answer')).toBeTruthy();
+    expect(screen.getByText('Correct answer')).toBeTruthy();
+  });
 });
