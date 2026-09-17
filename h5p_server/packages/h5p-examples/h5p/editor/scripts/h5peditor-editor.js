@@ -203,13 +203,18 @@ ns.Editor = function (library, defaultParams, replace, iframeLoaded) {
         if (loadAttempts < 2) {
           loadAttempts++;
           setTimeout(function () {
-            fetchLibraries('content-type-cache');
+            fetchLibraries(action === 'content-type-cache' ? 'libraries' : 'content-type-cache');
           }, 500);
           return;
         }
         $container.html('Error, unable to load libraries.');
       }).done(function (data) {
-        if (data.success === false) {
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {}
+        }
+        if (data && data.success === false) {
           $container.html(data.message + ' (' + data.errorCode  + ')');
           return;
         }
@@ -241,7 +246,6 @@ ns.Editor = function (library, defaultParams, replace, iframeLoaded) {
     };
 
     fetchLibraries(primaryAction);
-  };
 
     // Start resizing the iframe
     if (iframe.contentWindow.MutationObserver !== undefined) {

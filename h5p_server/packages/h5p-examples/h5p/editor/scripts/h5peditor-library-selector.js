@@ -50,11 +50,19 @@ ns.LibrarySelector = function (libraries, defaultLibrary, defaultParams) {
     dialogText: H5PEditor.t('core', 'confirmChangeLibrary')
   }).appendTo(document.body);
 
-  if (H5PIntegration.hubIsEnabled) {
-    this.selector = new ns.SelectorHub(libraries, defaultLibrary, changeLibraryDialog);
+  var isHub = Boolean(
+    (typeof H5PIntegration !== 'undefined' && H5PIntegration && H5PIntegration.hubIsEnabled) ||
+    (typeof window.parent !== 'undefined' && window.parent && window.parent.H5PIntegration && window.parent.H5PIntegration.hubIsEnabled)
+  );
+
+  var hasLibrariesObject = libraries && libraries.libraries;
+  var libList = Array.isArray(libraries) ? libraries : (hasLibrariesObject ? libraries.libraries : []);
+
+  if (isHub) {
+    this.selector = new ns.SelectorHub(hasLibrariesObject ? libraries : { libraries: libList }, defaultLibrary, changeLibraryDialog);
   }
   else {
-    this.selector = new ns.SelectorLegacy(libraries, defaultLibrary, changeLibraryDialog);
+    this.selector = new ns.SelectorLegacy(libList, defaultLibrary, changeLibraryDialog);
   }
 
   this.$selector = ns.$(this.selector.getElement());
